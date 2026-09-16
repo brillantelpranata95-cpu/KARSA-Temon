@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "karsa-temon"
+  },
+  "targets": {
+    "lentera-temon": {
+      "hosting": {
+        "main": [
+          "karsa-temon"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
