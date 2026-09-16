@@ -26,8 +26,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Seed master data if database is fresh
-    seedMasterDataIfEmpty();
+    // Attempt seeding in background without blocking Auth state
+    seedMasterDataIfEmpty().catch(err => console.warn("Background seed attempt warning:", err));
 
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
