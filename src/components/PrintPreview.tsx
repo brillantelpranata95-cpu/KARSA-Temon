@@ -1,23 +1,14 @@
 import React from "react";
 import { SpjItem, SpjDocumentItem } from "../types";
 import { terbilangRupiah } from "../utils/format";
-import { ArrowLeft, CheckCircle2, Circle, AlertCircle, ExternalLink, Printer } from "lucide-react";
+import { formatDateDDMMYYYY, getNamaHari, getNamaHariCapitalized } from "../utils/date";
+import { ArrowLeft, ExternalLink, Printer } from "lucide-react";
 
 interface PrintPreviewProps {
   spj: SpjItem;
   documents: SpjDocumentItem[];
   onBack: () => void;
 }
-
-// Format date to dd-mm-yyyy
-const formatDate = (dateStr: string): string => {
-  if (!dateStr) return "";
-  const parts = dateStr.split("-");
-  if (parts.length === 3) {
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
-  }
-  return dateStr;
-};
 
 export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack }) => {
   const [selectedDocCode, setSelectedDocCode] = React.useState<string>("BEND_26");
@@ -29,20 +20,35 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
     window.print();
   };
 
+  // Helper for Notulen Decisions formatting
+  const getFormattedKeputusanRapat = (): string => {
+    if (data.keputusanRapat) {
+      return data.keputusanRapat;
+    }
+    const jamMulai = data.jamMulai || "09.00";
+    const jamSelesai = data.jamSelesai || "11.30";
+    return [
+      `1. Kegiatan rapat koordinasi dimulai pada pukul ${jamMulai} WIB dibuka dengan doa bersama oleh pemimpin rapat;`,
+      `2. Pembukaan dari Panewu Temon;`,
+      `3. Diskusi teknis pelaksanaan kegiatan;`,
+      `4. Kegiatan rapat koordinasi diakhiri pada pukul ${jamSelesai} WIB ditutup dengan doa bersama oleh pemimpin rapat.`
+    ].join("\n");
+  };
+
   return (
     <div className="space-y-6">
       {/* Header controls (Hidden on Print) */}
-      <div className="print:hidden bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex justify-between items-center">
+      <div className="print:hidden bg-white dark:bg-slate-800 p-4 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm flex justify-between items-center">
         <div className="flex items-center space-x-3">
           <button
             onClick={onBack}
-            className="p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-xl text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="font-bold text-gray-900">{spj.nomorSpj}</h2>
-            <p className="text-xs text-gray-500">{spj.masterSnapshot.kegiatan.nama}</p>
+            <h2 className="font-bold text-gray-900 dark:text-white">{spj.nomorSpj}</h2>
+            <p className="text-xs text-gray-500 dark:text-slate-400">{spj.masterSnapshot.kegiatan.nama}</p>
           </div>
         </div>
 
@@ -53,8 +59,8 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               onClick={() => setSelectedDocCode(d.documentTypeCode)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 selectedDocCode === d.documentTypeCode
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-[#32848D] text-white shadow-sm font-semibold"
+                  : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600"
               }`}
             >
               {d.documentTypeCode.replace("_", " ")}
@@ -79,7 +85,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
             <div className="flex justify-between items-start text-xs border-b border-black pb-2">
               <div>
                 <p>Lembar : I / II / III / IV / V</p>
-                <p>Model : Bend. 26.a</p>
+                <p>Model : Bend. 26. a</p>
               </div>
             </div>
 
@@ -102,15 +108,15 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <span className="col-span-3 font-semibold">Untuk membayar</span>
                 <span className="col-span-1">:</span>
                 <span className="col-span-8 whitespace-pre-line">
-                  {`${spj.sharedData?.judulAktivitas || "Aktivitas belum diisi"} sebanyak ${spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal ${formatDate(spj.tanggal)}\n${spj.masterSnapshot.kodeRekening.nama}\n${spj.masterSnapshot.kegiatan.nama.toUpperCase()}`}
+                  {`${spj.sharedData?.judulAktivitas || "Aktivitas belum diisi"} sebanyak ${spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal ${formatDateDDMMYYYY(spj.tanggal)}\n${spj.masterSnapshot.kodeRekening.nama}\n${spj.masterSnapshot.kegiatan.nama.toUpperCase()}`}
                 </span>
               </div>
             </div>
 
             <div className="border-t border-b border-black py-3 flex justify-between items-center font-sans">
               <span className="font-bold text-base">Terbilang</span>
-              <span className="text-base font-bold capitalize text-right max-w-md">
-                {terbilangRupiah(Number(data.nominal || 0))}
+              <span className="text-lg font-extrabold bg-gray-100 px-4 py-1 rounded border border-black font-mono">
+                Rp. {Number(data.nominal || 0).toLocaleString("id-ID")},-
               </span>
             </div>
 
@@ -162,7 +168,18 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
         {/* ==================== NOTULEN TEMPLATE ==================== */}
         {selectedDocCode === "NOTULENSI_RAPAT" && (
           <div className="space-y-6 font-serif text-black text-sm">
-            <div className="text-center font-bold text-xl uppercase tracking-widest border-b-2 border-black pb-2">
+            {/* Kop Resmi Pemkab */}
+            <div className="flex items-center space-x-4 border-b-2 border-black pb-3">
+              <img src="/kulonprogo-logo.png" alt="Logo Pemkab Kulon Progo" className="w-16 h-16 object-contain shrink-0" />
+              <div className="text-center flex-1 space-y-0.5">
+                <p className="font-bold text-sm uppercase tracking-wide">PEMERINTAH KABUPATEN KULON PROGO</p>
+                <p className="font-extrabold text-lg uppercase tracking-wider">KAPANEWON TEMON</p>
+                <p className="text-[11px]">Alamat : Jalan Raya Wates-Purworejo Km 10,4 Temon Kulon Progo Telp. (0274) 6472581</p>
+                <p className="text-[11px]">Email: temon@kulonprogokab.go.id Web: temon.kulonprogokab.go.id</p>
+              </div>
+            </div>
+
+            <div className="text-center font-bold text-xl uppercase tracking-widest border-b border-black pb-2">
               NOTULEN RAPAT
             </div>
 
@@ -171,17 +188,21 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold w-1/4">Rapat</td>
                   <td className="py-2 w-10 text-center">:</td>
-                  <td className="py-2">{data.acara || "Rapat Koordinasi Pentas Seni Non-Rekognisi"}</td>
+                  <td className="py-2">{spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</td>
                 </tr>
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold">Hari / Tanggal</td>
                   <td className="py-2 text-center">:</td>
-                  <td className="py-2">{data.hariTanggal || "Rabu, 05 Agustus 2026"}</td>
+                  <td className="py-2">{`${getNamaHariCapitalized(spj.tanggal)}, ${formatDateDDMMYYYY(spj.tanggal)}`}</td>
                 </tr>
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold">Pukul</td>
                   <td className="py-2 text-center">:</td>
-                  <td className="py-2">{data.pukul || "09.00 WIB s.d. 11.30 WIB"}</td>
+                  <td className="py-2">
+                    {data.jamMulai && data.jamSelesai
+                      ? `${data.jamMulai} WIB s.d. ${data.jamSelesai} WIB`
+                      : data.pukul || "09.00 WIB s.d. 11.30 WIB"}
+                  </td>
                 </tr>
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold">Tempat Rapat</td>
@@ -201,7 +222,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold">Peserta Rapat</td>
                   <td className="py-2 text-center">:</td>
-                  <td className="py-2">{data.pesertaRapat || "20 orang"}</td>
+                  <td className="py-2">{`${spj.sharedData?.jumlahPeserta || 20} orang`}</td>
                 </tr>
               </tbody>
             </table>
@@ -209,8 +230,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
             <div className="space-y-4 pt-4">
               <h3 className="font-bold underline text-base">Keputusan Rapat:</h3>
               <div className="whitespace-pre-line text-justify leading-relaxed bg-gray-50 print:bg-transparent p-4 rounded-xl border border-gray-200 print:border-none">
-                {data.keputusanRapat ||
-                  `1. Kegiatan rapat koordinasi dimulai pada pukul 09.00 WIB dibuka dengan doa bersama oleh pemimpin rapat;\n2. Pembukaan dari Panewu Temon;\n3. Kegiatan Pentas Seni Non-Rekognisi dimaksudkan untuk mendukung anak-anak tampil lebih percaya diri di depan umum;\n4. Sekolah-sekolah harap dapat memanfaatkan kegiatan ini sebaik mungkin dengan mempersiapkan penampilan yang dipilih;\n5. Untuk koordinasi berikutnya bisa menghubungi Jawatan Sosial ke Kepala Jawatan atau staff.`}
+                {getFormattedKeputusanRapat()}
               </div>
             </div>
 
@@ -218,7 +238,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               <div className="text-center w-64">
                 <p className="font-semibold">Pemimpin Rapat,</p>
                 <div className="h-20"></div>
-                <p className="font-bold underline">{data.pemimpinRapat || "SURADIMAN, S.I.P., M.M."}</p>
+                <p className="font-bold underline">{data.pemimpinRapat || spj.sharedData?.pptkNama || "SURADIMAN, S.I.P., M.M."}</p>
                 <p className="text-xs">{spj.sharedData?.pptkPangkat || "Pembina; IV/a"}</p>
                 <p className="text-xs">NIP. {spj.sharedData?.pptkNip || "19730101 199303 1 008"}</p>
               </div>
@@ -229,23 +249,26 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
         {/* ==================== DAFTAR HADIR TEMPLATE ==================== */}
         {selectedDocCode === "DAFTAR_HADIR" && (
           <div className="space-y-4 font-sans text-black text-sm">
-            <div className="text-center border-b-2 border-black pb-2 space-y-0.5">
-              <p className="font-bold text-base uppercase">PEMERINTAH KABUPATEN KULON PROGO</p>
-              <p className="font-extrabold text-lg uppercase">KAPANEWON TEMON</p>
-              <p className="text-xs">Alamat : Jalan Raya Wates-Purworejo Km 10,4 Temon Kulon Progo Telp. (0274) 6472581</p>
-              <p className="text-xs">Email: temon@kulonprogokab.go.id Web: temon.kulonprogokab.go.id</p>
+            <div className="flex items-center space-x-4 border-b-2 border-black pb-3">
+              <img src="/kulonprogo-logo.png" alt="Logo Pemkab Kulon Progo" className="w-16 h-16 object-contain shrink-0" />
+              <div className="text-center flex-1 space-y-0.5">
+                <p className="font-bold text-sm uppercase tracking-wide">PEMERINTAH KABUPATEN KULON PROGO</p>
+                <p className="font-extrabold text-lg uppercase tracking-wider">KAPANEWON TEMON</p>
+                <p className="text-[11px]">Alamat : Jalan Raya Wates-Purworejo Km 10,4 Temon Kulon Progo Telp. (0274) 6472581</p>
+                <p className="text-[11px]">Email: temon@kulonprogokab.go.id Web: temon.kulonprogokab.go.id</p>
+              </div>
             </div>
 
             <div className="text-center py-2 font-bold text-lg underline uppercase">
               DAFTAR HADIR
             </div>
 
-            <div className="text-left text-xs py-2 space-y-1">
-              <p><span className="font-semibold inline-block w-24">HARI</span>: {data.hari || "RABU"}</p>
-              <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {data.tanggal || formatDate(spj.tanggal)}</p>
+            <div className="text-left text-xs py-2 space-y-1 font-mono">
+              <p><span className="font-semibold inline-block w-24">HARI</span>: {getNamaHari(spj.tanggal)}</p>
+              <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {formatDateDDMMYYYY(spj.tanggal)}</p>
               <p><span className="font-semibold inline-block w-24">PUKUL</span>: {data.jam || "09.00 WIB s.d. 11.00 WIB"}</p>
               <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {data.tempat || "PENDOPO KAPANEWON TEMON"}</p>
-              <p><span className="font-semibold inline-block w-24">ACARA</span>: {data.acara || spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
+              <p><span className="font-semibold inline-block w-24">ACARA</span>: {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
             </div>
 
             <table className="w-full border border-black text-xs text-center border-collapse">
@@ -277,7 +300,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
 
             <div className="flex justify-end pt-4">
               <div className="text-center w-64 text-xs">
-                <p>Temon, {formatDate(spj.tanggal)}</p>
+                <p>Temon, {formatDateDDMMYYYY(spj.tanggal)}</p>
                 <p className="font-semibold">PPTK</p>
                 <div className="h-16"></div>
                 <p className="font-bold underline">{spj.sharedData?.pptkNama || "SURADIMAN, S.I.P., M.M."}</p>
@@ -290,6 +313,15 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
         {/* ==================== SPJ AKTIVITAS LAPANGAN TEMPLATE ==================== */}
         {selectedDocCode === "SPJ_AKTIVITAS_LAPANGAN" && (
           <div className="space-y-6 font-serif text-black text-sm">
+            <div className="flex items-center space-x-4 border-b-2 border-black pb-3">
+              <img src="/kulonprogo-logo.png" alt="Logo Pemkab Kulon Progo" className="w-16 h-16 object-contain shrink-0" />
+              <div className="text-center flex-1 space-y-0.5">
+                <p className="font-bold text-sm uppercase tracking-wide">PEMERINTAH KABUPATEN KULON PROGO</p>
+                <p className="font-extrabold text-lg uppercase tracking-wider">KAPANEWON TEMON</p>
+                <p className="text-[11px]">Alamat : Jalan Raya Wates-Purworejo Km 10,4 Temon Kulon Progo Telp. (0274) 6472581</p>
+              </div>
+            </div>
+
             <div className="text-center font-bold text-xl uppercase tracking-wider underline">
               LAPORAN HASIL PELAKSANAAN TUGAS
             </div>
@@ -299,12 +331,12 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <tr className="border-b border-black">
                   <td className="p-3 font-semibold w-12 text-center border-r border-black">1.</td>
                   <td className="p-3 font-semibold w-1/3 border-r border-black">Maksud dan Tujuan Perjalanan Dinas</td>
-                  <td className="p-3">: {data.maksudTujuan || "Pentas Seni Non-Rekognisi"}</td>
+                  <td className="p-3">: {data.maksudTujuan || spj.sharedData?.judulAktivitas || "Aktivitas Lapangan"}</td>
                 </tr>
                 <tr className="border-b border-black">
                   <td className="p-3 font-semibold text-center border-r border-black">2.</td>
                   <td className="p-3 font-semibold border-r border-black">Tempat Tujuan</td>
-                  <td className="p-3">: {data.tempatTujuan || "GOR Kedundang"}</td>
+                  <td className="p-3">: {data.tempatTujuan || "Kapanewon Temon"}</td>
                 </tr>
                 <tr className="border-b border-black">
                   <td className="p-3 font-semibold text-center border-r border-black">3.</td>
@@ -314,14 +346,14 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <tr className="border-b border-black">
                   <td className="p-3 font-semibold text-center border-r border-black">4.</td>
                   <td className="p-3 font-semibold border-r border-black">Pelaksanaan Tanggal</td>
-                  <td className="p-3">: {data.tanggalPelaksanaan || "12 Agustus 2026"}</td>
+                  <td className="p-3">: {data.tanggalPelaksanaan || formatDateDDMMYYYY(spj.tanggal)}</td>
                 </tr>
                 <tr>
                   <td className="p-3 font-semibold text-center border-r border-black align-top">5.</td>
                   <td className="p-3 font-semibold border-r border-black align-top">Kesimpulan (Hasil)</td>
                   <td className="p-3 whitespace-pre-line leading-relaxed text-justify">
                     {data.kesimpulanHasil ||
-                      `1. Kegiatan dibuka pukul 08.30 WIB dengan registrasi peserta;\n2. Kegiatan dimulai pukul 09.00 WIB dengan pembukaan dari MC dan menyanyikan Indonesia Raya;\n3. Sambutan dan pembukaan secara resmi oleh Panewu Kapanewon Temon;\n4. Penampilan kesenian anak-anak dari TK/KB/SPS se-Kapanewon Temon;\n5. Kegiatan berjalan dengan lancar dan selesai pukul 12.30 WIB.`}
+                      `1. Kegiatan dibuka pukul 08.30 WIB dengan registrasi peserta;\n2. Kegiatan dimulai pukul 09.00 WIB dengan pembukaan dari MC dan menyanyikan Indonesia Raya;\n3. Sambutan dan pembukaan secara resmi oleh Panewu Kapanewon Temon;\n4. Pelaksanaan tugas lapangan berjalan tertib dan lancar;\n5. Kegiatan selesai pukul 12.30 WIB.`}
                   </td>
                 </tr>
               </tbody>
@@ -335,7 +367,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <p className="font-bold underline">{spj.sharedData?.panewuNama || "RUSDI SUWARNO, SIP, M.M"}</p>
               </div>
               <div>
-                <p>Temon, {data.tanggalPelaksanaan || spj.tanggal}</p>
+                <p>Temon, {data.tanggalPelaksanaan || formatDateDDMMYYYY(spj.tanggal)}</p>
                 <p className="font-bold">Yang Membuat Laporan</p>
                 <div className="h-20"></div>
                 <p className="font-bold underline">{data.pembuatLaporan || spj.userName}</p>

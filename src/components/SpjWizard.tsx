@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { UserProfile, SpjItem, SpjDocumentItem } from "../types";
 import { getSpjById, getSpjDocuments, saveSpjDocumentData, finalizeSpj, updateSpjSharedData } from "../services/api";
 import { terbilangRupiah } from "../utils/format";
+import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari } from "../utils/date";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -13,7 +14,8 @@ import {
   Trash2,
   Printer,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Users
 } from "lucide-react";
 
 interface SpjWizardProps {
@@ -265,34 +267,34 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
               {/* ================= FORM EDITOR BEND 26 ================= */}
               {activeDoc.documentTypeCode === "BEND_26" && (
                 <div className="space-y-4 text-sm">
-                  <div className="rounded-xl border border-[#32848D]/15 bg-[#F6FAF5] p-4 text-sm leading-6 text-slate-700">
-                    <p>{spj.sharedData?.judulAktivitas || "Judul aktivitas"} sebanyak {spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal {spj.tanggal}</p>
+                  <div className="rounded-xl border border-[#32848D]/15 bg-[#F6FAF5] dark:bg-slate-700/50 p-4 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                    <p>{spj.sharedData?.judulAktivitas || "Judul aktivitas"} sebanyak {spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal {formatDateDDMMYYYY(spj.tanggal)}</p>
                     <p>{spj.masterSnapshot.kodeRekening.nama}</p>
                     <p className="font-semibold">{spj.masterSnapshot.kegiatan.nama.toUpperCase()}</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Nominal (Rp)</label>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nominal (Rp)</label>
                     <input
                       type="number"
                       min="0"
                       value={formData.nominal ?? 0}
                       onChange={(e) => handleFormChange("nominal", Math.max(0, Number(e.target.value) || 0))}
-                      className="w-full border border-gray-300 rounded-xl p-2.5 font-bold"
+                      className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 font-bold text-gray-900 dark:text-white"
                     />
-                    <p className="mt-1 text-xs text-slate-500">{terbilangRupiah(Number(formData.nominal || 0))}</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 capitalize font-medium">{terbilangRupiah(Number(formData.nominal || 0))}</p>
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">
                     {["phr", "pph", "ppn"].map((pajak) => (
-                      <label key={pajak} className="block text-xs font-semibold uppercase text-gray-700">
+                      <label key={pajak} className="block text-xs font-semibold uppercase text-gray-700 dark:text-slate-300">
                         Pajak {pajak}
                         <input
                           type="number"
                           min="0"
                           value={formData[pajak] ?? 0}
                           onChange={(e) => handleFormChange(pajak, Math.max(0, Number(e.target.value) || 0))}
-                          className="mt-1 w-full border border-gray-300 rounded-xl p-2.5 font-normal"
+                          className="mt-1 w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 font-normal text-gray-900 dark:text-white"
                         />
                       </label>
                     ))}
@@ -303,47 +305,233 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
               {/* ================= FORM EDITOR NOTULEN ================= */}
               {activeDoc.documentTypeCode === "NOTULENSI_RAPAT" && (
                 <div className="space-y-4 text-sm">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Acara Rapat</label>
-                    <input
-                      type="text"
-                      value={formData.acara || "Rapat Koordinasi Pentas Seni Non-Rekognisi"}
-                      onChange={(e) => handleFormChange("acara", e.target.value)}
-                      className="w-full border border-gray-300 rounded-xl p-2.5"
-                    />
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-200 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-300">
+                    Acara dan Hari/Tanggal diisi otomatis dari paket SPJ. Poin 1 dan poin penutup keputusan rapat diformat secara baku secara otomatis.
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Acara Rapat (Otomatis)</label>
+                      <input
+                        type="text"
+                        value={spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}
+                        readOnly
+                        className="w-full border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50 rounded-xl p-2.5 text-gray-600 dark:text-slate-300"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Hari / Tanggal (Otomatis)</label>
+                      <input
+                        type="text"
+                        value={`${getNamaHariCapitalized(spj.tanggal)}, ${formatDateDDMMYYYY(spj.tanggal)}`}
+                        readOnly
+                        className="w-full border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50 rounded-xl p-2.5 text-gray-600 dark:text-slate-300"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Hari / Tanggal</label>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Jam Mulai Rapat</label>
                       <input
                         type="text"
-                        value={formData.hariTanggal || "Rabu, 05 Agustus 2026"}
-                        onChange={(e) => handleFormChange("hariTanggal", e.target.value)}
-                        className="w-full border border-gray-300 rounded-xl p-2.5"
+                        value={formData.jamMulai || "09.00"}
+                        onChange={(e) => {
+                          const jMulai = e.target.value;
+                          handleFormChange("jamMulai", jMulai);
+                          // rebuild keputusan
+                          const jSelesai = formData.jamSelesai || "11.30";
+                          const tengah = formData.poinTengah || "Pembukaan oleh Panewu Temon.\nDiskusi teknis pelaksanaan kegiatan.";
+                          const lines = tengah.split("\n").filter((l: string) => l.trim().length > 0);
+                          let idx = 1;
+                          const result = [];
+                          result.push(`${idx++}. Kegiatan rapat koordinasi dimulai pada pukul ${jMulai} WIB dibuka dengan doa bersama oleh pemimpin rapat;`);
+                          lines.forEach((line: string) => {
+                            const clean = line.replace(/^\d+\.\s*/, "").trim();
+                            if (clean) result.push(`${idx++}. ${clean}${clean.endsWith(";") || clean.endsWith(".") ? "" : ";"}`);
+                          });
+                          result.push(`${idx}. Kegiatan rapat koordinasi diakhiri pada pukul ${jSelesai} WIB ditutup dengan doa bersama oleh pemimpin rapat.`);
+                          handleFormChange("keputusanRapat", result.join("\n"));
+                        }}
+                        placeholder="09.00"
+                        className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Pukul</label>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Jam Selesai Rapat</label>
                       <input
                         type="text"
-                        value={formData.pukul || "09.00 WIB s.d. 11.30 WIB"}
-                        onChange={(e) => handleFormChange("pukul", e.target.value)}
-                        className="w-full border border-gray-300 rounded-xl p-2.5"
+                        value={formData.jamSelesai || "11.30"}
+                        onChange={(e) => {
+                          const jSelesai = e.target.value;
+                          handleFormChange("jamSelesai", jSelesai);
+                          const jMulai = formData.jamMulai || "09.00";
+                          const tengah = formData.poinTengah || "Pembukaan oleh Panewu Temon.\nDiskusi teknis pelaksanaan kegiatan.";
+                          const lines = tengah.split("\n").filter((l: string) => l.trim().length > 0);
+                          let idx = 1;
+                          const result = [];
+                          result.push(`${idx++}. Kegiatan rapat koordinasi dimulai pada pukul ${jMulai} WIB dibuka dengan doa bersama oleh pemimpin rapat;`);
+                          lines.forEach((line: string) => {
+                            const clean = line.replace(/^\d+\.\s*/, "").trim();
+                            if (clean) result.push(`${idx++}. ${clean}${clean.endsWith(";") || clean.endsWith(".") ? "" : ";"}`);
+                          });
+                          result.push(`${idx}. Kegiatan rapat koordinasi diakhiri pada pukul ${jSelesai} WIB ditutup dengan doa bersama oleh pemimpin rapat.`);
+                          handleFormChange("keputusanRapat", result.join("\n"));
+                        }}
+                        placeholder="11.30"
+                        className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Keputusan Rapat</label>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                      Poin-Poin Isi Keputusan Rapat (Tengah)
+                    </label>
+                    <textarea
+                      value={formData.poinTengah || "Pembukaan dari Panewu Temon.\nDiskusi teknis pelaksanaan kegiatan."}
+                      onChange={(e) => {
+                        const tengah = e.target.value;
+                        handleFormChange("poinTengah", tengah);
+                        const jMulai = formData.jamMulai || "09.00";
+                        const jSelesai = formData.jamSelesai || "11.30";
+                        const lines = tengah.split("\n").filter((l: string) => l.trim().length > 0);
+                        let idx = 1;
+                        const result = [];
+                        result.push(`${idx++}. Kegiatan rapat koordinasi dimulai pada pukul ${jMulai} WIB dibuka dengan doa bersama oleh pemimpin rapat;`);
+                        lines.forEach((line: string) => {
+                          const clean = line.replace(/^\d+\.\s*/, "").trim();
+                          if (clean) result.push(`${idx++}. ${clean}${clean.endsWith(";") || clean.endsWith(".") ? "" : ";"}`);
+                        });
+                        result.push(`${idx}. Kegiatan rapat koordinasi diakhiri pada pukul ${jSelesai} WIB ditutup dengan doa bersama oleh pemimpin rapat.`);
+                        handleFormChange("keputusanRapat", result.join("\n"));
+                      }}
+                      placeholder="Masukkan poin-poin rapat (satu per baris)..."
+                      className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white h-28 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#32848D] mb-1">
+                      Hasil Susunan Teks Keputusan Rapat (Otomatis & Baku)
+                    </label>
                     <textarea
                       value={
                         formData.keputusanRapat ||
-                        `1. Rapat dibuka pukul 09.00 WIB oleh Pimpinan Rapat.\n2. Pembukaan oleh Panewu Temon.\n3. Diskusi teknis pelaksanaan pentas seni.`
+                        `1. Kegiatan rapat koordinasi dimulai pada pukul 09.00 WIB dibuka dengan doa bersama oleh pemimpin rapat;\n2. Pembukaan dari Panewu Temon;\n3. Diskusi teknis pelaksanaan kegiatan;\n4. Kegiatan rapat koordinasi diakhiri pada pukul 11.30 WIB ditutup dengan doa bersama oleh pemimpin rapat.`
                       }
-                      onChange={(e) => handleFormChange("keputusanRapat", e.target.value)}
-                      className="w-full border border-gray-300 rounded-xl p-2.5 h-36"
-                    ></textarea>
+                      readOnly
+                      className="w-full border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50 rounded-xl p-2.5 font-mono text-xs text-gray-800 dark:text-slate-200 h-32"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ================= FORM EDITOR DAFTAR HADIR ================= */}
+              {activeDoc.documentTypeCode === "DAFTAR_HADIR" && (
+                <div className="space-y-4 text-sm">
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 flex justify-between items-center">
+                    <div>
+                      <h3 className="font-bold text-emerald-900 dark:text-emerald-200">Live Preview & Editor Daftar Hadir</h3>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                        {spj.sharedData?.jumlahPeserta || 20} Peserta — Metadata rata kiri otomatis dari paket SPJ
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const count = spj.sharedData?.jumlahPeserta || 20;
+                        const currentPeserta = formData.peserta || [];
+                        const updated = Array.from({ length: count }, (_, idx) => ({
+                          no: idx + 1,
+                          nama: currentPeserta[idx]?.nama || "",
+                          jabatan: currentPeserta[idx]?.jabatan || ""
+                        }));
+                        handleFormChange("peserta", updated);
+                      }}
+                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700"
+                    >
+                      Reset / Generate Baris ({spj.sharedData?.jumlahPeserta || 20})
+                    </button>
+                  </div>
+
+                  {/* Header Preview in Editor */}
+                  <div className="border border-gray-300 dark:border-slate-600 rounded-xl p-4 bg-white dark:bg-slate-800 space-y-3">
+                    <div className="flex items-center space-x-3 border-b-2 border-black pb-2">
+                      <img src="/kulonprogo-logo.png" alt="Logo Pemkab Kulon Progo" className="w-14 h-14 object-contain shrink-0" />
+                      <div className="text-center flex-1 text-xs">
+                        <p className="font-bold uppercase text-gray-900 dark:text-white">PEMERINTAH KABUPATEN KULON PROGO</p>
+                        <p className="font-extrabold text-sm uppercase text-gray-900 dark:text-white">KAPANEWON TEMON</p>
+                        <p className="text-[10px] text-gray-600 dark:text-slate-400">Jalan Raya Wates-Purworejo Km 10,4 Temon Kulon Progo Telp. (0274) 6472581</p>
+                      </div>
+                    </div>
+
+                    <div className="text-left text-xs space-y-1 text-gray-800 dark:text-slate-200 font-mono">
+                      <p><span className="font-semibold inline-block w-24">HARI</span>: {getNamaHari(spj.tanggal)}</p>
+                      <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {formatDateDDMMYYYY(spj.tanggal)}</p>
+                      <p><span className="font-semibold inline-block w-24">PUKUL</span>: {formData.jam || "09.00 WIB s.d. 11.00 WIB"}</p>
+                      <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {formData.tempat || "PENDOPO KAPANEWON TEMON"}</p>
+                      <p><span className="font-semibold inline-block w-24">ACARA</span>: {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
+                    </div>
+
+                    {/* Interactive Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-left border-collapse border border-gray-300 dark:border-slate-600">
+                        <thead>
+                          <tr className="bg-gray-100 dark:bg-slate-700 border-b border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300">
+                            <th className="p-2 w-10 text-center border-r">NO</th>
+                            <th className="p-2 border-r">NAMA PESERTA</th>
+                            <th className="p-2 border-r">JABATAN / ALAMAT</th>
+                            <th className="p-2 w-32 text-center">TANDA TANGAN</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
+                          {Array.from({ length: spj.sharedData?.jumlahPeserta || formData.peserta?.length || 15 }).map((_, idx) => {
+                            const pList = formData.peserta || [];
+                            const current = pList[idx] || { nama: "", jabatan: "" };
+
+                            return (
+                              <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700/40">
+                                <td className="p-2 text-center border-r font-bold text-gray-500">{idx + 1}</td>
+                                <td className="p-1 border-r">
+                                  <input
+                                    type="text"
+                                    value={current.nama || ""}
+                                    onChange={(e) => {
+                                      const updated = [...pList];
+                                      while (updated.length <= idx) updated.push({ no: updated.length + 1, nama: "", jabatan: "" });
+                                      updated[idx] = { ...updated[idx], nama: e.target.value };
+                                      handleFormChange("peserta", updated);
+                                    }}
+                                    placeholder={`Nama Peserta #${idx + 1}`}
+                                    className="w-full bg-transparent p-1 rounded border border-gray-200 dark:border-slate-600 text-xs text-gray-900 dark:text-white"
+                                  />
+                                </td>
+                                <td className="p-1 border-r">
+                                  <input
+                                    type="text"
+                                    value={current.jabatan || ""}
+                                    onChange={(e) => {
+                                      const updated = [...pList];
+                                      while (updated.length <= idx) updated.push({ no: updated.length + 1, nama: "", jabatan: "" });
+                                      updated[idx] = { ...updated[idx], jabatan: e.target.value };
+                                      handleFormChange("peserta", updated);
+                                    }}
+                                    placeholder={`Jabatan / Unit`}
+                                    className="w-full bg-transparent p-1 rounded border border-gray-200 dark:border-slate-600 text-xs text-gray-900 dark:text-white"
+                                  />
+                                </td>
+                                <td className="p-2 text-xs font-mono text-gray-400">
+                                  {idx % 2 === 0 ? `${idx + 1}. ........` : `   ${idx + 1}. ........`}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}

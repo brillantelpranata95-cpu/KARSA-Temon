@@ -15,8 +15,8 @@ export interface UserProfile {
 }
 
 export interface Jawatan { id: string; kode: string; nama: string; description?: string; isActive: boolean; createdAt?: any; updatedAt?: any; }
-export interface Kegiatan { id: string; kodeKegiatan: string; namaKegiatan: string; jawatanId: string; tahunAnggaran: number; status: "ACTIVE" | "INACTIVE" | "ARCHIVED"; createdAt?: any; updatedAt?: any; }
-export interface KodeRekening { id: string; kode: string; nama: string; tahunAnggaran: number; kategori?: string; isActive: boolean; createdAt?: any; updatedAt?: any; }
+export interface Kegiatan { id: string; kodeKegiatan: string; namaKegiatan: string; jawatanId: string; tahunAnggaran: number; status: "ACTIVE" | "INACTIVE" | "ARCHIVED" | "PENDING_APPROVAL"; requestedBy?: string; createdAt?: any; updatedAt?: any; }
+export interface KodeRekening { id: string; kode: string; nama: string; tahunAnggaran: number; kategori?: string; isActive: boolean; status?: "ACTIVE" | "INACTIVE" | "PENDING_APPROVAL"; requestedBy?: string; createdAt?: any; updatedAt?: any; }
 export interface JenisBelanja { id: string; kode: string; nama: string; description?: string; kodeRekeningId?: string; isActive: boolean; createdAt?: any; updatedAt?: any; }
 export interface DocumentTypeItem { id: string; code: string; name: string; description: string; category: "FINANCIAL" | "ADMINISTRATIVE" | "REPORT"; isActive: boolean; createdAt?: any; updatedAt?: any; }
 export interface ChecklistDocConfig { documentTypeId: string; required: boolean; order: number; }

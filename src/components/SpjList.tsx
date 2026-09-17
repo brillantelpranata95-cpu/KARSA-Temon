@@ -5,259 +5,291 @@ import {
   getKegiatanList,
   getJenisBelanjaList,
   getKodeRekeningList,
+  getJawatanList,
   createSpjPackage,
-  finalizeSpj,
   reopenSpj,
   deleteSpj,
+  requestNewKegiatan,
+  requestNewKodeRekening,
 } from "../services/api";
+import { formatDateDDMMYYYY } from "../utils/date";
 import {
   Plus,
   FileText,
-  CheckCircle2,
   Clock,
-  AlertTriangle,
-  ShieldAlert,
-  ArrowRight,
+  CheckCircle2,
+  AlertCircle,
   Eye,
   RefreshCw,
   Trash2,
+  ArrowRight,
+  Send,
+  Building,
 } from "lucide-react";
-
-// Format date to dd-mm-yyyy
-const formatDate = (dateStr: string): string => {
-  if (!dateStr) return "";
-  const parts = dateStr.split("-");
-  if (parts.length === 3) {
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
-  }
-  return dateStr;
-};
 
 interface SpjListProps {
   user: UserProfile;
-  onSelectSpj: (spjId: string, mode: "edit" | "preview") => void;
+  onSelectSpj: (spjId: string, viewMode: "preview" | "edit") => void;
 }
 
 export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
-  const [spjList, setSpjList] = useState<SpjItem[]>([]);
+  const [spjs, setSpjs] = useState<SpjItem[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Modal Create SPJ state
   const [isModalOpen, setIsModalOpen] = useState(false);
+
   const [kegiatanList, setKegiatanList] = useState<Kegiatan[]>([]);
   const [jenisList, setJenisList] = useState<JenisBelanja[]>([]);
   const [rekList, setRekList] = useState<KodeRekening[]>([]);
+  const [jawatanList, setJawatanList] = useState<{ id: string; nama: string }[]>([]);
 
   const [selectedKegiatanId, setSelectedKegiatanId] = useState("");
   const [selectedJenisId, setSelectedJenisId] = useState("");
   const [selectedRekId, setSelectedRekId] = useState("");
-  const [tanggalSpj, setTanggalSpj] = useState(new Date().toISOString().split("T")[0]);
   const [judulAktivitas, setJudulAktivitas] = useState("");
-  const [jumlahPeserta, setJumlahPeserta] = useState(20);
-  const [creating, setCreating] = useState(false);
+  const [jumlahPeserta, setJumlahPeserta] = useState<number>(20);
+  const [tanggalSpj, setTanggalSpj] = useState(() => new Date().toISOString().split("T")[0]);
+  const [adminOverrideJawatanId, setAdminOverrideJawatanId] = useState("");
 
-  // Admin Reopen State
+  const [creating, setCreating] = useState(false);
   const [reopenSpjId, setReopenSpjId] = useState<string | null>(null);
   const [reopenReason, setReopenReason] = useState("");
-
-  // Admin Delete State
   const [deleteSpjId, setDeleteSpjId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  // Admin: override jawatan for SPJ creation
-  const [adminOverrideJawatanId, setAdminOverrideJawatanId] = useState<string>("");
-  const [adminKegiatanList, setAdminKegiatanList] = useState<Kegiatan[]>([]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const data = await getSpjList(user);
-      setSpjList(data);
-    } catch (err) {
-      console.error("Failed to load SPJ list:", err);
-    }
-    setLoading(false);
-  };
+  // Request modals
+  const [isRequestKegiatanOpen, setIsRequestKegiatanOpen] = useState(false);
+  const [isRequestRekOpen, setIsRequestRekOpen] = useState(false);
+  const [reqKegKode, setReqKegKode] = useState("");
+  const [reqKegNama, setReqKegNama] = useState("");
+  const [reqRekKode, setReqRekKode] = useState("");
+  const [reqRekNama, setReqRekNama] = useState("");
+  const [submittingReq, setSubmittingReq] = useState(false);
 
   useEffect(() => {
     loadData();
   }, [user]);
 
-  const handleOpenCreateModal = async () => {
-    setIsModalOpen(true);
+  const loadData = async () => {
+    setLoading(true);
     try {
-      // Admin can see all kegiatan; user sees their jawatan's
-      const kegQueryJawatan = user.role === "ADMIN" && adminOverrideJawatanId ? adminOverrideJawatanId : user.jawatanId;
-      const [keg, jen, rek] = await Promise.all([
-        getKegiatanList(kegQueryJawatan),
+      const [spjData, kData, jData, rData, jawatanData] = await Promise.all([
+        getSpjList(user),
+        getKegiatanList(user.role === "ADMIN" ? undefined : user.jawatanId),
         getJenisBelanjaList(),
         getKodeRekeningList(),
+        getJawatanList(),
       ]);
-      setKegiatanList(keg);
-      setJenisList(jen);
-      setRekList(rek);
+      setSpjs(spjData);
+      setKegiatanList(kData);
+      setJenisList(jData);
+      setRekList(rData);
+      setJawatanList(jawatanData);
 
-      if (keg.length > 0) setSelectedKegiatanId(keg[0].id);
-      if (jen.length > 0) setSelectedJenisId(jen[0].id);
-      if (rek.length > 0) {
-        const initialJenis = jen[0];
-        const matchingRek = initialJenis?.kodeRekeningId ? rek.find((r) => r.id === initialJenis.kodeRekeningId) : rek[0];
-        setSelectedRekId((matchingRek || rek[0]).id);
+      if (kData.length > 0) setSelectedKegiatanId(kData[0].id);
+      if (rData.length > 0) {
+        setSelectedRekId(rData[0].id);
+        const linkedJenis = jData.find((j) => j.kodeRekeningId === rData[0].id);
+        if (linkedJenis) setSelectedJenisId(linkedJenis.id);
       }
     } catch (e) {
-      console.error("Failed to fetch modal dropdowns:", e);
-    }
-  };
-
-  // Admin: load kegiatan for a selected jawatan override
-  const handleAdminJawatanChange = async (jawatanId: string) => {
-    setAdminOverrideJawatanId(jawatanId);
-    if (jawatanId) {
-      const keg = await getKegiatanList(jawatanId);
-      setAdminKegiatanList(keg);
-      setKegiatanList(keg);
-      if (keg.length > 0) setSelectedKegiatanId(keg[0].id);
+      console.error("Gagal memuat data SPJ:", e);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCreateSpj = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCreating(true);
+    const k = kegiatanList.find((x) => x.id === selectedKegiatanId);
+    const r = rekList.find((x) => x.id === selectedRekId);
+    const j = jenisList.find((x) => x.id === selectedJenisId);
 
-    const kegiatan = kegiatanList.find((k) => k.id === selectedKegiatanId);
-    const jenisBelanja = jenisList.find((j) => j.id === selectedJenisId);
-    const kodeRekening = rekList.find((r) => r.id === selectedRekId);
-
-    if (!kegiatan || !jenisBelanja || !kodeRekening || !judulAktivitas.trim() || jumlahPeserta < 1) {
-      alert("Harap lengkapi kegiatan, jenis belanja, kode rekening, judul aktivitas, dan jumlah peserta.");
-      setCreating(false);
+    if (!k || !r || !j) {
+      alert("Mohon lengkapi pilihan Kegiatan, Kode Rekening, dan Jenis Belanja.");
       return;
     }
 
+    setCreating(true);
     try {
-      // Admin override: if admin selected a different jawatan, use that
-      const userForSpj = user.role === "ADMIN" && adminOverrideJawatanId
-        ? {
-            ...user,
-            jawatanId: adminOverrideJawatanId,
-            jawatanName: adminKegiatanList.find((k) => k.jawatanId === adminOverrideJawatanId)
-              ? adminOverrideJawatanId
-              : adminOverrideJawatanId,
-          }
-        : user;
+      let targetJawatanId = user.jawatanId;
+      let targetJawatanName = user.jawatanName;
 
-      const newSpjId = await createSpjPackage({
-        user: userForSpj,
-        kegiatan,
-        jenisBelanja,
-        kodeRekening,
+      if (user.role === "ADMIN" && adminOverrideJawatanId) {
+        const found = jawatanList.find((jw) => jw.id === adminOverrideJawatanId);
+        if (found) {
+          targetJawatanId = found.id;
+          targetJawatanName = found.nama;
+        }
+      }
+
+      await createSpjPackage({
+        user,
+        kegiatan: k,
+        jenisBelanja: j,
+        kodeRekening: r,
         tanggal: tanggalSpj,
         judulAktivitas,
         jumlahPeserta,
+        targetJawatanId,
+        targetJawatanName,
       });
-
       setIsModalOpen(false);
-      setCreating(false);
-      onSelectSpj(newSpjId, "edit");
-    } catch (err) {
-      console.error("Failed to create SPJ:", err);
-      alert("Gagal membuat SPJ baru.");
+      setJudulAktivitas("");
+      setJumlahPeserta(20);
+      loadData();
+    } catch (err: any) {
+      alert("Gagal membuat Paket SPJ: " + err.message);
+    } finally {
       setCreating(false);
     }
   };
 
-  const handleReopenSubmit = async () => {
-    if (!reopenSpjId || !reopenReason.trim()) {
-      alert("Alasan reopen wajib diisi!");
-      return;
-    }
+  const handleReopen = async () => {
+    if (!reopenSpjId || !reopenReason) return;
     try {
       await reopenSpj(reopenSpjId, reopenReason, user);
       setReopenSpjId(null);
       setReopenReason("");
       loadData();
-    } catch (e) {
-      console.error("Failed to reopen SPJ:", e);
+    } catch (err: any) {
+      alert("Gagal reopening SPJ: " + err.message);
     }
   };
 
-  const handleDeleteSubmit = async () => {
+  const handleDelete = async () => {
     if (!deleteSpjId) return;
+    setDeleting(true);
     try {
       await deleteSpj(deleteSpjId, user);
       setDeleteSpjId(null);
       loadData();
-    } catch (e) {
-      console.error("Failed to delete SPJ:", e);
-      alert("Gagal menghapus SPJ.");
+    } catch (err: any) {
+      alert("Gagal menghapus SPJ: " + err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleRequestKegiatanSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reqKegKode || !reqKegNama) return;
+    setSubmittingReq(true);
+    try {
+      await requestNewKegiatan(
+        {
+          kodeKegiatan: reqKegKode,
+          namaKegiatan: reqKegNama,
+          tahunAnggaran: new Date().getFullYear(),
+        },
+        user
+      );
+      alert("Pengajuan Kode Kegiatan berhasil dikirim. Menunggu persetujuan Admin.");
+      setIsRequestKegiatanOpen(false);
+      setReqKegKode("");
+      setReqKegNama("");
+    } catch (err: any) {
+      alert("Gagal mengirim pengajuan: " + err.message);
+    } finally {
+      setSubmittingReq(false);
+    }
+  };
+
+  const handleRequestRekSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reqRekKode || !reqRekNama) return;
+    setSubmittingReq(true);
+    try {
+      await requestNewKodeRekening(
+        {
+          kode: reqRekKode,
+          nama: reqRekNama,
+          tahunAnggaran: new Date().getFullYear(),
+        },
+        user
+      );
+      alert("Pengajuan Kode Rekening berhasil dikirim. Menunggu persetujuan Admin.");
+      setIsRequestRekOpen(false);
+      setReqRekKode("");
+      setReqRekNama("");
+    } catch (err: any) {
+      alert("Gagal mengirim pengajuan: " + err.message);
+    } finally {
+      setSubmittingReq(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Top Action Bar */}
-      <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm">
+      {/* HEADER SECTION */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Pengelolaan SPJ Kapanewon</h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400">
-            Daftar paket pertanggungjawaban keuangan & administratif Jawatan
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <FileText className="w-6 h-6 text-[#32848D]" />
+            Daftar Paket SPJ {user.role === "ADMIN" ? "Seluruh Jawatan" : user.jawatanName}
+          </h1>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+            Kelola dan monitor berkas SPJ secara real-time.
           </p>
         </div>
         <button
-          onClick={handleOpenCreateModal}
-          className="px-5 py-2.5 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow-md hover:shadow-lg transition-all"
+          onClick={() => setIsModalOpen(true)}
+          className="px-5 py-2.5 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-2xl shadow-md transition inline-flex items-center space-x-2 text-sm"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           <span>Buat Paket SPJ Baru</span>
         </button>
       </div>
 
-      {/* SPJ Table List */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+      {/* TABLE LIST */}
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-gray-400">Memuat daftar SPJ...</div>
-        ) : spjList.length === 0 ? (
-          <div className="p-12 text-center space-y-4">
-            <FileText className="w-12 h-12 text-gray-300 mx-auto" />
-            <h3 className="text-base font-semibold text-gray-800 dark:text-slate-200">Belum Ada Paket SPJ</h3>
-            <p className="text-sm text-gray-500 dark:text-slate-400 max-w-sm mx-auto">
-              Anda belum membuat paket pertanggungjawaban SPJ untuk unit kerja ini.
-            </p>
-            <button
-              onClick={handleOpenCreateModal}
-              className="px-4 py-2 bg-[#32848D] text-white text-sm font-medium rounded-xl hover:bg-[#276972]"
-            >
-              + Buat SPJ Pertama
-            </button>
+          <div className="p-12 text-center text-gray-400 dark:text-slate-500">Memuat data SPJ...</div>
+        ) : spjs.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <AlertCircle className="w-10 h-10 text-gray-300 dark:text-slate-600 mx-auto" />
+            <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Belum ada dokumen SPJ yang dibuat.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 dark:bg-slate-700/50 border-b border-gray-200 dark:border-slate-600 text-xs font-semibold text-gray-500 dark:text-slate-300 uppercase tracking-wider">
-                  <th className="p-4">Nomor SPJ</th>
-                  <th className="p-4">Kegiatan</th>
-                  <th className="p-4">Jenis Belanja</th>
-                  <th className="p-4">Tanggal</th>
-                  <th className="p-4 text-center">Progress</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Aksi</th>
+                <tr className="bg-gray-50/50 dark:bg-slate-700/50 text-gray-500 dark:text-slate-300 text-xs font-semibold border-b border-gray-100 dark:border-slate-700">
+                  <th className="p-4">TANGGAL</th>
+                  <th className="p-4">JAWATAN</th>
+                  <th className="p-4">KEGIATAN & REKENING</th>
+                  <th className="p-4">JUDUL AKTIVITAS</th>
+                  <th className="p-4">PROGRESS</th>
+                  <th className="p-4">STATUS</th>
+                  <th className="p-4 text-right">AKSI</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-slate-700 text-sm">
-                {spjList.map((spj) => (
-                  <tr key={spj.id} className="hover:bg-gray-50/80 dark:hover:bg-slate-700/30 transition-colors">
-                    <td className="p-4 font-semibold text-[#32848D] font-mono">{spj.nomorSpj}</td>
-                    <td className="p-4 text-gray-800 dark:text-slate-200 max-w-xs truncate">
-                      {spj.masterSnapshot.kegiatan.nama}
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700 text-xs">
+                {spjs.map((spj) => (
+                  <tr key={spj.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition">
+                    <td className="p-4 font-mono font-medium text-gray-700 dark:text-slate-300">
+                      {formatDateDDMMYYYY(spj.tanggal)}
                     </td>
-                    <td className="p-4 text-gray-600 dark:text-slate-300 font-medium">
-                      {spj.masterSnapshot.jenisBelanja.nama}
+                    <td className="p-4">
+                      <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-100 dark:border-emerald-800/50">
+                        {spj.jawatanName}
+                      </span>
                     </td>
-                    <td className="p-4 text-gray-500 dark:text-slate-400 text-xs font-mono">
-                      {formatDate(spj.tanggal)}
+                    <td className="p-4 space-y-0.5">
+                      <p className="font-bold text-gray-900 dark:text-white">{spj.masterSnapshot.kegiatan.nama}</p>
+                      <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                        [{spj.masterSnapshot.kodeRekening.kode}] {spj.masterSnapshot.kodeRekening.nama}
+                      </p>
                     </td>
-                    <td className="p-4 text-center">
-                      <div className="flex items-center justify-center space-x-2">
+                    <td className="p-4">
+                      <p className="font-semibold text-gray-800 dark:text-slate-200">
+                        {spj.sharedData?.judulAktivitas || "Rapat / Kegiatan"}
+                      </p>
+                      {spj.sharedData?.jumlahPeserta && (
+                        <p className="text-[11px] text-gray-400">{spj.sharedData.jumlahPeserta} Peserta</p>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center space-x-2">
                         <div className="w-16 bg-gray-200 dark:bg-slate-600 rounded-full h-2 overflow-hidden">
                           <div
                             className={`h-2 rounded-full ${
@@ -266,24 +298,24 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                             style={{ width: `${spj.progress}%` }}
                           ></div>
                         </div>
-                        <span className="text-xs font-bold text-gray-700 dark:text-slate-200">{spj.progress}%</span>
+                        <span className="font-bold text-gray-700 dark:text-slate-200">{spj.progress}%</span>
                       </div>
                     </td>
                     <td className="p-4">
                       {spj.status === "FINALIZED" ? (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full font-semibold bg-emerald-100 text-emerald-800">
                           <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Final
                         </span>
                       ) : spj.status === "COMPLETE" ? (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full font-semibold bg-blue-100 text-blue-800">
                           <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Lengkap
                         </span>
                       ) : spj.status === "IN_PROGRESS" ? (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full font-semibold bg-amber-100 text-amber-800">
                           <Clock className="w-3.5 h-3.5 mr-1" /> Proses
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full font-semibold bg-gray-100 text-gray-700">
                           Draft
                         </span>
                       )}
@@ -336,12 +368,11 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       {/* MODAL CREATE SPJ */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-slate-700 pb-3">
               Buat Paket SPJ Baru
             </h2>
             <form onSubmit={handleCreateSpj} className="space-y-4 text-sm">
-              {/* Admin Override: select jawatan */}
               {user.role === "ADMIN" && (
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
@@ -349,21 +380,30 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                   </label>
                   <select
                     value={adminOverrideJawatanId}
-                    onChange={(e) => handleAdminJawatanChange(e.target.value)}
+                    onChange={(e) => setAdminOverrideJawatanId(e.target.value)}
                     className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                   >
                     <option value="">— Gunakan Jawatan Saya ({user.jawatanName}) —</option>
-                    {/* We'll populate jawatan list dynamically */}
-                    <option value="jawatan-sosial">Jawatan Sosial</option>
-                    <option value="jawatan-praja">Jawatan Praja</option>
-                    <option value="jawatan-kemakmuran">Jawatan Kemakmuran</option>
-                    <option value="jawatan-pelayanan">Jawatan Pelayanan Umum</option>
+                    {jawatanList.map((jw) => (
+                      <option key={jw.id} value={jw.id}>
+                        {jw.nama}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Pilih Kegiatan</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300">Pilih Kegiatan</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsRequestKegiatanOpen(true)}
+                    className="text-[11px] text-[#32848D] font-semibold hover:underline"
+                  >
+                    + Ajukan Kegiatan Baru
+                  </button>
+                </div>
                 <select
                   value={selectedKegiatanId}
                   onChange={(e) => setSelectedKegiatanId(e.target.value)}
@@ -378,7 +418,16 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Kode Rekening</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300">Kode Rekening</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsRequestRekOpen(true)}
+                    className="text-[11px] text-[#32848D] font-semibold hover:underline"
+                  >
+                    + Ajukan Rekening Baru
+                  </button>
+                </div>
                 <select
                   value={selectedRekId}
                   onChange={(e) => {
@@ -406,8 +455,9 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
+              {/* Grid 12: Judul Aktivitas (span 9), Jumlah Peserta (span 3) */}
+              <div className="grid grid-cols-12 gap-3">
+                <div className="col-span-12 sm:col-span-9">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Judul Aktivitas</label>
                   <input
                     type="text"
@@ -418,8 +468,8 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                     className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Jumlah Peserta</label>
+                <div className="col-span-12 sm:col-span-3">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Peserta</label>
                   <input
                     type="number"
                     min="1"
@@ -439,7 +489,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                   onChange={(e) => setTanggalSpj(e.target.value)}
                   className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                 />
-                <p className="text-xs text-gray-400 mt-1">Format tersimpan: {formatDate(tanggalSpj)}</p>
+                <p className="text-xs text-gray-400 mt-1">Format tersimpan: {formatDateDDMMYYYY(tanggalSpj)}</p>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 dark:border-slate-700">
@@ -463,14 +513,117 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         </div>
       )}
 
-      {/* MODAL ADMIN REOPEN */}
+      {/* MODAL REQUEST KEGIATAN BARU */}
+      {isRequestKegiatanOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">Ajukan Kode Kegiatan Baru</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400">
+              Kode kegiatan ini akan otomatis terafiliasi dengan jawatan Anda ({user.jawatanName}) dan membutuhkan persetujuan Admin.
+            </p>
+            <form onSubmit={handleRequestKegiatanSubmit} className="space-y-3 text-sm">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Kode Kegiatan</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: 1.02.01.2.02"
+                  value={reqKegKode}
+                  onChange={(e) => setReqKegKode(e.target.value)}
+                  required
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Kegiatan</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: PENYELENGGARAAN URUSAN SOSIAL KAPANEWON"
+                  value={reqKegNama}
+                  onChange={(e) => setReqKegNama(e.target.value)}
+                  required
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRequestKegiatanOpen(false)}
+                  className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 rounded-xl font-medium"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReq}
+                  className="px-4 py-2 bg-[#32848D] text-white rounded-xl font-semibold hover:bg-[#276972]"
+                >
+                  {submittingReq ? "Mengirim..." : "Kirim Pengajuan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL REQUEST KODE REKENING BARU */}
+      {isRequestRekOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">Ajukan Kode Rekening Baru</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400">
+              Kode rekening baru membutuhkan persetujuan Admin sebelum dapat digunakan.
+            </p>
+            <form onSubmit={handleRequestRekSubmit} className="space-y-3 text-sm">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Kode Rekening</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: 5.1.02.01.01.0024"
+                  value={reqRekKode}
+                  onChange={(e) => setReqRekKode(e.target.value)}
+                  required
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Rekening</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Belanja Makan dan Minum Rapat"
+                  value={reqRekNama}
+                  onChange={(e) => setReqRekNama(e.target.value)}
+                  required
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRequestRekOpen(false)}
+                  className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 rounded-xl font-medium"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReq}
+                  className="px-4 py-2 bg-[#32848D] text-white rounded-xl font-semibold hover:bg-[#276972]"
+                >
+                  {submittingReq ? "Mengirim..." : "Kirim Pengajuan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL REOPEN SPJ */}
       {reopenSpjId && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center space-x-2 text-amber-600 font-bold text-lg">
-              <ShieldAlert className="w-6 h-6" />
-              <span>Konfirmasi Reopen SPJ</span>
-            </div>
+            <h3 className="text-base font-bold text-amber-600 flex items-center gap-2">
+              <RefreshCw className="w-5 h-5" /> Konfirmasi Reopen SPJ
+            </h3>
             <p className="text-xs text-gray-500 dark:text-slate-400">
               Mengizinkan perbaikan dokumen SPJ yang sudah difinalisasi. Alasan reopening wajib dicatat ke Audit Log.
             </p>
@@ -480,7 +633,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 value={reopenReason}
                 onChange={(e) => setReopenReason(e.target.value)}
                 placeholder="Contoh: Perbaikan nominal kuitansi Bend 26..."
-                className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2 text-sm text-gray-900 dark:text-white h-24"
+                className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white h-24"
               ></textarea>
             </div>
             <div className="flex justify-end space-x-3 pt-2">
@@ -491,8 +644,8 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 Batal
               </button>
               <button
-                onClick={handleReopenSubmit}
-                className="px-5 py-2 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700"
+                onClick={handleReopen}
+                className="px-4 py-2 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700"
               >
                 Reopen SPJ
               </button>
@@ -501,16 +654,15 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         </div>
       )}
 
-      {/* MODAL ADMIN DELETE */}
+      {/* MODAL DELETE SPJ */}
       {deleteSpjId && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center space-x-2 text-red-600 font-bold text-lg">
-              <Trash2 className="w-6 h-6" />
-              <span>Konfirmasi Hapus SPJ</span>
-            </div>
-            <p className="text-xs text-gray-500 dark:text-slate-400">
-              Tindakan ini akan menghapus paket SPJ beserta seluruh dokumen terkait secara permanen. Tindakan ini tidak dapat dibatalkan.
+            <h3 className="text-base font-bold text-red-600 flex items-center gap-2">
+              <Trash2 className="w-5 h-5" /> Hapus Paket SPJ
+            </h3>
+            <p className="text-xs text-gray-600 dark:text-slate-300">
+              Apakah Anda yakin ingin menghapus paket SPJ ini beserta seluruh dokumennya? Tindakan ini tidak dapat dibatalkan.
             </p>
             <div className="flex justify-end space-x-3 pt-2">
               <button
@@ -520,10 +672,11 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 Batal
               </button>
               <button
-                onClick={handleDeleteSubmit}
-                className="px-5 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700"
               >
-                Hapus Permanen
+                {deleting ? "Menghapus..." : "Hapus Permanen"}
               </button>
             </div>
           </div>

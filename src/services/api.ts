@@ -265,25 +265,225 @@ export const getOrCreateUserProfile = async (authUser: { uid: string; email: str
   return newUser;
 };
 
-// ------------------- MASTER DATA FETCHERS -------------------
+// Admin Create User directly
+export const adminCreateUser = async (data: {
+  email: string;
+  displayName: string;
+  role: "ADMIN" | "USER";
+  jawatanId: string;
+  jawatanName: string;
+}, actor: UserProfile) => {
+  const customUid = `user-${Date.now()}`;
+  const userRef = doc(db, "users", customUid);
+  const newUser: UserProfile = {
+    uid: customUid,
+    email: data.email.trim().toLowerCase(),
+    displayName: data.displayName.trim() || data.email,
+    photoURL: null,
+    role: data.role,
+    jawatanId: data.jawatanId,
+    jawatanName: data.jawatanName,
+    isActive: true,
+  };
+
+  await setDoc(userRef, sanitizeData({
+    ...newUser,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  }));
+
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "UPDATE_USER_ACCESS",
+    entityType: "USER",
+    entityId: customUid,
+    newValue: newUser
+  });
+
+  return customUid;
+};
+
+// ------------------- MASTER DATA FETCHERS & MANAGERS -------------------
 export const getJawatanList = async (): Promise<Jawatan[]> => {
   const snap = await getDocs(collection(db, "jawatan"));
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as Jawatan));
 };
 
-export const getKegiatanList = async (jawatanId?: string): Promise<Kegiatan[]> => {
-  let q = collection(db, "kegiatan");
+export const getKegiatanList = async (jawatanId?: string, includePending = false): Promise<Kegiatan[]> => {
+  const snap = await getDocs(collection(db, "kegiatan"));
+  let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Kegiatan));
   if (jawatanId) {
-    const snap = await getDocs(query(q, where("jawatanId", "==", jawatanId)));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Kegiatan));
+    list = list.filter(k => k.jawatanId === jawatanId);
   }
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Kegiatan));
+  if (!includePending) {
+    list = list.filter(k => k.status === "ACTIVE" || !k.status);
+  }
+  return list;
 };
 
-export const getKodeRekeningList = async (): Promise<KodeRekening[]> => {
+export const getKodeRekeningList = async (includePending = false): Promise<KodeRekening[]> => {
   const snap = await getDocs(collection(db, "kodeRekening"));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as KodeRekening));
+  let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as KodeRekening));
+  if (!includePending) {
+    list = list.filter(r => r.status === "ACTIVE" || r.isActive !== false);
+  }
+  return list;
+};
+
+// User Request New Kode Kegiatan
+export const requestNewKegiatan = async (data: {
+  kodeKegiatan: string;
+  namaKegiatan: string;
+  tahunAnggaran: number;
+}, user: UserProfile) => {
+  const id = `keg-${Date.now()}`;
+  const kegRef = doc(db, "kegiatan", id);
+  const payload: Kegiatan = {
+    id,
+    kodeKegiatan: data.kodeKegiatan.trim(),
+    namaKegiatan: data.namaKegiatan.trim(),
+    jawatanId: user.jawatanId,
+    tahunAnggaran: data.tahunAnggaran || 2026,
+    status: "PENDING_APPROVAL",
+    requestedBy: user.email
+  };
+  await setDoc(kegRef, sanitizeData({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+  return id;
+};
+
+// User Request New Kode Rekening
+export const requestNewKodeRekening = async (data: {
+  kode: string;
+  nama: string;
+  tahunAnggaran: number;
+  kategori?: string;
+}, user: UserProfile) => {
+  const id = `rek-${Date.now()}`;
+  const rekRef = doc(db, "kodeRekening", id);
+  const payload: KodeRekening = {
+    id,
+    kode: data.kode.trim(),
+    nama: data.nama.trim(),
+    tahunAnggaran: data.tahunAnggaran || 2026,
+    kategori: data.kategori || "LAINNYA",
+    isActive: false,
+    status: "PENDING_APPROVAL",
+    requestedBy: user.email
+  };
+  await setDoc(rekRef, sanitizeData({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+  return id;
+};
+
+// Admin Approve / Reject Kegiatan
+export const adminApproveKegiatan = async (kegiatanId: string, actor: UserProfile) => {
+  const kegRef = doc(db, "kegiatan", kegiatanId);
+  await updateDoc(kegRef, sanitizeData({ status: "ACTIVE", updatedAt: serverTimestamp() }));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: kegiatanId,
+    newValue: { status: "ACTIVE" }
+  });
+};
+
+export const adminRejectKegiatan = async (kegiatanId: string, actor: UserProfile) => {
+  await deleteDoc(doc(db, "kegiatan", kegiatanId));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: kegiatanId,
+    reason: "Pengajuan kegiatan ditolak oleh admin"
+  });
+};
+
+// Admin Approve / Reject Kode Rekening
+export const adminApproveKodeRekening = async (rekId: string, actor: UserProfile) => {
+  const rekRef = doc(db, "kodeRekening", rekId);
+  await updateDoc(rekRef, sanitizeData({ isActive: true, status: "ACTIVE", updatedAt: serverTimestamp() }));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: rekId,
+    newValue: { status: "ACTIVE", isActive: true }
+  });
+};
+
+export const adminRejectKodeRekening = async (rekId: string, actor: UserProfile) => {
+  await deleteDoc(doc(db, "kodeRekening", rekId));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: rekId,
+    reason: "Pengajuan kode rekening ditolak oleh admin"
+  });
+};
+
+// Admin Direct Create Kegiatan
+export const adminCreateKegiatan = async (data: {
+  kodeKegiatan: string;
+  namaKegiatan: string;
+  jawatanId: string;
+  tahunAnggaran: number;
+}, actor: UserProfile) => {
+  const id = `keg-${Date.now()}`;
+  const kegRef = doc(db, "kegiatan", id);
+  const payload: Kegiatan = {
+    id,
+    kodeKegiatan: data.kodeKegiatan.trim(),
+    namaKegiatan: data.namaKegiatan.trim(),
+    jawatanId: data.jawatanId,
+    tahunAnggaran: data.tahunAnggaran || 2026,
+    status: "ACTIVE"
+  };
+  await setDoc(kegRef, sanitizeData({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: id,
+    newValue: payload
+  });
+  return id;
+};
+
+// Admin Direct Create Kode Rekening
+export const adminCreateKodeRekening = async (data: {
+  kode: string;
+  nama: string;
+  tahunAnggaran: number;
+  kategori?: string;
+}, actor: UserProfile) => {
+  const id = `rek-${Date.now()}`;
+  const rekRef = doc(db, "kodeRekening", id);
+  const payload: KodeRekening = {
+    id,
+    kode: data.kode.trim(),
+    nama: data.nama.trim(),
+    tahunAnggaran: data.tahunAnggaran || 2026,
+    kategori: data.kategori || "LAINNYA",
+    isActive: true,
+    status: "ACTIVE"
+  };
+  await setDoc(rekRef, sanitizeData({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: id,
+    newValue: payload
+  });
+  return id;
 };
 
 export const getJenisBelanjaList = async (): Promise<JenisBelanja[]> => {
@@ -315,11 +515,16 @@ export const createSpjPackage = async (params: {
   tanggal: string;
   judulAktivitas: string;
   jumlahPeserta: number;
+  targetJawatanId?: string;
+  targetJawatanName?: string;
 }): Promise<string> => {
-  const { user, kegiatan, jenisBelanja, kodeRekening, tanggal, judulAktivitas, jumlahPeserta } = params;
+  const { user, kegiatan, jenisBelanja, kodeRekening, tanggal, judulAktivitas, jumlahPeserta, targetJawatanId, targetJawatanName } = params;
   const year = new Date(tanggal).getFullYear() || 2026;
   const month = new Date(tanggal).getMonth() + 1 || 8;
   const nomorSpj = await generateSpjNumber(year);
+
+  const activeJawatanId = targetJawatanId || user.jawatanId;
+  const activeJawatanName = targetJawatanName || user.jawatanName;
 
   // Find checklist config for jenisBelanja
   const configSnap = await getDocs(query(collection(db, "checklistConfigs"), where("jenisBelanjaId", "==", jenisBelanja.id)));
@@ -364,8 +569,8 @@ export const createSpjPackage = async (params: {
 
   const spjData: Omit<SpjItem, "id"> = {
     nomorSpj,
-    jawatanId: user.jawatanId,
-    jawatanName: user.jawatanName,
+    jawatanId: activeJawatanId,
+    jawatanName: activeJawatanName,
     userId: user.uid,
     userEmail: user.email,
     userName: user.displayName,
