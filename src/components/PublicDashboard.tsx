@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { collection, getCountFromServer, query, where } from "firebase/firestore";
 import { db } from "../config/firebase";
-import { ArrowRight, FileCheck2, Layers3, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileText, ShieldCheck } from "lucide-react";
 
 interface PublicStats {
   finalized: number;
@@ -40,32 +40,43 @@ export const PublicDashboard: React.FC<PublicDashboardProps> = ({ loading, onLog
   const selesai = stats.finalized + stats.complete;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#070b18] text-white">
-      <section className="relative min-h-screen px-6 py-8 md:px-12 flex items-center">
-        <div className="absolute inset-0 opacity-70">
-          <div className="absolute -top-28 -left-24 h-80 w-80 rounded-full bg-blue-500 blur-3xl animate-pulse" />
-          <div className="absolute top-1/4 right-0 h-96 w-96 rounded-full bg-cyan-400 blur-3xl opacity-50" />
-          <div className="absolute bottom-0 left-1/3 h-96 w-96 rounded-full bg-violet-500 blur-3xl opacity-40" />
+    <main className="min-h-screen bg-[#F6FAF5] text-slate-950">
+      <header className="border-b border-[#32848D]/10 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <img src="/karsa-logo.png" alt="Logo KARSA Temon" className="h-11 w-11 rounded-xl object-contain" />
+            <div>
+              <p className="text-sm font-bold tracking-wide text-[#32848D]">KARSA Temon</p>
+              <p className="text-xs text-slate-500">Kapanewon Temon · Kulon Progo</p>
+            </div>
+          </div>
+          <button
+            onClick={onLogin}
+            disabled={loading}
+            className="rounded-xl bg-[#32848D] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#276972] disabled:opacity-60"
+          >
+            {loading ? "Menyiapkan..." : "Masuk Internal"}
+          </button>
         </div>
+      </header>
 
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(255,255,255,.18),transparent_28%),linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)] bg-[length:100%_100%,64px_64px,64px_64px]" />
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_12%,rgba(203,220,165,.45),transparent_30%),radial-gradient(circle_at_12%_25%,rgba(50,132,141,.18),transparent_26%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#F6FAF5] to-transparent" />
 
-        <div className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-[1.1fr_.9fr]">
+        <div className="relative mx-auto grid min-h-[calc(100vh-76px)] max-w-7xl items-center gap-12 px-6 py-16 lg:grid-cols-[1.05fr_.95fr]">
           <div className="space-y-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm text-blue-100 shadow-2xl backdrop-blur-xl">
-              <Sparkles className="h-4 w-4 text-cyan-200" />
-              Sistem Pertanggungjawaban Kapanewon Temon
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#32848D]/15 bg-white px-4 py-2 text-sm font-medium text-[#32848D] shadow-sm">
+              <ShieldCheck className="h-4 w-4" />
+              Sistem Pengelolaan SPJ Kapanewon Temon
             </div>
 
             <div className="space-y-5">
-              <h1 className="max-w-5xl text-5xl font-black tracking-tight md:text-7xl lg:text-8xl">
-                KARSA Temon
-                <span className="block bg-gradient-to-r from-cyan-200 via-white to-blue-300 bg-clip-text text-transparent">
-                  SPJ rapi, cepat, dan siap cetak.
-                </span>
+              <h1 className="max-w-4xl text-4xl font-extrabold tracking-tight text-slate-950 md:text-6xl">
+                Pertanggungjawaban kegiatan yang tertib, terukur, dan siap cetak.
               </h1>
-              <p className="max-w-2xl text-lg leading-8 text-slate-300 md:text-xl">
-                Dashboard publik untuk memantau progres penyelesaian SPJ, dengan mesin dokumen Bend 26, daftar hadir, notulen, dan laporan aktivitas lapangan.
+              <p className="max-w-2xl text-lg leading-8 text-slate-600">
+                KARSA Temon membantu penyusunan paket SPJ melalui data kegiatan, kode rekening, daftar hadir, Bend 26, notulen, dan laporan aktivitas dalam satu alur kerja yang rapi.
               </p>
             </div>
 
@@ -73,58 +84,49 @@ export const PublicDashboard: React.FC<PublicDashboardProps> = ({ loading, onLog
               <button
                 onClick={onLogin}
                 disabled={loading}
-                className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-bold text-slate-950 shadow-2xl shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-50 disabled:cursor-wait disabled:opacity-70"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#32848D] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#32848D]/20 transition hover:-translate-y-0.5 hover:bg-[#276972] disabled:translate-y-0 disabled:cursor-wait disabled:opacity-70"
               >
                 {loading ? "Menyiapkan login..." : "Masuk Dashboard Internal"}
-                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                <ArrowRight className="h-4 w-4" />
               </button>
               <a
                 href="#statistik"
-                className="inline-flex items-center justify-center rounded-2xl border border-white/15 bg-white/10 px-6 py-4 text-sm font-bold text-white backdrop-blur-xl transition hover:bg-white/15"
+                className="inline-flex items-center justify-center rounded-2xl border border-[#32848D]/20 bg-white px-6 py-3.5 text-sm font-bold text-[#32848D] shadow-sm transition hover:bg-[#F6FAF5]"
               >
                 Lihat Statistik Publik
               </a>
             </div>
           </div>
 
-          <div className="relative min-h-[520px] perspective-distant">
-            <div className="absolute inset-x-6 top-0 rounded-[2.5rem] border border-white/15 bg-white/10 p-6 shadow-2xl backdrop-blur-2xl transform-gpu rotate-[-3deg] transition duration-500 hover:rotate-0">
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[.32em] text-cyan-200">Agregat SPJ</p>
-                  <h2 className="mt-1 text-2xl font-black">Status Penyelesaian</h2>
-                </div>
-                <img src="https://koboyo.com/icons/svg/account-statement.svg" alt="SPJ icon" className="h-14 w-14 invert" />
+          <div id="statistik" className="rounded-[2rem] border border-[#32848D]/12 bg-white p-6 shadow-2xl shadow-[#32848D]/10">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-6">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[.24em] text-[#619892]">Statistik SPJ</p>
+                <h2 className="mt-2 text-2xl font-extrabold text-slate-950">Ringkasan Penyelesaian</h2>
               </div>
-
-              <div id="statistik" className="mt-8 grid gap-4">
-                <div className="rounded-3xl bg-gradient-to-br from-cyan-300 to-blue-500 p-6 text-slate-950 shadow-2xl shadow-blue-500/30">
-                  <p className="text-sm font-bold uppercase tracking-[.25em] opacity-70">SPJ Selesai</p>
-                  <div className="mt-3 flex items-end justify-between">
-                    <strong className="text-7xl font-black tabular-nums">{selesai}</strong>
-                    <FileCheck2 className="mb-2 h-12 w-12" />
-                  </div>
-                  <p className="mt-3 text-sm font-semibold">Finalized + lengkap berdasarkan data Firestore.</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-3xl border border-white/10 bg-white/10 p-5">
-                    <ShieldCheck className="mb-4 h-7 w-7 text-emerald-300" />
-                    <p className="text-3xl font-black tabular-nums">{stats.finalized}</p>
-                    <p className="text-xs text-slate-300">Sudah final</p>
-                  </div>
-                  <div className="rounded-3xl border border-white/10 bg-white/10 p-5">
-                    <Layers3 className="mb-4 h-7 w-7 text-blue-200" />
-                    <p className="text-3xl font-black tabular-nums">{stats.total}</p>
-                    <p className="text-xs text-slate-300">Total paket SPJ</p>
-                  </div>
-                </div>
-              </div>
+              <img src="/karsa-logo.png" alt="KARSA Temon" className="h-16 w-16 rounded-2xl object-contain" />
             </div>
 
-            <div className="absolute bottom-3 left-0 right-12 rounded-[2rem] border border-white/10 bg-slate-950/70 p-5 shadow-2xl backdrop-blur-xl transform-gpu rotate-[4deg]">
-              <p className="text-sm font-bold text-cyan-100">Template resmi aktif</p>
-              <p className="mt-2 text-xs leading-6 text-slate-400">Bend 26 • Notulen • Daftar Hadir • SPJ Aktivitas Lapangan • Surat Undangan</p>
+            <div className="mt-6 rounded-3xl bg-gradient-to-br from-[#32848D] to-[#93B39D] p-6 text-white">
+              <p className="text-sm font-semibold text-white/80">SPJ sudah diselesaikan</p>
+              <div className="mt-3 flex items-end justify-between">
+                <strong className="text-7xl font-black tabular-nums">{selesai}</strong>
+                <CheckCircle2 className="mb-2 h-12 w-12 text-[#CBDCA5]" />
+              </div>
+              <p className="mt-3 text-sm text-white/85">Status COMPLETE dan FINALIZED.</p>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div className="rounded-3xl border border-slate-100 bg-[#F6FAF5] p-5">
+                <ShieldCheck className="mb-4 h-7 w-7 text-[#32848D]" />
+                <p className="text-3xl font-black tabular-nums">{stats.finalized}</p>
+                <p className="text-xs text-slate-500">Sudah final</p>
+              </div>
+              <div className="rounded-3xl border border-slate-100 bg-[#F6FAF5] p-5">
+                <FileText className="mb-4 h-7 w-7 text-[#619892]" />
+                <p className="text-3xl font-black tabular-nums">{stats.total}</p>
+                <p className="text-xs text-slate-500">Total paket SPJ</p>
+              </div>
             </div>
           </div>
         </div>

@@ -223,22 +223,26 @@ export const getOrCreateUserProfile = async (authUser: { uid: string; email: str
 
   if (snap.exists()) {
     const data = snap.data() as UserProfile;
-    // update last login
-    await updateDoc(userRef, { lastLoginAt: serverTimestamp() });
-    return data;
+    const isBootstrapAdmin = authUser.email?.toLowerCase() === "temonkec@gmail.com";
+    const bootstrapPatch = isBootstrapAdmin && (data.role !== "ADMIN" || data.jawatanId !== "kapanewon-temon")
+      ? { role: "ADMIN" as const, jawatanId: "kapanewon-temon", jawatanName: "Administrasi Kapanewon Temon", isActive: true }
+      : {};
+    await updateDoc(userRef, { ...bootstrapPatch, lastLoginAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    return { ...data, ...bootstrapPatch };
   }
 
-  // Create new user (default to USER, Jawatan Sosial for Kulon Progo / Temon)
-  const isDefaultAdmin = authUser.email?.toLowerCase().includes("brillant") || authUser.email?.toLowerCase().includes("admin");
+  // The Kapanewon account is the sole bootstrap administrator; every other account
+  // remains unassigned until that administrator sets its jawatan and access.
+  const isBootstrapAdmin = authUser.email?.toLowerCase() === "temonkec@gmail.com";
   const newUser: UserProfile = {
     uid: authUser.uid,
     email: authUser.email || "",
     displayName: authUser.displayName || authUser.email || "Pengguna KARSA",
     photoURL: authUser.photoURL,
-    role: isDefaultAdmin ? "ADMIN" : "USER",
-    jawatanId: "jawatan-sosial",
-    jawatanName: "Jawatan Sosial",
-    isActive: true,
+    role: isBootstrapAdmin ? "ADMIN" : "USER",
+    jawatanId: isBootstrapAdmin ? "kapanewon-temon" : "unassigned",
+    jawatanName: isBootstrapAdmin ? "Administrasi Kapanewon Temon" : "Belum ditetapkan",
+    isActive: isBootstrapAdmin,
   };
 
   await setDoc(userRef, sanitizeData({
@@ -308,8 +312,10 @@ export const createSpjPackage = async (params: {
   jenisBelanja: JenisBelanja;
   kodeRekening: KodeRekening;
   tanggal: string;
+  judulAktivitas: string;
+  jumlahPeserta: number;
 }): Promise<string> => {
-  const { user, kegiatan, jenisBelanja, kodeRekening, tanggal } = params;
+  const { user, kegiatan, jenisBelanja, kodeRekening, tanggal, judulAktivitas, jumlahPeserta } = params;
   const year = new Date(tanggal).getFullYear() || 2026;
   const month = new Date(tanggal).getMonth() + 1 || 8;
   const nomorSpj = await generateSpjNumber(year);
@@ -381,7 +387,8 @@ export const createSpjPackage = async (params: {
       kodeKegiatan: kegiatan.kodeKegiatan,
       kodeRekening: kodeRekening.kode,
       namaRekening: kodeRekening.nama,
-      tanggal: tanggal,
+      judulAktivitas: judulAktivitas.trim(),
+      jumlahPeserta: Math.max(1, Math.floor(jumlahPeserta)),
       paNama: "RUSDI SUWARNO, SIP, M.M",
       paNip: "19770721 199603 1 001",
       bendaharaNama: "SUBARI",
