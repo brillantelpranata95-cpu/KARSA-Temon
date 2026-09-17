@@ -40,8 +40,8 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab("dashboard")}>
             <img src="/karsa-logo.png" alt="KARSA Temon" className="h-11 w-11 rounded-xl object-contain" />
             <div>
-              <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">KARSA Temon</span>
-              <span className="block text-xs text-[#32848D] font-medium">Sistem Pengelolaan SPJ Kecamatan</span>
+              <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">KARSA TEMON</span>
+              <span className="block text-xs text-[#32848D] font-medium">Kelola Administrasi dan Rekam SPJ</span>
             </div>
           </div>
 

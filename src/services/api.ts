@@ -833,6 +833,41 @@ export const deleteSpj = async (spjId: string, user: UserProfile) => {
   });
 };
 
+// Archive SPJ (move to archive box)
+export const archiveSpj = async (spjId: string, user: UserProfile) => {
+  const spjRef = doc(db, "spj", spjId);
+  const spjSnap = await getDoc(spjRef);
+  if (!spjSnap.exists()) return;
+
+  await updateDoc(spjRef, {
+    status: "ARCHIVED",
+    archivedAt: new Date().toISOString(),
+    archivedBy: user.displayName,
+    updatedAt: serverTimestamp()
+  });
+
+  await logAudit({
+    actorUid: user.uid,
+    actorEmail: user.email,
+    action: "ARCHIVE_SPJ",
+    entityType: "SPJ",
+    entityId: spjId,
+    newValue: { status: "ARCHIVED" }
+  });
+};
+
+// Get archived SPJs
+export const getArchivedSpjList = async (user: UserProfile): Promise<SpjItem[]> => {
+  let q;
+  if (user.role === "ADMIN") {
+    q = query(collection(db, "spj"), where("status", "==", "ARCHIVED"), orderBy("archivedAt", "desc"));
+  } else {
+    q = query(collection(db, "spj"), where("status", "==", "ARCHIVED"), where("jawatanId", "==", user.jawatanId), orderBy("archivedAt", "desc"));
+  }
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as SpjItem));
+};
+
 // Create/Update Jawatan (Admin only)
 export const createJawatan = async (jawatan: Omit<Jawatan, "createdAt" | "updatedAt">, user: UserProfile) => {
   const ref = doc(db, "jawatan", jawatan.id);

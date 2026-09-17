@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { UserProfile, SpjItem, Kegiatan, JenisBelanja, KodeRekening } from "../types";
+import { UserProfile, SpjItem, Kegiatan, KodeRekening } from "../types";
 import {
   getSpjList,
   getKegiatanList,
-  getJenisBelanjaList,
   getKodeRekeningList,
   getJawatanList,
   createSpjPackage,
   reopenSpj,
   deleteSpj,
+  archiveSpj,
+  getArchivedSpjList,
   requestNewKegiatan,
   requestNewKodeRekening,
+  getSpjDocuments,
 } from "../services/api";
 import { formatDateDDMMYYYY } from "../utils/date";
 import {
@@ -23,8 +25,9 @@ import {
   RefreshCw,
   Trash2,
   ArrowRight,
-  Send,
-  Building,
+  Archive,
+  Package,
+  Download,
 } from "lucide-react";
 
 interface SpjListProps {
@@ -34,16 +37,16 @@ interface SpjListProps {
 
 export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [spjs, setSpjs] = useState<SpjItem[]>([]);
+  const [archivedSpjs, setArchivedSpjs] = useState<SpjItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
 
   const [kegiatanList, setKegiatanList] = useState<Kegiatan[]>([]);
-  const [jenisList, setJenisList] = useState<JenisBelanja[]>([]);
   const [rekList, setRekList] = useState<KodeRekening[]>([]);
   const [jawatanList, setJawatanList] = useState<{ id: string; nama: string }[]>([]);
 
   const [selectedKegiatanId, setSelectedKegiatanId] = useState("");
-  const [selectedJenisId, setSelectedJenisId] = useState("");
   const [selectedRekId, setSelectedRekId] = useState("");
   const [judulAktivitas, setJudulAktivitas] = useState("");
   const [jumlahPeserta, setJumlahPeserta] = useState<number>(20);
@@ -55,6 +58,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [reopenReason, setReopenReason] = useState("");
   const [deleteSpjId, setDeleteSpjId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [archiveSpjId, setArchiveSpjId] = useState<string | null>(null);
 
   // Request modals
   const [isRequestKegiatanOpen, setIsRequestKegiatanOpen] = useState(false);
@@ -72,25 +76,21 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [spjData, kData, jData, rData, jawatanData] = await Promise.all([
+      const [spjData, archivedData, kData, rData, jawatanData] = await Promise.all([
         getSpjList(user),
+        getArchivedSpjList(user),
         getKegiatanList(user.role === "ADMIN" ? undefined : user.jawatanId),
-        getJenisBelanjaList(),
         getKodeRekeningList(),
         getJawatanList(),
       ]);
       setSpjs(spjData);
+      setArchivedSpjs(archivedData);
       setKegiatanList(kData);
-      setJenisList(jData);
       setRekList(rData);
       setJawatanList(jawatanData);
 
       if (kData.length > 0) setSelectedKegiatanId(kData[0].id);
-      if (rData.length > 0) {
-        setSelectedRekId(rData[0].id);
-        const linkedJenis = jData.find((j) => j.kodeRekeningId === rData[0].id);
-        if (linkedJenis) setSelectedJenisId(linkedJenis.id);
-      }
+      if (rData.length > 0) setSelectedRekId(rData[0].id);
     } catch (e) {
       console.error("Gagal memuat data SPJ:", e);
     } finally {
@@ -102,10 +102,9 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     e.preventDefault();
     const k = kegiatanList.find((x) => x.id === selectedKegiatanId);
     const r = rekList.find((x) => x.id === selectedRekId);
-    const j = jenisList.find((x) => x.id === selectedJenisId);
 
-    if (!k || !r || !j) {
-      alert("Mohon lengkapi pilihan Kegiatan, Kode Rekening, dan Jenis Belanja.");
+    if (!k || !r) {
+      alert("Mohon lengkapi pilihan Kegiatan dan Kode Rekening.");
       return;
     }
 
@@ -125,7 +124,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       await createSpjPackage({
         user,
         kegiatan: k,
-        jenisBelanja: j,
+        jenisBelanja: { id: "", kode: "", nama: "", isActive: true },
         kodeRekening: r,
         tanggal: tanggalSpj,
         judulAktivitas,
@@ -170,17 +169,28 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     }
   };
 
+  const handleArchive = async () => {
+    if (!archiveSpjId) return;
+    try {
+      await archiveSpj(archiveSpjId, user);
+      setArchiveSpjId(null);
+      loadData();
+    } catch (err: any) {
+      alert("Gagal mengarsipkan SPJ: " + err.message);
+    }
+  };
+
+  const handleDownloadPdf = async (spjId: string) => {
+    alert("Fitur download PDF akan segera tersedia. Untuk saat ini, gunakan fitur Print dari halaman Preview.");
+  };
+
   const handleRequestKegiatanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reqKegKode || !reqKegNama) return;
     setSubmittingReq(true);
     try {
       await requestNewKegiatan(
-        {
-          kodeKegiatan: reqKegKode,
-          namaKegiatan: reqKegNama,
-          tahunAnggaran: new Date().getFullYear(),
-        },
+        { kodeKegiatan: reqKegKode, namaKegiatan: reqKegNama, tahunAnggaran: new Date().getFullYear() },
         user
       );
       alert("Pengajuan Kode Kegiatan berhasil dikirim. Menunggu persetujuan Admin.");
@@ -200,11 +210,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     setSubmittingReq(true);
     try {
       await requestNewKodeRekening(
-        {
-          kode: reqRekKode,
-          nama: reqRekNama,
-          tahunAnggaran: new Date().getFullYear(),
-        },
+        { kode: reqRekKode, nama: reqRekNama, tahunAnggaran: new Date().getFullYear() },
         user
       );
       alert("Pengajuan Kode Rekening berhasil dikirim. Menunggu persetujuan Admin.");
@@ -231,14 +237,80 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
             Kelola dan monitor berkas SPJ secara real-time.
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-5 py-2.5 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-2xl shadow-md transition inline-flex items-center space-x-2 text-sm"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Buat Paket SPJ Baru</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowArchive(!showArchive)}
+            className={`px-4 py-2.5 rounded-2xl font-semibold text-sm flex items-center space-x-2 transition ${
+              showArchive
+                ? "bg-[#32848D] text-white"
+                : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200"
+            }`}
+          >
+            <Archive className="w-4 h-4" />
+            <span>Arsip ({archivedSpjs.length})</span>
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-5 py-2.5 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-2xl shadow-md transition inline-flex items-center space-x-2 text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Buat Paket SPJ Baru</span>
+          </button>
+        </div>
       </div>
+
+      {/* ARCHIVE BOX */}
+      {showArchive && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 p-6 rounded-3xl border border-amber-200 dark:border-amber-800 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <Package className="w-5 h-5 text-amber-700 dark:text-amber-400" />
+              <h2 className="text-lg font-bold text-amber-900 dark:text-amber-200">Box Arsip SPJ</h2>
+            </div>
+            <span className="text-xs font-semibold bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-3 py-1 rounded-full">
+              {archivedSpjs.length} SPJ Diarsipkan
+            </span>
+          </div>
+
+          {archivedSpjs.length === 0 ? (
+            <div className="text-center py-8 text-amber-600 dark:text-amber-400 text-sm">
+              Belum ada SPJ yang diarsipkan.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {archivedSpjs.map((spj) => (
+                <div
+                  key={spj.id}
+                  className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-amber-100 dark:border-slate-700 flex items-center justify-between"
+                >
+                  <div>
+                    <p className="font-bold text-gray-900 dark:text-white text-sm">{spj.nomorSpj}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                      {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama} — {formatDateDDMMYYYY(spj.tanggal)}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleDownloadPdf(spj.id)}
+                      className="px-3 py-1.5 text-xs font-semibold text-[#32848D] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download PDF</span>
+                    </button>
+                    <button
+                      onClick={() => onSelectSpj(spj.id, "preview")}
+                      className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg inline-flex items-center space-x-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Lihat</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* TABLE LIST */}
       <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -292,9 +364,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                       <div className="flex items-center space-x-2">
                         <div className="w-16 bg-gray-200 dark:bg-slate-600 rounded-full h-2 overflow-hidden">
                           <div
-                            className={`h-2 rounded-full ${
-                              spj.progress === 100 ? "bg-emerald-500" : "bg-[#32848D]"
-                            }`}
+                            className={`h-2 rounded-full ${spj.progress === 100 ? "bg-emerald-500" : "bg-[#32848D]"}`}
                             style={{ width: `${spj.progress}%` }}
                           ></div>
                         </div>
@@ -337,7 +407,17 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                           <span>Kelola</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
-                      ) : user.role === "ADMIN" ? (
+                      ) : (
+                        <button
+                          onClick={() => setArchiveSpjId(spj.id)}
+                          className="px-3 py-1.5 text-xs font-medium text-[#32848D] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1"
+                        >
+                          <Archive className="w-3.5 h-3.5" />
+                          <span>Arsipkan</span>
+                        </button>
+                      )}
+
+                      {spj.status === "FINALIZED" && user.role === "ADMIN" && (
                         <button
                           onClick={() => setReopenSpjId(spj.id)}
                           className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg inline-flex items-center space-x-1"
@@ -345,7 +425,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                           <RefreshCw className="w-3.5 h-3.5" />
                           <span>Reopen</span>
                         </button>
-                      ) : null}
+                      )}
 
                       {user.role === "ADMIN" && (
                         <button
@@ -430,12 +510,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 </div>
                 <select
                   value={selectedRekId}
-                  onChange={(e) => {
-                    const nextRekId = e.target.value;
-                    setSelectedRekId(nextRekId);
-                    const linkedJenis = jenisList.find((j) => j.kodeRekeningId === nextRekId);
-                    if (linkedJenis) setSelectedJenisId(linkedJenis.id);
-                  }}
+                  onChange={(e) => setSelectedRekId(e.target.value)}
                   className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                 >
                   {rekList.map((r) => (
@@ -444,15 +519,6 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Jenis Belanja</label>
-                <input
-                  value={jenisList.find((j) => j.id === selectedJenisId)?.nama || "Belum dikonfigurasi untuk kode rekening ini"}
-                  readOnly
-                  className="w-full border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50 rounded-xl p-2.5 text-gray-600 dark:text-slate-300"
-                />
               </div>
 
               {/* Grid 12: Judul Aktivitas (span 9), Jumlah Peserta (span 3) */}
@@ -509,6 +575,100 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ARCHIVE SPJ */}
+      {archiveSpjId && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-[#32848D] flex items-center gap-2">
+              <Archive className="w-5 h-5" /> Arsipkan SPJ
+            </h3>
+            <p className="text-xs text-gray-600 dark:text-slate-300">
+              SPJ yang diarsipkan akan dipindahkan ke Box Arsip dan dapat diunduh dalam format PDF.
+            </p>
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                onClick={() => setArchiveSpjId(null)}
+                className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleArchive}
+                className="px-4 py-2 bg-[#32848D] text-white rounded-xl font-semibold hover:bg-[#276972]"
+              >
+                Arsipkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL REOPEN SPJ */}
+      {reopenSpjId && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-amber-600 flex items-center gap-2">
+              <RefreshCw className="w-5 h-5" /> Konfirmasi Reopen SPJ
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400">
+              Mengizinkan perbaikan dokumen SPJ yang sudah difinalisasi. Alasan reopening wajib dicatat ke Audit Log.
+            </p>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Alasan Reopen</label>
+              <textarea
+                value={reopenReason}
+                onChange={(e) => setReopenReason(e.target.value)}
+                placeholder="Contoh: Perbaikan nominal kuitansi Bend 26..."
+                className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white h-24"
+              ></textarea>
+            </div>
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                onClick={() => setReopenSpjId(null)}
+                className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleReopen}
+                className="px-4 py-2 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700"
+              >
+                Reopen SPJ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DELETE SPJ */}
+      {deleteSpjId && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-red-600 flex items-center gap-2">
+              <Trash2 className="w-5 h-5" /> Hapus Paket SPJ
+            </h3>
+            <p className="text-xs text-gray-600 dark:text-slate-300">
+              Apakah Anda yakin ingin menghapus paket SPJ ini beserta seluruh dokumennya? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                onClick={() => setDeleteSpjId(null)}
+                className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700"
+              >
+                {deleting ? "Menghapus..." : "Hapus Permanen"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -613,72 +773,6 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL REOPEN SPJ */}
-      {reopenSpjId && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-amber-600 flex items-center gap-2">
-              <RefreshCw className="w-5 h-5" /> Konfirmasi Reopen SPJ
-            </h3>
-            <p className="text-xs text-gray-500 dark:text-slate-400">
-              Mengizinkan perbaikan dokumen SPJ yang sudah difinalisasi. Alasan reopening wajib dicatat ke Audit Log.
-            </p>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Alasan Reopen</label>
-              <textarea
-                value={reopenReason}
-                onChange={(e) => setReopenReason(e.target.value)}
-                placeholder="Contoh: Perbaikan nominal kuitansi Bend 26..."
-                className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white h-24"
-              ></textarea>
-            </div>
-            <div className="flex justify-end space-x-3 pt-2">
-              <button
-                onClick={() => setReopenSpjId(null)}
-                className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl font-medium"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleReopen}
-                className="px-4 py-2 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700"
-              >
-                Reopen SPJ
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DELETE SPJ */}
-      {deleteSpjId && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-red-600 flex items-center gap-2">
-              <Trash2 className="w-5 h-5" /> Hapus Paket SPJ
-            </h3>
-            <p className="text-xs text-gray-600 dark:text-slate-300">
-              Apakah Anda yakin ingin menghapus paket SPJ ini beserta seluruh dokumennya? Tindakan ini tidak dapat dibatalkan.
-            </p>
-            <div className="flex justify-end space-x-3 pt-2">
-              <button
-                onClick={() => setDeleteSpjId(null)}
-                className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl font-medium"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700"
-              >
-                {deleting ? "Menghapus..." : "Hapus Permanen"}
-              </button>
-            </div>
           </div>
         </div>
       )}

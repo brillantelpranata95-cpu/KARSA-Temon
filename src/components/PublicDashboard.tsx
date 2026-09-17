@@ -46,8 +46,8 @@ export const PublicDashboard: React.FC<PublicDashboardProps> = ({ loading, onLog
           <div className="flex items-center gap-3">
             <img src="/karsa-logo.png" alt="Logo KARSA Temon" className="h-11 w-11 rounded-xl object-contain" />
             <div>
-              <p className="text-sm font-bold tracking-wide text-[#32848D]">KARSA Temon</p>
-              <p className="text-xs text-slate-500">Kapanewon Temon · Kulon Progo</p>
+              <p className="text-base font-bold tracking-wide text-[#32848D]">KARSA TEMON</p>
+              <p className="text-xs text-slate-500">Kelola Administrasi dan Rekam SPJ</p>
             </div>
           </div>
           <button
@@ -66,17 +66,24 @@ export const PublicDashboard: React.FC<PublicDashboardProps> = ({ loading, onLog
 
         <div className="relative mx-auto grid min-h-[calc(100vh-76px)] max-w-7xl items-center gap-12 px-6 py-16 lg:grid-cols-[1.05fr_.95fr]">
           <div className="space-y-8">
+            {/* 3-tier branding badge */}
             <div className="inline-flex items-center gap-2 rounded-full border border-[#32848D]/15 bg-white px-4 py-2 text-sm font-medium text-[#32848D] shadow-sm">
               <ShieldCheck className="h-4 w-4" />
-              Sistem Pengelolaan SPJ Kapanewon Temon
+              Sistem Pengelolaan SPJ Terintegrasi Kecamatan Temon
             </div>
 
             <div className="space-y-5">
+              {/* 3-tier branding: Title */}
               <h1 className="max-w-4xl text-4xl font-extrabold tracking-tight text-slate-950 md:text-6xl">
-                Pertanggungjawaban kegiatan yang tertib, terukur, dan siap cetak.
+                KARSA TEMON
               </h1>
-              <p className="max-w-2xl text-lg leading-8 text-slate-600">
-                KARSA Temon membantu penyusunan paket SPJ melalui data kegiatan, kode rekening, daftar hadir, Bend 26, notulen, dan laporan aktivitas dalam satu alur kerja yang rapi.
+              {/* 3-tier branding: Subtitle (kepanjangan) */}
+              <p className="text-lg font-semibold text-[#32848D]">
+                Kelola Administrasi dan Rekam SPJ
+              </p>
+              {/* 3-tier branding: Tagline */}
+              <p className="max-w-2xl text-base leading-7 text-slate-600">
+                Sistem Pengelolaan SPJ Terintegrasi Kecamatan Temon. Pertanggungjawaban kegiatan yang tertib, terukur, dan siap cetak.
               </p>
             </div>
 
