@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { UserProfile, SpjItem, SpjDocumentItem } from "../types";
 import { getSpjById, getSpjDocuments, saveSpjDocumentData, finalizeSpj } from "../services/api";
+import { terbilangRupiah } from "../utils/format";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -226,67 +227,37 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
               {/* ================= FORM EDITOR BEND 26 ================= */}
               {activeDoc.documentTypeCode === "BEND_26" && (
                 <div className="space-y-4 text-sm">
+                  <div className="rounded-xl border border-[#32848D]/15 bg-[#F6FAF5] p-4 text-sm leading-6 text-slate-700">
+                    <p>{spj.sharedData?.judulAktivitas || "Judul aktivitas"} sebanyak {spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal {spj.tanggal}</p>
+                    <p>{spj.masterSnapshot.kodeRekening.nama}</p>
+                    <p className="font-semibold">{spj.masterSnapshot.kegiatan.nama.toUpperCase()}</p>
+                  </div>
+
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Terima Dari</label>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Nominal (Rp)</label>
                     <input
-                      type="text"
-                      value={formData.terimaDari || "Bendahara Pengeluaran Kapanewon Temon"}
-                      onChange={(e) => handleFormChange("terimaDari", e.target.value)}
-                      className="w-full border border-gray-300 rounded-xl p-2.5"
+                      type="number"
+                      min="0"
+                      value={formData.nominal ?? 0}
+                      onChange={(e) => handleFormChange("nominal", Math.max(0, Number(e.target.value) || 0))}
+                      className="w-full border border-gray-300 rounded-xl p-2.5 font-bold"
                     />
+                    <p className="mt-1 text-xs text-slate-500">{terbilangRupiah(Number(formData.nominal || 0))}</p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Nominal (Rp)</label>
-                      <input
-                        type="number"
-                        value={formData.nominal || 320000}
-                        onChange={(e) => handleFormChange("nominal", Number(e.target.value))}
-                        className="w-full border border-gray-300 rounded-xl p-2.5 font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Terbilang</label>
-                      <input
-                        type="text"
-                        value={formData.uangSebesar || "Tiga ratus dua puluh ribu rupiah"}
-                        onChange={(e) => handleFormChange("uangSebesar", e.target.value)}
-                        className="w-full border border-gray-300 rounded-xl p-2.5"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Untuk Membayar</label>
-                    <textarea
-                      value={formData.untukMembayar || spj.masterSnapshot.kegiatan.nama}
-                      onChange={(e) => handleFormChange("untukMembayar", e.target.value)}
-                      className="w-full border border-gray-300 rounded-xl p-2.5 h-20"
-                    ></textarea>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Penerima</label>
-                      <input
-                        type="text"
-                        value={formData.penerimaNama || ""}
-                        onChange={(e) => handleFormChange("penerimaNama", e.target.value)}
-                        placeholder="Contoh: SUYATINI"
-                        className="w-full border border-gray-300 rounded-xl p-2.5"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Jabatan Penerima</label>
-                      <input
-                        type="text"
-                        value={formData.penerimaJabatan || ""}
-                        onChange={(e) => handleFormChange("penerimaJabatan", e.target.value)}
-                        placeholder="Contoh: Pengelola Catering"
-                        className="w-full border border-gray-300 rounded-xl p-2.5"
-                      />
-                    </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    {["phr", "pph", "ppn"].map((pajak) => (
+                      <label key={pajak} className="block text-xs font-semibold uppercase text-gray-700">
+                        Pajak {pajak}
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData[pajak] ?? 0}
+                          onChange={(e) => handleFormChange(pajak, Math.max(0, Number(e.target.value) || 0))}
+                          className="mt-1 w-full border border-gray-300 rounded-xl p-2.5 font-normal"
+                        />
+                      </label>
+                    ))}
                   </div>
                 </div>
               )}

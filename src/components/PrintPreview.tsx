@@ -1,5 +1,6 @@
 import React from "react";
 import { SpjItem, SpjDocumentItem } from "../types";
+import { terbilangRupiah } from "../utils/format";
 import { ArrowLeft, CheckCircle2, Circle, AlertCircle, ExternalLink, Printer } from "lucide-react";
 
 interface PrintPreviewProps {
@@ -71,8 +72,9 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <p>Model : Bend. 26.a</p>
               </div>
               <div className="text-right">
-                <p>Pajak Sewa / PPh / PHR : Standard</p>
-                <p>NPWP Kapanewon Temon</p>
+                <p>Pajak PHR: Rp. {Number(data.phr || 0).toLocaleString("id-ID")}</p>
+                <p>Pajak PPh: Rp. {Number(data.pph || 0).toLocaleString("id-ID")}</p>
+                <p>Pajak PPN: Rp. {Number(data.ppn || 0).toLocaleString("id-ID")}</p>
               </div>
             </div>
 
@@ -84,27 +86,24 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               <div className="grid grid-cols-12">
                 <span className="col-span-3 font-semibold">Terima dari</span>
                 <span className="col-span-1">:</span>
-                <span className="col-span-8">{data.terimaDari || "Bendahara Pengeluaran Kapanewon Temon"}</span>
+                <span className="col-span-8">Bendahara Pengeluaran Kapanewon Temon</span>
               </div>
               <div className="grid grid-cols-12">
                 <span className="col-span-3 font-semibold">Uang sebesar</span>
                 <span className="col-span-1">:</span>
-                <span className="col-span-8 capitalize font-medium">{data.uangSebesar || "Tiga ratus dua puluh ribu rupiah"}</span>
+                <span className="col-span-8 capitalize font-medium">{terbilangRupiah(Number(data.nominal || 0))}</span>
               </div>
               <div className="grid grid-cols-12">
                 <span className="col-span-3 font-semibold">Untuk membayar</span>
                 <span className="col-span-1">:</span>
-                <span className="col-span-8">{data.untukMembayar || spj.masterSnapshot.kegiatan.nama}</span>
-              </div>
-              <div className="grid grid-cols-12">
-                <span className="col-span-3 font-semibold">Uraian Belanja</span>
-                <span className="col-span-1">:</span>
-                <span className="col-span-8">{data.uraian || spj.masterSnapshot.jenisBelanja.nama}</span>
+                <span className="col-span-8 whitespace-pre-line">
+                  {`${spj.sharedData?.judulAktivitas || "Aktivitas belum diisi"} sebanyak ${spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal ${spj.tanggal}\n${spj.masterSnapshot.kodeRekening.nama}\n${spj.masterSnapshot.kegiatan.nama.toUpperCase()}`}
+                </span>
               </div>
             </div>
 
             <div className="border-t border-b border-black py-3 flex justify-between items-center font-sans">
-              <span className="font-bold text-base">TERBILANG:</span>
+              <span className="font-bold text-base">JUMLAH:</span>
               <span className="text-lg font-extrabold bg-gray-100 px-4 py-1 rounded border border-black">
                 Rp. {Number(data.nominal || 320000).toLocaleString("id-ID")}
               </span>
@@ -127,10 +126,10 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <p>NIP. {spj.sharedData?.bendaharaNip || "19700110 200801 1 013"}</p>
               </div>
               <div>
-                <p className="font-semibold">Yang Menerima</p>
+                <p className="font-semibold">PPTK</p>
                 <div className="h-20"></div>
-                <p className="font-bold underline">{data.penerimaNama || "…..................................."}</p>
-                <p>{data.penerimaJabatan || ""}</p>
+                <p className="font-bold underline">{spj.sharedData?.pptkNama || "SURADIMAN, S.I.P., M.M."}</p>
+                <p>NIP. {spj.sharedData?.pptkNip || "19730101 199303 1 008"}</p>
               </div>
             </div>
 
@@ -237,16 +236,12 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               DAFTAR HADIR
             </div>
 
-            <div className="grid grid-cols-2 text-xs py-2 gap-2">
-              <div>
-                <p><span className="font-semibold inline-block w-20">HARI</span>: {data.hari || "RABU"}</p>
-                <p><span className="font-semibold inline-block w-20">TANGGAL</span>: {data.tanggal || spj.tanggal}</p>
-                <p><span className="font-semibold inline-block w-20">JAM</span>: {data.jam || "09.00 WIB s.d. 11.00 WIB"}</p>
-              </div>
-              <div>
-                <p><span className="font-semibold inline-block w-20">TEMPAT</span>: {data.tempat || "PENDOPO KAPANEWON TEMON"}</p>
-                <p><span className="font-semibold inline-block w-20">ACARA</span>: {data.acara || spj.masterSnapshot.kegiatan.nama}</p>
-              </div>
+            <div className="text-left text-xs py-2 space-y-1">
+              <p><span className="font-semibold inline-block w-24">HARI</span>: {data.hari || "RABU"}</p>
+              <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {data.tanggal || spj.tanggal}</p>
+              <p><span className="font-semibold inline-block w-24">PUKUL</span>: {data.jam || "09.00 WIB s.d. 11.00 WIB"}</p>
+              <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {data.tempat || "PENDOPO KAPANEWON TEMON"}</p>
+              <p><span className="font-semibold inline-block w-24">ACARA</span>: {data.acara || spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
             </div>
 
             <table className="w-full border border-black text-xs text-center border-collapse">
@@ -259,7 +254,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 </tr>
               </thead>
               <tbody>
-                {Array.from({ length: 15 }).map((_, idx) => (
+                {Array.from({ length: Number(spj.sharedData?.jumlahPeserta || data.peserta?.length || 15) }).map((_, idx) => (
                   <tr key={idx} className="border-b border-black h-8">
                     <td className="border-r border-black">{idx + 1}</td>
                     <td className="border-r border-black text-left px-2">

@@ -416,7 +416,9 @@ export const createSpjPackage = async (params: {
       templateId: `tpl-${item.documentTypeCode.toLowerCase()}`,
       templateVersion: 1,
       status: "DRAFT",
-      data: {},
+      data: item.documentTypeCode === "DAFTAR_HADIR"
+        ? { peserta: Array.from({ length: Math.max(1, Math.floor(jumlahPeserta)) }, (_, index) => ({ no: index + 1, nama: "", jabatan: "", tandaTangan: "" })) }
+        : {},
       validation: {
         isValid: false,
         errors: [{ field: "general", message: "Dokumen belum diisi" }]

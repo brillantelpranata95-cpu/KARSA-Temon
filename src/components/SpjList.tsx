@@ -30,6 +30,8 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [selectedJenisId, setSelectedJenisId] = useState("");
   const [selectedRekId, setSelectedRekId] = useState("");
   const [tanggalSpj, setTanggalSpj] = useState(new Date().toISOString().split("T")[0]);
+  const [judulAktivitas, setJudulAktivitas] = useState("");
+  const [jumlahPeserta, setJumlahPeserta] = useState(20);
   const [creating, setCreating] = useState(false);
 
   // Admin Reopen State
@@ -65,7 +67,11 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
 
       if (keg.length > 0) setSelectedKegiatanId(keg[0].id);
       if (jen.length > 0) setSelectedJenisId(jen[0].id);
-      if (rek.length > 0) setSelectedRekId(rek[0].id);
+      if (rek.length > 0) {
+        const initialJenis = jen[0];
+        const matchingRek = initialJenis?.kodeRekeningId ? rek.find(r => r.id === initialJenis.kodeRekeningId) : rek[0];
+        setSelectedRekId((matchingRek || rek[0]).id);
+      }
     } catch (e) {
       console.error("Failed to fetch modal dropdowns:", e);
     }
@@ -79,8 +85,8 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     const jenisBelanja = jenisList.find(j => j.id === selectedJenisId);
     const kodeRekening = rekList.find(r => r.id === selectedRekId);
 
-    if (!kegiatan || !jenisBelanja || !kodeRekening) {
-      alert("Harap lengkapi pilihan kegiatan, jenis belanja, dan kode rekening");
+    if (!kegiatan || !jenisBelanja || !kodeRekening || !judulAktivitas.trim() || jumlahPeserta < 1) {
+      alert("Harap lengkapi kegiatan, jenis belanja, kode rekening, judul aktivitas, dan jumlah peserta.");
       setCreating(false);
       return;
     }
@@ -91,7 +97,9 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         kegiatan,
         jenisBelanja,
         kodeRekening,
-        tanggal: tanggalSpj
+        tanggal: tanggalSpj,
+        judulAktivitas,
+        jumlahPeserta
       });
 
       setIsModalOpen(false);
@@ -270,26 +278,16 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Pilih Jenis Belanja</label>
-                <select
-                  value={selectedJenisId}
-                  onChange={(e) => setSelectedJenisId(e.target.value)}
-                  className="w-full border border-gray-300 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-500"
-                >
-                  {jenisList.map((j) => (
-                    <option key={j.id} value={j.id}>
-                      {j.nama}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Kode Rekening</label>
                 <select
                   value={selectedRekId}
-                  onChange={(e) => setSelectedRekId(e.target.value)}
-                  className="w-full border border-gray-300 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => {
+                    const nextRekId = e.target.value;
+                    setSelectedRekId(nextRekId);
+                    const linkedJenis = jenisList.find(j => j.kodeRekeningId === nextRekId);
+                    if (linkedJenis) setSelectedJenisId(linkedJenis.id);
+                  }}
+                  className="w-full border border-gray-300 rounded-xl p-2.5 focus:ring-2 focus:ring-[#32848D]"
                 >
                   {rekList.map((r) => (
                     <option key={r.id} value={r.id}>
@@ -297,6 +295,40 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Jenis Belanja</label>
+                <input
+                  value={jenisList.find(j => j.id === selectedJenisId)?.nama || "Belum dikonfigurasi untuk kode rekening ini"}
+                  readOnly
+                  className="w-full border border-gray-200 bg-gray-50 rounded-xl p-2.5 text-gray-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Judul Aktivitas</label>
+                  <input
+                    type="text"
+                    value={judulAktivitas}
+                    onChange={(e) => setJudulAktivitas(e.target.value)}
+                    placeholder="Contoh: Rapat Koordinasi Persiapan Kegiatan"
+                    required
+                    className="w-full border border-gray-300 rounded-xl p-2.5 focus:ring-2 focus:ring-[#32848D]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Jumlah Peserta</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={jumlahPeserta}
+                    onChange={(e) => setJumlahPeserta(Math.max(1, Number(e.target.value) || 1))}
+                    required
+                    className="w-full border border-gray-300 rounded-xl p-2.5 focus:ring-2 focus:ring-[#32848D]"
+                  />
+                </div>
               </div>
 
               <div>
