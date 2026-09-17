@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "./context/AuthContext";
 import { Navbar } from "./components/Navbar";
+import { Dashboard } from "./components/Dashboard";
 import { SpjList } from "./components/SpjList";
 import { SpjWizard } from "./components/SpjWizard";
 import { PrintPreview } from "./components/PrintPreview";
@@ -11,7 +12,7 @@ import { SpjItem, SpjDocumentItem } from "./types";
 
 export function App() {
   const { user, loading, signInWithGoogle, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "spj" | "master" | "audit">("spj");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "spj" | "master" | "audit">("dashboard");
 
   const [selectedSpjId, setSelectedSpjId] = useState<string | null>(null);
   const [selectedSpj, setSelectedSpj] = useState<SpjItem | null>(null);
@@ -26,12 +27,17 @@ export function App() {
     setSelectedDocs(docs);
   };
 
+  const handleCreateSpj = () => {
+    setActiveTab("spj");
+    setViewMode("list");
+  };
+
   if (!user) {
     return <PublicDashboard loading={loading} onLogin={signInWithGoogle} />;
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 text-slate-900">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors">
       <Navbar
         user={user}
         activeTab={activeTab}
@@ -56,7 +62,9 @@ export function App() {
             onBack={() => setViewMode("list")}
             onPreview={() => handleSelectSpj(selectedSpjId, "preview")}
           />
-        ) : activeTab === "dashboard" || activeTab === "spj" ? (
+        ) : activeTab === "dashboard" ? (
+          <Dashboard user={user} onCreateSpj={handleCreateSpj} />
+        ) : activeTab === "spj" ? (
           <SpjList user={user} onSelectSpj={handleSelectSpj} />
         ) : (
           <AdminView user={user} activeTab={activeTab as "master" | "audit"} />

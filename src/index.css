@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-karsa-primary: #32848D;
+  --color-karsa-accent: #CBDCA5;
+  --color-karsa-bg: #F6FAF5;
+}

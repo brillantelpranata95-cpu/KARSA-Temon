@@ -6,6 +6,7 @@ import {
   setDoc,
   updateDoc,
   addDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -604,6 +605,139 @@ export const updateSpjSharedData = async (spjId: string, sharedDataPatch: Partia
   const current = snap.data() as SpjItem;
   const updatedShared = { ...(current.sharedData || {}), ...sharedDataPatch };
   await updateDoc(spjRef, sanitizeData({ sharedData: updatedShared, updatedAt: serverTimestamp() }));
+};
+
+// Delete SPJ (Admin only)
+export const deleteSpj = async (spjId: string, user: UserProfile) => {
+  const spjRef = doc(db, "spj", spjId);
+  const docsSnap = await getDocs(query(collection(db, "spjDocuments"), where("spjId", "==", spjId)));
+  
+  // Delete all associated documents
+  const batch = writeBatch(db);
+  docsSnap.docs.forEach(d => batch.delete(d.ref));
+  batch.delete(spjRef);
+  await batch.commit();
+
+  await logAudit({
+    actorUid: user.uid,
+    actorEmail: user.email,
+    action: "DELETE_SPJ",
+    entityType: "SPJ",
+    entityId: spjId,
+    reason: "SPJ dihapus oleh administrator"
+  });
+};
+
+// Create/Update Jawatan (Admin only)
+export const createJawatan = async (jawatan: Omit<Jawatan, "createdAt" | "updatedAt">, user: UserProfile) => {
+  const ref = doc(db, "jawatan", jawatan.id);
+  await setDoc(ref, sanitizeData({
+    ...jawatan,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  }));
+  
+  await logAudit({
+    actorUid: user.uid,
+    actorEmail: user.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: jawatan.id,
+    newValue: { type: "JAWATAN", data: jawatan }
+  });
+  
+  return jawatan.id;
+};
+
+export const updateJawatan = async (jawatanId: string, patchData: Partial<Jawatan>, user: UserProfile) => {
+  const ref = doc(db, "jawatan", jawatanId);
+  await updateDoc(ref, sanitizeData({ ...patchData, updatedAt: serverTimestamp() }));
+  
+  await logAudit({
+    actorUid: user.uid,
+    actorEmail: user.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: jawatanId,
+    newValue: { type: "JAWATAN_UPDATE", data: patchData }
+  });
+};
+
+export const deleteJawatan = async (jawatanId: string, user: UserProfile) => {
+  await deleteDoc(doc(db, "jawatan", jawatanId));
+  
+  await logAudit({
+    actorUid: user.uid,
+    actorEmail: user.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: jawatanId,
+    reason: "Jawatan dihapus oleh administrator"
+  });
+};
+
+// Get SPJ statistics for dashboard/AI analysis
+export const getSpjStatistics = async (user: UserProfile): Promise<{
+  totalSpj: number;
+  finalizedSpj: number;
+  inProgressSpj: number;
+  draftSpj: number;
+  totalNominal: number;
+  byKategori: Record<string, { count: number; totalNominal: number; percentage: number }>;
+}> => {
+  const spjCol = collection(db, "spj");
+  const q = user.role !== "ADMIN"
+    ? query(spjCol, where("jawatanId", "==", user.jawatanId))
+    : spjCol;
+  const snap = await getDocs(q);
+  const spjList = snap.docs.map(d => ({ id: d.id, ...d.data() } as SpjItem));
+  
+  // Fetch documents to get nominal data
+  const allDocSnap = await getDocs(collection(db, "spjDocuments"));
+  const allDocs = allDocSnap.docs.map(d => ({ id: d.id, ...d.data() } as SpjDocumentItem));
+  
+  let totalNominal = 0;
+  const byKategori: Record<string, { count: number; totalNominal: number }> = {};
+  
+  for (const spj of spjList) {
+    const spjDocs = allDocs.filter(d => d.spjId === spj.id);
+    const bend26Doc = spjDocs.find(d => d.documentTypeCode === "BEND_26");
+    const nominal = Number(bend26Doc?.data?.nominal || 0);
+    totalNominal += nominal;
+    
+    // Classify by kode rekening nama for AI analysis
+    const rekNama = spj.masterSnapshot.kodeRekening?.nama || "LAINNYA";
+    const kategori = rekNama.toUpperCase().includes("RAPAT") ? "MAKAN_MINUM_RAPAT"
+      : rekNama.toUpperCase().includes("LAPANGAN") ? "MAKAN_MINUM_LAPANGAN"
+      : rekNama.toUpperCase().includes("HONOR") || rekNama.toUpperCase().includes("JASA") ? "HONOR_JASA"
+      : rekNama.toUpperCase().includes("ATK") ? "ATK"
+      : rekNama.toUpperCase().includes("TRANSPORT") ? "TRANSPORT"
+      : "LAINNYA";
+      
+    if (!byKategori[kategori]) {
+      byKategori[kategori] = { count: 0, totalNominal: 0 };
+    }
+    byKategori[kategori].count += 1;
+    byKategori[kategori].totalNominal += nominal;
+  }
+  
+  // Calculate percentages
+  const byKategoriWithPercentage: Record<string, { count: number; totalNominal: number; percentage: number }> = {};
+  Object.keys(byKategori).forEach(key => {
+    byKategoriWithPercentage[key] = {
+      ...byKategori[key],
+      percentage: totalNominal > 0 ? (byKategori[key].totalNominal / totalNominal) * 100 : 0
+    };
+  });
+  
+  return {
+    totalSpj: spjList.length,
+    finalizedSpj: spjList.filter(s => s.status === "FINALIZED").length,
+    inProgressSpj: spjList.filter(s => s.status === "IN_PROGRESS" || s.status === "COMPLETE").length,
+    draftSpj: spjList.filter(s => s.status === "DRAFT").length,
+    totalNominal,
+    byKategori: byKategoriWithPercentage
+  };
 };
 
 // Update User Access (Admin only)

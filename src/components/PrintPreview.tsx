@@ -9,6 +9,16 @@ interface PrintPreviewProps {
   onBack: () => void;
 }
 
+// Format date to dd-mm-yyyy
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  return dateStr;
+};
+
 export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack }) => {
   const [selectedDocCode, setSelectedDocCode] = React.useState<string>("BEND_26");
 
@@ -71,11 +81,6 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <p>Lembar : I / II / III / IV / V</p>
                 <p>Model : Bend. 26.a</p>
               </div>
-              <div className="text-right">
-                <p>Pajak PHR: Rp. {Number(data.phr || 0).toLocaleString("id-ID")}</p>
-                <p>Pajak PPh: Rp. {Number(data.pph || 0).toLocaleString("id-ID")}</p>
-                <p>Pajak PPN: Rp. {Number(data.ppn || 0).toLocaleString("id-ID")}</p>
-              </div>
             </div>
 
             <div className="text-center py-2">
@@ -97,15 +102,15 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <span className="col-span-3 font-semibold">Untuk membayar</span>
                 <span className="col-span-1">:</span>
                 <span className="col-span-8 whitespace-pre-line">
-                  {`${spj.sharedData?.judulAktivitas || "Aktivitas belum diisi"} sebanyak ${spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal ${spj.tanggal}\n${spj.masterSnapshot.kodeRekening.nama}\n${spj.masterSnapshot.kegiatan.nama.toUpperCase()}`}
+                  {`${spj.sharedData?.judulAktivitas || "Aktivitas belum diisi"} sebanyak ${spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal ${formatDate(spj.tanggal)}\n${spj.masterSnapshot.kodeRekening.nama}\n${spj.masterSnapshot.kegiatan.nama.toUpperCase()}`}
                 </span>
               </div>
             </div>
 
             <div className="border-t border-b border-black py-3 flex justify-between items-center font-sans">
-              <span className="font-bold text-base">JUMLAH:</span>
-              <span className="text-lg font-extrabold bg-gray-100 px-4 py-1 rounded border border-black">
-                Rp. {Number(data.nominal || 320000).toLocaleString("id-ID")}
+              <span className="font-bold text-base">Terbilang</span>
+              <span className="text-base font-bold capitalize text-right max-w-md">
+                {terbilangRupiah(Number(data.nominal || 0))}
               </span>
             </div>
 
@@ -147,7 +152,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               </div>
               <div>
                 <p>Telah dibukukan BK. Tgl: ……………</p>
-                <p className="font-mono">Kode Rek: {spj.masterSnapshot.kodeRekening.kode}</p>
+                <p className="font-mono">Kode Rek: {spj.masterSnapshot.kegiatan.kode} {spj.masterSnapshot.kodeRekening.kode}</p>
                 <p>Tahun Anggaran: {spj.tahunAnggaran}</p>
               </div>
             </div>
@@ -237,7 +242,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
 
             <div className="text-left text-xs py-2 space-y-1">
               <p><span className="font-semibold inline-block w-24">HARI</span>: {data.hari || "RABU"}</p>
-              <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {data.tanggal || spj.tanggal}</p>
+              <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {data.tanggal || formatDate(spj.tanggal)}</p>
               <p><span className="font-semibold inline-block w-24">PUKUL</span>: {data.jam || "09.00 WIB s.d. 11.00 WIB"}</p>
               <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {data.tempat || "PENDOPO KAPANEWON TEMON"}</p>
               <p><span className="font-semibold inline-block w-24">ACARA</span>: {data.acara || spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
@@ -272,7 +277,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
 
             <div className="flex justify-end pt-4">
               <div className="text-center w-64 text-xs">
-                <p>Temon, {spj.tanggal}</p>
+                <p>Temon, {formatDate(spj.tanggal)}</p>
                 <p className="font-semibold">PPTK</p>
                 <div className="h-16"></div>
                 <p className="font-bold underline">{spj.sharedData?.pptkNama || "SURADIMAN, S.I.P., M.M."}</p>
@@ -342,65 +347,34 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
         {/* ==================== SURAT UNDANGAN TEMPLATE ==================== */}
         {selectedDocCode === "SURAT_UNDANGAN" && (
           <div className="space-y-6 font-serif text-black text-sm">
-            {data.externalUrl ? (
-              <div className="bg-blue-50 border border-blue-200 p-6 rounded-2xl text-center space-y-4 print:hidden">
-                <p className="text-blue-900 font-semibold">Tautan Dokumen External Google Drive Berhasil Dihubungkan:</p>
-                <a
-                  href={data.externalUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center space-x-2 text-blue-600 underline font-mono text-sm"
-                >
-                  <span>{data.externalUrl}</span>
-                  <ExternalLink className="w-4 h-4" />
-                </a>
+            {activeDoc?.externalUrl ? (
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl text-center space-y-2 print:hidden">
+                  <p className="text-blue-900 font-semibold">Surat Undangan dari Google Drive:</p>
+                  <a
+                    href={activeDoc.externalUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center space-x-2 text-blue-600 underline font-mono text-sm"
+                  >
+                    <span>{activeDoc.externalUrl}</span>
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+                <div className="border border-gray-300 rounded-xl overflow-hidden">
+                  <iframe
+                    src={activeDoc.externalUrl.replace("/view?usp=drive_fs", "/preview").replace("/edit", "/preview")}
+                    className="w-full h-[800px] border-0"
+                    title="Surat Undangan"
+                  ></iframe>
+                </div>
               </div>
-            ) : null}
-
-            <div className="text-center border-b-2 border-black pb-2 space-y-0.5">
-              <p className="font-bold text-base uppercase">PEMERINTAH KABUPATEN KULON PROGO</p>
-              <p className="font-extrabold text-xl uppercase">KAPANEWON TEMON</p>
-              <p className="text-xs">Alamat : Jalan Raya Wates-Purworejo Km 10,4 Temon Kulon Progo Telp. (0274) 6472581</p>
-            </div>
-
-            <div className="flex justify-between text-xs pt-2">
-              <div>
-                <p>Nomor : 005 / {spj.nomorSpj.split("/").pop()}</p>
-                <p>Sifat : Penting</p>
-                <p>Hal : Undangan Rapat Koordinasi</p>
+            ) : (
+              <div className="text-center p-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
+                <p>Belum ada tautan Google Drive yang ditautkan untuk surat undangan ini.</p>
+                <p className="text-xs mt-2">Silakan isi tautan di editor SPJ terlebih dahulu.</p>
               </div>
-              <div className="text-right">
-                <p>Temon, {spj.tanggal}</p>
-                <p>Kepada Yth.</p>
-                <p className="font-bold">{data.tujuanUndangan || "Bapak/Ibu Peserta Rapat"}</p>
-                <p>di Tempat</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 leading-relaxed text-justify pt-4">
-              <p>Dengan hormat,</p>
-              <p>
-                Mengharap kehadiran Bapak/Ibu pada rapat koordinasi pelaksanaan kegiatan {spj.masterSnapshot.kegiatan.nama} yang akan diselenggarakan besok pada:
-              </p>
-
-              <div className="pl-6 space-y-1 text-xs">
-                <p><span className="font-semibold inline-block w-24">Hari / Tanggal</span>: {data.hariTanggal || "Rabu, 05 Agustus 2026"}</p>
-                <p><span className="font-semibold inline-block w-24">Waktu</span>: {data.waktu || "09.00 WIB s.d. selesai"}</p>
-                <p><span className="font-semibold inline-block w-24">Tempat</span>: {data.tempat || "Pendopo Kapanewon Temon"}</p>
-                <p><span className="font-semibold inline-block w-24">Acara</span>: {data.acara || "Rapat Koordinasi"}</p>
-              </div>
-
-              <p>Demikian undangan ini kami sampaikan, atas perhatian dan kehadirannya diucapkan terima kasih.</p>
-            </div>
-
-            <div className="flex justify-end pt-8">
-              <div className="text-center w-64 text-xs">
-                <p className="font-semibold">Panewu Temon</p>
-                <div className="h-20"></div>
-                <p className="font-bold underline">{spj.sharedData?.panewuNama || "RUSDI SUWARNO, SIP, M.M"}</p>
-                <p>NIP. {spj.sharedData?.panewuNip || "19770721 199603 1 001"}</p>
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>

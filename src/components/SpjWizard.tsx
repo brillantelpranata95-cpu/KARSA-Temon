@@ -351,30 +351,33 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
               {/* ================= FORM EDITOR SURAT UNDANGAN ================= */}
               {activeDoc.documentTypeCode === "SURAT_UNDANGAN" && (
                 <div className="space-y-4 text-sm">
-                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl space-y-2">
-                    <label className="block text-xs font-bold text-blue-900">
-                      Tautan Dokumen External Google Drive (Optional)
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-xl space-y-2">
+                    <label className="block text-xs font-bold text-blue-900 dark:text-blue-200">
+                      Tautan Dokumen External Google Drive (Wajib)
                     </label>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      Surat undangan sudah dibuat di luar web app ini. Cukup tautkan link Google Drive untuk verifikasi & cetak.
+                    </p>
                     <div className="flex items-center space-x-2">
                       <LinkIcon className="w-4 h-4 text-blue-600" />
                       <input
                         type="url"
                         value={externalUrl}
                         onChange={(e) => setExternalUrl(e.target.value)}
-                        placeholder="https://drive.google.com/file/d/..."
-                        className="w-full border border-blue-300 rounded-lg p-2 text-xs bg-white"
+                        placeholder="https://drive.google.com/file/d/... atau https://drive.google.com/document/d/..."
+                        className="w-full border border-blue-300 dark:border-blue-700 rounded-lg p-2 text-xs bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       />
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Tujuan Undangan</label>
-                    <input
-                      type="text"
-                      value={formData.tujuanUndangan || "Bapak/Ibu Kepala Sekolah Penampil"}
-                      onChange={(e) => handleFormChange("tujuanUndangan", e.target.value)}
-                      className="w-full border border-gray-300 rounded-xl p-2.5"
-                    />
+                    {externalUrl && (
+                      <div className="mt-2 p-2 bg-white dark:bg-slate-700 rounded-lg border border-blue-200 dark:border-slate-600">
+                        <p className="text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Preview:</p>
+                        <iframe
+                          src={externalUrl.replace("/view?usp=drive_fs", "/preview").replace("/edit", "/preview")}
+                          className="w-full h-64 rounded-lg border-0"
+                          title="Surat Undangan Preview"
+                        ></iframe>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
