@@ -107,7 +107,6 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               <span className="text-lg font-extrabold bg-gray-100 px-4 py-1 rounded border border-black">
                 Rp. {Number(data.nominal || 320000).toLocaleString("id-ID")}
               </span>
-              <span className="text-xs">Temon, {data.tanggalKas || spj.tanggal}</span>
             </div>
 
             {/* Signature Area */}

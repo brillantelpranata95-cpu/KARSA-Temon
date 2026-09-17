@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { UserProfile, SpjItem, SpjDocumentItem } from "../types";
-import { getSpjById, getSpjDocuments, saveSpjDocumentData, finalizeSpj } from "../services/api";
+import { getSpjById, getSpjDocuments, saveSpjDocumentData, finalizeSpj, updateSpjSharedData } from "../services/api";
 import { terbilangRupiah } from "../utils/format";
 import {
   ArrowLeft,
@@ -12,7 +12,8 @@ import {
   Plus,
   Trash2,
   Printer,
-  ShieldCheck
+  ShieldCheck,
+  UserCheck
 } from "lucide-react";
 
 interface SpjWizardProps {
@@ -33,11 +34,23 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [externalUrl, setExternalUrl] = useState<string>("");
 
+  // PPTK Settings State
+  const [isPptkModalOpen, setIsPptkModalOpen] = useState(false);
+  const [pptkNama, setPptkNama] = useState("");
+  const [pptkNip, setPptkNip] = useState("");
+  const [pptkPangkat, setPptkPangkat] = useState("");
+
   const loadSpjData = async () => {
     try {
       const [s, docs] = await Promise.all([getSpjById(spjId), getSpjDocuments(spjId)]);
       setSpj(s);
       setDocuments(docs);
+
+      if (s?.sharedData) {
+        setPptkNama(s.sharedData.pptkNama || "SURADIMAN, S.I.P., M.M.");
+        setPptkNip(s.sharedData.pptkNip || "19730101 199303 1 008");
+        setPptkPangkat(s.sharedData.pptkPangkat || "Pembina; IV/a");
+      }
 
       if (docs.length > 0 && !selectedDocId) {
         setSelectedDocId(docs[0].id);
@@ -94,6 +107,23 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
     }
   };
 
+  const handleSavePptk = async () => {
+    if (!spj) return;
+    try {
+      await updateSpjSharedData(spj.id, {
+        pptkNama: pptkNama.trim(),
+        pptkNip: pptkNip.trim(),
+        pptkPangkat: pptkPangkat.trim()
+      });
+      setIsPptkModalOpen(false);
+      await loadSpjData();
+      alert("Penandatangan PPTK berhasil diperbarui!");
+    } catch (err) {
+      console.error("Failed to update PPTK:", err);
+      alert("Gagal memperbarui PPTK.");
+    }
+  };
+
   if (!spj) {
     return <div className="p-8 text-center text-gray-500">Memuat SPJ...</div>;
   }
@@ -122,6 +152,14 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
         {/* Action Controls */}
         <div className="flex items-center space-x-3 w-full md:w-auto justify-end">
+          <button
+            onClick={() => setIsPptkModalOpen(true)}
+            className="px-4 py-2 bg-[#F6FAF5] hover:bg-[#CBDCA5]/40 text-[#32848D] border border-[#32848D]/20 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-colors"
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>Atur PPTK</span>
+          </button>
+
           <button
             onClick={onPreview}
             className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-semibold flex items-center space-x-2"
@@ -367,6 +405,73 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
           )}
         </div>
       </div>
+
+      {/* Modal Edit PPTK Penandatangan */}
+      {isPptkModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
+              <UserCheck className="w-5 h-5" />
+              <span>Pengaturan Penandatangan PPTK</span>
+            </div>
+            <p className="text-xs text-gray-500">
+              Atur nama, NIP, dan pangkat/jabatan PPTK yang akan mencetak di seluruh dokumen SPJ ini.
+            </p>
+
+            <div className="space-y-3 text-sm">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Nama PPTK</label>
+                <input
+                  type="text"
+                  value={pptkNama}
+                  onChange={(e) => setPptkNama(e.target.value)}
+                  placeholder="SURADIMAN, S.I.P., M.M."
+                  className="w-full border border-gray-300 rounded-xl p-2.5"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">NIP PPTK</label>
+                <input
+                  type="text"
+                  value={pptkNip}
+                  onChange={(e) => setPptkNip(e.target.value)}
+                  placeholder="19730101 199303 1 008"
+                  className="w-full border border-gray-300 rounded-xl p-2.5"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Pangkat / Golongan PPTK</label>
+                <input
+                  type="text"
+                  value={pptkPangkat}
+                  onChange={(e) => setPptkPangkat(e.target.value)}
+                  placeholder="Pembina; IV/a"
+                  className="w-full border border-gray-300 rounded-xl p-2.5"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-3 border-t">
+              <button
+                type="button"
+                onClick={() => setIsPptkModalOpen(false)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl font-medium text-sm"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePptk}
+                className="px-5 py-2 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-xl text-sm shadow-sm"
+              >
+                Simpan Penandatangan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

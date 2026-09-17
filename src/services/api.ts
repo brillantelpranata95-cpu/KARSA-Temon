@@ -595,3 +595,32 @@ export const reopenSpj = async (spjId: string, reason: string, user: UserProfile
     newValue: { status: "IN_PROGRESS" }
   });
 };
+
+// Update SPJ Shared Data (e.g. PPTK Nama, NIP, Pangkat)
+export const updateSpjSharedData = async (spjId: string, sharedDataPatch: Partial<SpjItem["sharedData"]>) => {
+  const spjRef = doc(db, "spj", spjId);
+  const snap = await getDoc(spjRef);
+  if (!snap.exists()) return;
+  const current = snap.data() as SpjItem;
+  const updatedShared = { ...(current.sharedData || {}), ...sharedDataPatch };
+  await updateDoc(spjRef, sanitizeData({ sharedData: updatedShared, updatedAt: serverTimestamp() }));
+};
+
+// Update User Access (Admin only)
+export const getAllUsers = async (): Promise<UserProfile[]> => {
+  const snap = await getDocs(collection(db, "users"));
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
+};
+
+export const updateUserAccess = async (targetUid: string, patchData: { role?: "ADMIN" | "USER"; jawatanId?: string; jawatanName?: string; isActive?: boolean }, actor: UserProfile) => {
+  const userRef = doc(db, "users", targetUid);
+  await updateDoc(userRef, sanitizeData({ ...patchData, updatedAt: serverTimestamp() }));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "UPDATE_USER_ACCESS",
+    entityType: "USER",
+    entityId: targetUid,
+    newValue: patchData
+  });
+};
