@@ -365,7 +365,11 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                     <div className="bg-gray-50 dark:bg-slate-700/40 rounded-xl p-4 space-y-1.5">
                       <div className="flex items-center space-x-2 text-[11px] font-semibold text-gray-500 dark:text-slate-400">
                         <Eye className="w-3.5 h-3.5" />
-                        <span>Data ditetapkan Administrator Kapanewon</span>
+                        <span>
+                          {field.jawatanManaged
+                            ? "Diatur oleh jawatan masing-masing — admin memantau"
+                            : "Data ditetapkan Administrator Kapanewon"}
+                        </span>
                       </div>
                       {primary ? (
                         <>
