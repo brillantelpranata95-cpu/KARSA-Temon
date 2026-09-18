@@ -65,7 +65,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
   const [qrRemaining, setQrRemaining] = useState<number>(0);
   const [qrGenerating, setQrGenerating] = useState(false);
   // Attendance rows captured via QR — synced live so the daftar hadir fills itself
-  const [qrAttendance, setQrAttendance] = useState<Array<{ id: string; nama: string; ttdImage?: string }>>([]);
+  const [qrAttendance, setQrAttendance] = useState<Array<{ id: string; nama: string; jabatan: string; ttdImage?: string }>>([]);
 
   // Countdown for the active QR session (30 minutes TTL)
   useEffect(() => {
@@ -112,7 +112,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
     const unsub = onSnapshot(collection(db, "spj", spjId, "attendance"), (snap) => {
       const rows = snap.docs.map((d) => {
         const data = d.data() as any;
-        return { id: d.id, nama: data.nama || "", ttdImage: data.ttdImage || "" };
+        return { id: d.id, nama: data.nama || "", jabatan: data.jabatan || "", ttdImage: data.ttdImage || "" };
       });
       setQrAttendance(rows);
     });
@@ -832,7 +832,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                               (p: any) => p?.nama && !qrNames.has(String(p.nama).trim().toLowerCase())
                             );
                             const merged = [
-                              ...qrRows.map((r) => ({ nama: r.nama, jabatan: "", ttdImage: r.ttdImage })),
+                              ...qrRows.map((r) => ({ nama: r.nama, jabatan: r.jabatan || "", ttdImage: r.ttdImage })),
                               ...manualRows.map((p: any) => ({ nama: p.nama, jabatan: p.jabatan || "", ttdImage: p.ttdImage || "" })),
                             ];
                             const totalRows = Math.max(

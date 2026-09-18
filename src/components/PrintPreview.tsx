@@ -23,7 +23,7 @@ const formatDateList = (dates?: string[], fallback?: string): string => {
 export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack }) => {
   const [selectedDocCode, setSelectedDocCode] = React.useState<string>("BEND_26");
   // Live QR attendance rows so the printed daftar hadir matches what was submitted
-  const [qrAttendance, setQrAttendance] = React.useState<Array<{ id: string; nama: string; ttdImage?: string }>>([]);
+  const [qrAttendance, setQrAttendance] = React.useState<Array<{ id: string; nama: string; jabatan: string; ttdImage?: string }>>([]);
 
   React.useEffect(() => {
     if (!spj?.id) return;
@@ -31,7 +31,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
       setQrAttendance(
         snap.docs.map((d) => {
           const row = d.data() as any;
-          return { id: d.id, nama: row.nama || "", ttdImage: row.ttdImage || "" };
+          return { id: d.id, nama: row.nama || "", jabatan: row.jabatan || "", ttdImage: row.ttdImage || "" };
         })
       );
     });
@@ -48,7 +48,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
     const manualRows = manual
       .filter((p: any) => p?.nama && !qrNames.has(String(p.nama).trim().toLowerCase()))
       .map((p: any) => ({ nama: p.nama, jabatan: p.jabatan || "", ttdImage: p.ttdImage || "" }));
-    const qrRows = qrAttendance.map((r) => ({ nama: r.nama, jabatan: "", ttdImage: r.ttdImage }));
+    const qrRows = qrAttendance.map((r) => ({ nama: r.nama, jabatan: r.jabatan || "", ttdImage: r.ttdImage }));
     return [...qrRows, ...manualRows];
   }, [data.peserta, qrAttendance]);
 

@@ -28,7 +28,6 @@ import {
   Archive,
   Package,
   Download,
-  MoreVertical,
 } from "lucide-react";
 
 interface SpjListProps {
@@ -65,17 +64,6 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [deleteSpjId, setDeleteSpjId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [archiveSpjId, setArchiveSpjId] = useState<string | null>(null);
-  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
-
-  // Close the per-row action dropdown when clicking anywhere outside it
-  useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest("[data-action-menu]")) setOpenActionMenuId(null);
-    };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, []);
 
   // Request modals
   const [isRequestKegiatanOpen, setIsRequestKegiatanOpen] = useState(false);
@@ -456,83 +444,51 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                       )}
                     </td>
                     <td className="p-4 text-right">
-                      <div className="relative inline-block text-left" data-action-menu>
+                      <div className="flex items-center justify-end gap-1.5 flex-wrap max-w-[260px] ml-auto">
                         <button
-                          onClick={() => setOpenActionMenuId(openActionMenuId === spj.id ? null : spj.id)}
-                          className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-                          title="Menu Aksi"
+                          onClick={() => onSelectSpj(spj.id, "preview")}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
                         >
-                          <MoreVertical className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5 shrink-0" />
+                          <span>Preview</span>
                         </button>
 
-                        {openActionMenuId === spj.id && (
-                          <div className="absolute right-0 mt-1.5 w-48 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-xl overflow-hidden z-30 py-1.5">
-                            <button
-                              onClick={() => {
-                                setOpenActionMenuId(null);
-                                onSelectSpj(spj.id, "preview");
-                              }}
-                              className="w-full text-left px-3.5 py-2 text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/60 inline-flex items-center space-x-2"
-                            >
-                              <Eye className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-                              <span>Preview</span>
-                            </button>
+                        {spj.status !== "FINALIZED" ? (
+                          <button
+                            onClick={() => onSelectSpj(spj.id, "edit")}
+                            className="px-3 py-1.5 text-xs font-semibold text-white bg-[#32848D] hover:bg-[#276972] rounded-lg inline-flex items-center space-x-1 shadow-sm whitespace-nowrap"
+                          >
+                            <span>Kelola</span>
+                            <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setArchiveSpjId(spj.id)}
+                            className="px-3 py-1.5 text-xs font-medium text-[#32848D] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
+                          >
+                            <Archive className="w-3.5 h-3.5 shrink-0" />
+                            <span>Arsipkan</span>
+                          </button>
+                        )}
 
-                            {spj.status !== "FINALIZED" && (
-                              <button
-                                onClick={() => {
-                                  setOpenActionMenuId(null);
-                                  onSelectSpj(spj.id, "edit");
-                                }}
-                                className="w-full text-left px-3.5 py-2 text-xs font-semibold text-[#32848D] hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 inline-flex items-center space-x-2"
-                              >
-                                <ArrowRight className="w-3.5 h-3.5 shrink-0" />
-                                <span>Kelola</span>
-                              </button>
-                            )}
+                        {spj.status === "FINALIZED" && user.role === "ADMIN" && (
+                          <button
+                            onClick={() => setReopenSpjId(spj.id)}
+                            className="px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                            <span>Reopen</span>
+                          </button>
+                        )}
 
-                            {spj.status === "FINALIZED" && (
-                              <button
-                                onClick={() => {
-                                  setOpenActionMenuId(null);
-                                  setArchiveSpjId(spj.id);
-                                }}
-                                className="w-full text-left px-3.5 py-2 text-xs font-medium text-[#32848D] hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 inline-flex items-center space-x-2"
-                              >
-                                <Archive className="w-3.5 h-3.5 shrink-0" />
-                                <span>Arsipkan</span>
-                              </button>
-                            )}
-
-                            {spj.status === "FINALIZED" && user.role === "ADMIN" && (
-                              <button
-                                onClick={() => {
-                                  setOpenActionMenuId(null);
-                                  setReopenSpjId(spj.id);
-                                }}
-                                className="w-full text-left px-3.5 py-2 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 inline-flex items-center space-x-2"
-                              >
-                                <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-                                <span>Reopen</span>
-                              </button>
-                            )}
-
-                            {user.role === "ADMIN" && (
-                              <>
-                                <div className="my-1 border-t border-gray-100 dark:border-slate-700"></div>
-                                <button
-                                  onClick={() => {
-                                    setOpenActionMenuId(null);
-                                    setDeleteSpjId(spj.id);
-                                  }}
-                                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 inline-flex items-center space-x-2"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                                  <span>Hapus</span>
-                                </button>
-                              </>
-                            )}
-                          </div>
+                        {user.role === "ADMIN" && (
+                          <button
+                            onClick={() => setDeleteSpjId(spj.id)}
+                            className="px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                            <span>Hapus</span>
+                          </button>
                         )}
                       </div>
                     </td>

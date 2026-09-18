@@ -12,6 +12,62 @@ interface SpjData {
   jawatanName?: string;
 }
 
+/**
+ * Export the signature as a COMPACT transparent PNG.
+ * Steps: trim empty margins → downscale → re-encode as PNG.
+ * Keeps documents crisp while storing only a few KB per participant.
+ * (SignaturePad v5 draws directly onto the canvas element it was given.)
+ */
+const exportCompactSignature = (canvas: HTMLCanvasElement): string => {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas.toDataURL("image/png");
+
+  const { width, height } = canvas;
+  const pixels = ctx.getImageData(0, 0, width, height).data;
+
+  // Find the bounding box of inked pixels (alpha based — background is transparent)
+  let minX = width, minY = height, maxX = -1, maxY = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const alpha = pixels[(y * width + x) * 4 + 3];
+      if (alpha > 10) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0 || maxY < 0) return canvas.toDataURL("image/png");
+
+  // Small padding so strokes are never clipped
+  const padding = 8;
+  minX = Math.max(0, minX - padding);
+  minY = Math.max(0, minY - padding);
+  maxX = Math.min(width - 1, maxX + padding);
+  maxY = Math.min(height - 1, maxY + padding);
+
+  const cropW = maxX - minX + 1;
+  const cropH = maxY - minY + 1;
+
+  // Downscale: keep at most 600px on the longest side (signatures stay legible)
+  const MAX_SIDE = 600;
+  const scale = Math.min(1, MAX_SIDE / Math.max(cropW, cropH));
+  const outW = Math.max(1, Math.round(cropW * scale));
+  const outH = Math.max(1, Math.round(cropH * scale));
+
+  const out = document.createElement("canvas");
+  out.width = outW;
+  out.height = outH;
+  const outCtx = out.getContext("2d");
+  if (!outCtx) return canvas.toDataURL("image/png");
+  // Transparent background — no white box when printed over a document
+  outCtx.clearRect(0, 0, outW, outH);
+  outCtx.drawImage(canvas, minX, minY, cropW, cropH, 0, 0, outW, outH);
+
+  return out.toDataURL("image/png");
+};
+
 const QRAttendancePage: React.FC = () => {
   const { spjId } = useParams<{ spjId: string }>();
   const [spjData, setSpjData] = useState<SpjData | null>(null);
@@ -21,6 +77,7 @@ const QRAttendancePage: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [remainingMs, setRemainingMs] = useState<number>(0);
   const [namaPeserta, setNamaPeserta] = useState("");
+  const [jabatanPeserta, setJabatanPeserta] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const signaturePadRef = useRef<SignaturePad | null>(null);
@@ -93,7 +150,8 @@ const QRAttendancePage: React.FC = () => {
     if (ctx) ctx.scale(ratio, ratio);
 
     const pad = new SignaturePad(canvas, {
-      backgroundColor: "#ffffff",
+      // Transparent background → exported PNG has no white box, so it prints cleanly
+      backgroundColor: "rgba(0,0,0,0)",
       penColor: "#1a1a1a",
       minWidth: 1.5,
       maxWidth: 3,
@@ -136,16 +194,23 @@ const QRAttendancePage: React.FC = () => {
       alert("Mohon isi nama lengkap Anda.");
       return;
     }
+    if (!jabatanPeserta.trim()) {
+      alert("Mohon isi jabatan / alamat Anda.");
+      return;
+    }
     if (!signaturePadRef.current || signaturePadRef.current.isEmpty()) {
       alert("Mohon tanda tangan di kotak yang tersedia.");
       return;
     }
 
     try {
-      const ttdDataUrl = signaturePadRef.current.toDataURL("image/png") || "";
+      const ttdDataUrl = canvasRef.current
+        ? exportCompactSignature(canvasRef.current)
+        : (signaturePadRef.current.toDataURL("image/png") || "");
       const attCol = collection(db, "spj", spjId, "attendance");
       await addDoc(attCol, {
         nama: namaPeserta.trim(),
+        jabatan: jabatanPeserta.trim(),
         ttdImage: ttdDataUrl,
         timestamp: serverTimestamp(),
         timestampMs: Date.now(),
@@ -274,7 +339,7 @@ const QRAttendancePage: React.FC = () => {
             )}
           </div>
 
-          {/* Form Input Nama */}
+          {/* Form Input Nama & Jabatan */}
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">
@@ -285,6 +350,19 @@ const QRAttendancePage: React.FC = () => {
                 value={namaPeserta}
                 onChange={(e) => setNamaPeserta(e.target.value)}
                 placeholder="Ketik nama lengkap Anda..."
+                className="w-full border-2 border-gray-200 focus:border-[#32848D] rounded-2xl px-4 py-3.5 text-base font-medium outline-none transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">
+                Jabatan / Alamat
+              </label>
+              <input
+                type="text"
+                value={jabatanPeserta}
+                onChange={(e) => setJabatanPeserta(e.target.value)}
+                placeholder="Contoh: Staf Kapanewon Temon / Temon Kulon"
                 className="w-full border-2 border-gray-200 focus:border-[#32848D] rounded-2xl px-4 py-3.5 text-base font-medium outline-none transition-colors"
               />
             </div>
@@ -300,7 +378,7 @@ const QRAttendancePage: React.FC = () => {
               <div className="border-2 border-dashed border-gray-300 rounded-2xl overflow-hidden bg-white">
                 <canvas
                   ref={attachCanvas}
-                  className="w-full block"
+                  className="w-full block bg-white"
                   style={{ height: "200px", touchAction: "none" }}
                 />
               </div>
