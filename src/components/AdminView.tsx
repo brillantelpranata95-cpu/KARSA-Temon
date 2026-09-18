@@ -272,22 +272,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
     try {
       await adminApproveKegiatan(kegId, user);
       await fetchMasterData();
-      alert("Kode kegiatan berhasil disetujui!");
+      alert("Kode sub-kegiatan berhasil disetujui!");
     } catch (e) {
       console.error(e);
-      alert("Gagal menyetujui kode kegiatan.");
+      alert("Gagal menyetujui kode sub-kegiatan.");
     }
   };
 
   const handleRejectKegiatan = async (kegId: string) => {
-    if (!confirm("Tolak pengajuan kode kegiatan ini?")) return;
+    if (!confirm("Tolak pengajuan kode sub-kegiatan ini?")) return;
     try {
       await adminRejectKegiatan(kegId, user);
       await fetchMasterData();
-      alert("Pengajuan kode kegiatan ditolak.");
+      alert("Pengajuan kode sub-kegiatan ditolak.");
     } catch (e) {
       console.error(e);
-      alert("Gagal menolak kode kegiatan.");
+      alert("Gagal menolak kode sub-kegiatan.");
     }
   };
 
@@ -314,7 +314,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
       alert("Kode kegiatan berhasil ditambahkan!");
     } catch (e) {
       console.error(e);
-      alert("Gagal menambahkan kode kegiatan.");
+      alert("Gagal menambahkan kode sub-kegiatan.");
     }
   };
 
@@ -402,10 +402,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
       );
       setEditingKegiatan(null);
       await fetchMasterData();
-      alert("Kode kegiatan berhasil diperbarui!");
+      alert("Kode sub-kegiatan berhasil diperbarui!");
     } catch (e) {
       console.error(e);
-      alert("Gagal memperbarui kode kegiatan.");
+      alert("Gagal memperbarui kode sub-kegiatan.");
     }
   };
 
@@ -444,7 +444,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           </h1>
           <p className="text-sm text-gray-500 dark:text-slate-400">
             {activeTab === "master"
-              ? "Kelola pengguna, jawatan, kode kegiatan, dan kode rekening oleh Administrator"
+              ? "Kelola pengguna, jawatan, kode sub-kegiatan, dan kode rekening oleh Administrator"
               : "Riwayat aktivitas finalisasi, reopening, dan perubahan data penting"}
           </p>
         </div>
@@ -675,8 +675,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
               <div className="flex items-center space-x-3">
                 <BookOpen className="w-5 h-5 text-[#32848D]" />
                 <div>
-                  <h2 className="font-bold text-gray-900 dark:text-white">Daftar Kode Kegiatan & Pengajuan</h2>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">Persetujuan usulan kegiatan baru & penetapan jawatan naungan</p>
+                  <h2 className="font-bold text-gray-900 dark:text-white">Daftar Kode Sub-Kegiatan & Pengajuan</h2>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Persetujuan usulan sub-kegiatan baru & penetapan jawatan naungan</p>
                 </div>
               </div>
               <button
@@ -690,7 +690,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                 className="px-4 py-2 bg-[#32848D] hover:bg-[#276972] text-white rounded-xl text-xs font-semibold flex items-center space-x-1 shadow-sm"
               >
                 <Plus className="w-4 h-4" />
-                <span>Tambah Kode Kegiatan</span>
+                <span>Tambah Kode Sub-Kegiatan</span>
               </button>
             </div>
 
@@ -698,8 +698,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-slate-700/50 border-b text-xs font-semibold text-gray-500 dark:text-slate-300 uppercase">
-                    <th className="p-4">Kode Kegiatan</th>
-                    <th className="p-4">Nama Kegiatan</th>
+                    <th className="p-4">Kode Sub-Kegiatan</th>
+                    <th className="p-4">Nama Sub-Kegiatan</th>
                     <th className="p-4">Jawatan Naungan</th>
                     <th className="p-4 text-center">Status</th>
                     <th className="p-4 text-right">Aksi</th>
@@ -763,7 +763,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                               <button
                                 onClick={() => handleRejectKegiatan(k.id)}
                                 className="px-2.5 py-1 text-gray-400 hover:text-red-600 rounded-lg text-xs"
-                                title="Hapus Kegiatan"
+                                title="Hapus Sub-Kegiatan"
                               >
                                 <Trash2 className="w-4 h-4 inline" />
                               </button>
@@ -1120,11 +1120,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
               <BookOpen className="w-5 h-5" />
-              <span>Tambah Kode Kegiatan Baru</span>
+              <span>Tambah Kode Sub-Kegiatan Baru</span>
             </div>
             <form onSubmit={handleDirectCreateKegiatan} className="space-y-3 text-sm">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nomor Kode Kegiatan</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nomor Kode Sub-Kegiatan</label>
                 <input
                   type="text"
                   required
@@ -1136,7 +1136,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Kegiatan</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Sub-Kegiatan</label>
                 <input
                   type="text"
                   required
@@ -1184,7 +1184,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                   type="submit"
                   className="px-5 py-2 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-xl text-sm shadow-sm"
                 >
-                  Simpan Kegiatan
+                  Simpan Sub-Kegiatan
                 </button>
               </div>
             </form>
@@ -1295,11 +1295,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
               <Edit className="w-5 h-5" />
-              <span>Edit Kode Kegiatan</span>
+              <span>Edit Kode Sub-Kegiatan</span>
             </div>
             <div className="space-y-3 text-sm">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nomor Kode Kegiatan</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nomor Kode Sub-Kegiatan</label>
                 <input
                   type="text"
                   value={editKegKode}
@@ -1308,7 +1308,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Kegiatan</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Sub-Kegiatan</label>
                 <input
                   type="text"
                   value={editKegNama}

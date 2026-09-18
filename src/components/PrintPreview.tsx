@@ -63,7 +63,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                   : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600"
               }`}
             >
-              {d.documentTypeCode.replace("_", " ")}
+              {d.documentTypeCode.replace(/_/g, " ")}
             </button>
           ))}
           <button
@@ -150,12 +150,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <div className="h-6"></div>
                 <p>(…………………………)</p>
               </div>
-              <div>
-                <p>Telah dipungut Pajak:</p>
-                <p>PHR: Rp. {Number(data.phr || 0).toLocaleString("id-ID")}</p>
-                <p>PPh: Rp. {Number(data.pph || 0).toLocaleString("id-ID")}</p>
-                <p>PPN: Rp. {Number(data.ppn || 0).toLocaleString("id-ID")}</p>
-              </div>
+              <div></div>
               <div>
                 <p>Telah dibukukan BK. Tgl: ……………</p>
                 <p className="font-mono">Kode Rek: {spj.masterSnapshot.kegiatan.kode} {spj.masterSnapshot.kodeRekening.kode}</p>
@@ -373,6 +368,40 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <p className="font-bold underline">{data.pembuatLaporan || spj.userName}</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ==================== SURAT PERINTAH TEMPLATE ==================== */}
+        {selectedDocCode === "SURAT_PERINTAH" && (
+          <div className="space-y-6 font-serif text-black text-sm">
+            {activeDoc?.externalUrl ? (
+              <div className="space-y-4">
+                <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl text-center space-y-2 print:hidden">
+                  <p className="text-indigo-900 font-semibold">Surat Perintah dari Google Drive:</p>
+                  <a
+                    href={activeDoc.externalUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center space-x-2 text-indigo-600 underline font-mono text-sm"
+                  >
+                    <span>{activeDoc.externalUrl}</span>
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+                <div className="border border-gray-300 rounded-xl overflow-hidden">
+                  <iframe
+                    src={activeDoc.externalUrl.replace("/view?usp=drive_fs", "/preview").replace("/edit", "/preview")}
+                    className="w-full h-[800px] border-0"
+                    title="Surat Perintah"
+                  ></iframe>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center p-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
+                <p>Belum ada tautan Google Drive yang ditautkan untuk Surat Perintah ini.</p>
+                <p className="text-xs mt-2">Silakan isi tautan di editor SPJ terlebih dahulu.</p>
+              </div>
+            )}
           </div>
         )}
 

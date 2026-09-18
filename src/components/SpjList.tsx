@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { UserProfile, SpjItem, Kegiatan, JenisBelanja, KodeRekening } from "../types";
+import { UserProfile, SpjItem, Kegiatan, KodeRekening } from "../types";
 import {
   getSpjList,
   getKegiatanList,
-  getJenisBelanjaList,
   getKodeRekeningList,
   getJawatanList,
   createSpjPackage,
@@ -41,16 +40,15 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [kegiatanList, setKegiatanList] = useState<Kegiatan[]>([]);
-  const [jenisList, setJenisList] = useState<JenisBelanja[]>([]);
   const [rekList, setRekList] = useState<KodeRekening[]>([]);
   const [jawatanList, setJawatanList] = useState<{ id: string; nama: string }[]>([]);
 
   const [selectedKegiatanId, setSelectedKegiatanId] = useState("");
-  const [selectedJenisId, setSelectedJenisId] = useState("");
   const [selectedRekId, setSelectedRekId] = useState("");
-  const [judulAktivitas, setJudulAktivitas] = useState("");
+  const [taggingSubKegiatan, setTaggingSubKegiatan] = useState("");
   const [jumlahPeserta, setJumlahPeserta] = useState<number>(20);
   const [tanggalSpj, setTanggalSpj] = useState(() => new Date().toISOString().split("T")[0]);
   const [adminOverrideJawatanId, setAdminOverrideJawatanId] = useState("");
@@ -77,44 +75,65 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
 
   const loadData = async () => {
     setLoading(true);
-    try {
-      const [spjData, archivedData, kData, jData, rData, jawatanData] = await Promise.all([
-        getSpjList(user),
-        getArchivedSpjList(user),
-        getKegiatanList(user.role === "ADMIN" ? undefined : user.jawatanId),
-        getJenisBelanjaList(),
-        getKodeRekeningList(),
-        getJawatanList(),
-      ]);
-      setSpjs(spjData);
-      setArchivedSpjs(archivedData);
-      setKegiatanList(kData);
-      setJenisList(jData);
-      setRekList(rData);
-      setJawatanList(jawatanData);
+    setLoadError(null);
+    // Use allSettled so one failed query never blanks the whole page
+    const results = await Promise.allSettled([
+      getSpjList(user),
+      getArchivedSpjList(user),
+      getKegiatanList(user.role === "ADMIN" ? undefined : user.jawatanId),
+      getKodeRekeningList(),
+      getJawatanList(),
+    ]);
 
-      if (kData.length > 0) setSelectedKegiatanId(kData[0].id);
-      if (rData.length > 0) {
-        setSelectedRekId(rData[0].id);
-        // Auto-sync Jenis Belanja from Kode Rekening
-        const linkedJenis = jData.find((j) => j.kodeRekeningId === rData[0].id);
-        if (linkedJenis) setSelectedJenisId(linkedJenis.id);
-      }
-    } catch (e) {
-      console.error("Gagal memuat data SPJ:", e);
-    } finally {
-      setLoading(false);
+    const [spjRes, archRes, kegRes, rekRes, jawRes] = results;
+
+    const errors: string[] = [];
+    if (spjRes.status === "fulfilled") {
+      setSpjs(spjRes.value);
+    } else {
+      errors.push("Daftar SPJ: " + String(spjRes.reason));
     }
+    if (archRes.status === "fulfilled") {
+      setArchivedSpjs(archRes.value);
+    }
+    if (kegRes.status === "fulfilled") {
+      const kData = kegRes.value;
+      setKegiatanList(kData);
+      setSelectedKegiatanId((prev) => prev || (kData.length > 0 ? kData[0].id : ""));
+    } else {
+      errors.push("Sub-Kegiatan: " + String(kegRes.reason));
+    }
+    if (rekRes.status === "fulfilled") {
+      const rData = rekRes.value;
+      setRekList(rData);
+      setSelectedRekId((prev) => prev || (rData.length > 0 ? rData[0].id : ""));
+    } else {
+      errors.push("Kode Rekening: " + String(rekRes.reason));
+    }
+    if (jawRes.status === "fulfilled") {
+      setJawatanList(jawRes.value);
+    }
+
+    if (errors.length > 0) {
+      console.error("Load errors:", errors);
+      setLoadError(errors.join(" | "));
+    }
+    setLoading(false);
   };
+
+  // Kegiatan filtered by selected jawatan (admin override) or user jawatan
+  const effectiveJawatanId = user.role === "ADMIN" ? adminOverrideJawatanId : user.jawatanId;
+  const visibleKegiatanList = effectiveJawatanId
+    ? kegiatanList.filter((k) => k.jawatanId === effectiveJawatanId)
+    : kegiatanList;
 
   const handleCreateSpj = async (e: React.FormEvent) => {
     e.preventDefault();
-    const k = kegiatanList.find((x) => x.id === selectedKegiatanId);
+    const k = visibleKegiatanList.find((x) => x.id === selectedKegiatanId);
     const r = rekList.find((x) => x.id === selectedRekId);
-    const j = jenisList.find((x) => x.id === selectedJenisId);
 
     if (!k || !r) {
-      alert("Mohon lengkapi pilihan Kegiatan dan Kode Rekening.");
+      alert("Mohon lengkapi pilihan Sub-Kegiatan dan Kode Rekening.");
       return;
     }
 
@@ -134,16 +153,15 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       await createSpjPackage({
         user,
         kegiatan: k,
-        jenisBelanja: j || { id: "", kode: "", nama: "", isActive: true },
         kodeRekening: r,
         tanggal: tanggalSpj,
-        judulAktivitas,
+        judulAktivitas: taggingSubKegiatan,
         jumlahPeserta,
         targetJawatanId,
         targetJawatanName,
       });
       setIsModalOpen(false);
-      setJudulAktivitas("");
+      setTaggingSubKegiatan("");
       setJumlahPeserta(20);
       loadData();
     } catch (err: any) {
@@ -190,7 +208,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     }
   };
 
-  const handleDownloadPdf = async (spjId: string) => {
+  const handleDownloadPdf = async (_spjId: string) => {
     alert("Fitur download PDF akan segera tersedia. Untuk saat ini, gunakan fitur Print dari halaman Preview.");
   };
 
@@ -203,7 +221,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         { kodeKegiatan: reqKegKode, namaKegiatan: reqKegNama, tahunAnggaran: new Date().getFullYear() },
         user
       );
-      alert("Pengajuan Kode Kegiatan berhasil dikirim. Menunggu persetujuan Admin.");
+      alert("Pengajuan Kode Sub-Kegiatan berhasil dikirim. Menunggu persetujuan Admin.");
       setIsRequestKegiatanOpen(false);
       setReqKegKode("");
       setReqKegNama("");
@@ -269,6 +287,15 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         </div>
       </div>
 
+      {/* LOAD ERROR BANNER */}
+      {loadError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-4 rounded-2xl text-xs">
+          <p className="font-bold mb-1">Sebagian data gagal dimuat:</p>
+          <p className="font-mono break-all">{loadError}</p>
+          <button onClick={loadData} className="mt-2 font-semibold underline">Muat ulang</button>
+        </div>
+      )}
+
       {/* ARCHIVE BOX */}
       {showArchive && (
         <div className="bg-amber-50 dark:bg-amber-900/20 p-6 rounded-3xl border border-amber-200 dark:border-amber-800 shadow-sm">
@@ -296,7 +323,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                   <div>
                     <p className="font-bold text-gray-900 dark:text-white text-sm">{spj.nomorSpj}</p>
                     <p className="text-xs text-gray-500 dark:text-slate-400">
-                      {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama} — {formatDateDDMMYYYY(spj.tanggal)}
+                      {spj.sharedData?.judulAktivitas || spj.masterSnapshot?.kegiatan?.nama} — {formatDateDDMMYYYY(spj.tanggal)}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -338,8 +365,8 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 <tr className="bg-gray-50/50 dark:bg-slate-700/50 text-gray-500 dark:text-slate-300 text-xs font-semibold border-b border-gray-100 dark:border-slate-700">
                   <th className="p-4">TANGGAL</th>
                   <th className="p-4">JAWATAN</th>
-                  <th className="p-4">KEGIATAN & REKENING</th>
-                  <th className="p-4">JUDUL AKTIVITAS</th>
+                  <th className="p-4">SUB-KEGIATAN & REKENING</th>
+                  <th className="p-4">TAGGING SUB-KEGIATAN</th>
                   <th className="p-4">PROGRESS</th>
                   <th className="p-4">STATUS</th>
                   <th className="p-4 text-right">AKSI</th>
@@ -357,14 +384,14 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                       </span>
                     </td>
                     <td className="p-4 space-y-0.5">
-                      <p className="font-bold text-gray-900 dark:text-white">{spj.masterSnapshot.kegiatan.nama}</p>
+                      <p className="font-bold text-gray-900 dark:text-white">{spj.masterSnapshot?.kegiatan?.nama}</p>
                       <p className="text-[11px] text-gray-500 dark:text-slate-400">
-                        [{spj.masterSnapshot.kodeRekening.kode}] {spj.masterSnapshot.kodeRekening.nama}
+                        [{spj.masterSnapshot?.kodeRekening?.kode}] {spj.masterSnapshot?.kodeRekening?.nama}
                       </p>
                     </td>
                     <td className="p-4">
                       <p className="font-semibold text-gray-800 dark:text-slate-200">
-                        {spj.sharedData?.judulAktivitas || "Rapat / Kegiatan"}
+                        {spj.sharedData?.judulAktivitas || "—"}
                       </p>
                       {spj.sharedData?.jumlahPeserta && (
                         <p className="text-[11px] text-gray-400">{spj.sharedData.jumlahPeserta} Peserta</p>
@@ -470,7 +497,15 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                   </label>
                   <select
                     value={adminOverrideJawatanId}
-                    onChange={(e) => setAdminOverrideJawatanId(e.target.value)}
+                    onChange={(e) => {
+                      const nextJawatan = e.target.value;
+                      setAdminOverrideJawatanId(nextJawatan);
+                      // Re-select first sub-kegiatan of the chosen jawatan
+                      const filtered = nextJawatan
+                        ? kegiatanList.filter((k) => k.jawatanId === nextJawatan)
+                        : kegiatanList;
+                      setSelectedKegiatanId(filtered.length > 0 ? filtered[0].id : "");
+                    }}
                     className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                   >
                     <option value="">— Gunakan Jawatan Saya ({user.jawatanName}) —</option>
@@ -485,13 +520,13 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
 
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300">Pilih Kegiatan</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300">Pilih Sub-Kegiatan</label>
                   <button
                     type="button"
                     onClick={() => setIsRequestKegiatanOpen(true)}
                     className="text-[11px] text-[#32848D] font-semibold hover:underline"
                   >
-                    + Ajukan Kegiatan Baru
+                    + Ajukan Sub-Kegiatan Baru
                   </button>
                 </div>
                 <select
@@ -499,7 +534,10 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                   onChange={(e) => setSelectedKegiatanId(e.target.value)}
                   className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                 >
-                  {kegiatanList.map((k) => (
+                  {visibleKegiatanList.length === 0 && (
+                    <option value="">— Belum ada sub-kegiatan untuk jawatan ini —</option>
+                  )}
+                  {visibleKegiatanList.map((k) => (
                     <option key={k.id} value={k.id}>
                       [{k.kodeKegiatan}] {k.namaKegiatan}
                     </option>
@@ -520,13 +558,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 </div>
                 <select
                   value={selectedRekId}
-                  onChange={(e) => {
-                    const nextRekId = e.target.value;
-                    setSelectedRekId(nextRekId);
-                    // Auto-sync Jenis Belanja from Kode Rekening
-                    const linkedJenis = jenisList.find((j) => j.kodeRekeningId === nextRekId);
-                    if (linkedJenis) setSelectedJenisId(linkedJenis.id);
-                  }}
+                  onChange={(e) => setSelectedRekId(e.target.value)}
                   className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                 >
                   {rekList.map((r) => (
@@ -537,24 +569,15 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Jenis Belanja (Otomatis dari Kode Rekening)</label>
-                <input
-                  value={jenisList.find((j) => j.id === selectedJenisId)?.nama || "Belum dikonfigurasi untuk kode rekening ini"}
-                  readOnly
-                  className="w-full border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50 rounded-xl p-2.5 text-gray-600 dark:text-slate-300"
-                />
-              </div>
-
-              {/* Grid 12: Judul Aktivitas (span 9), Jumlah Peserta (span 3) */}
+              {/* Grid 12: Tagging Sub-Kegiatan (span 9), Jumlah Peserta (span 3) */}
               <div className="grid grid-cols-12 gap-3">
                 <div className="col-span-12 sm:col-span-9">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Judul Aktivitas</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Tagging Sub-Kegiatan</label>
                   <input
                     type="text"
-                    value={judulAktivitas}
-                    onChange={(e) => setJudulAktivitas(e.target.value)}
-                    placeholder="Contoh: Rapat Koordinasi Persiapan Kegiatan"
+                    value={taggingSubKegiatan}
+                    onChange={(e) => setTaggingSubKegiatan(e.target.value)}
+                    placeholder="Contoh: Rapat Koordinasi Jathilan"
                     required
                     className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                   />
@@ -698,20 +721,20 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         </div>
       )}
 
-      {/* MODAL REQUEST KEGIATAN BARU */}
+      {/* MODAL REQUEST SUB-KEGIATAN BARU */}
       {isRequestKegiatanOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-gray-900 dark:text-white">Ajukan Kode Kegiatan Baru</h3>
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">Ajukan Kode Sub-Kegiatan Baru</h3>
             <p className="text-xs text-gray-500 dark:text-slate-400">
-              Kode kegiatan ini akan otomatis terafiliasi dengan jawatan Anda ({user.jawatanName}) dan membutuhkan persetujuan Admin.
+              Kode sub-kegiatan ini akan otomatis terafiliasi dengan jawatan Anda ({user.jawatanName}) dan membutuhkan persetujuan Admin.
             </p>
             <form onSubmit={handleRequestKegiatanSubmit} className="space-y-3 text-sm">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Kode Kegiatan</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Kode Sub-Kegiatan</label>
                 <input
                   type="text"
-                  placeholder="Contoh: 1.02.01.2.02"
+                  placeholder="Contoh: 7.01.02.2.01.0001"
                   value={reqKegKode}
                   onChange={(e) => setReqKegKode(e.target.value)}
                   required
@@ -719,10 +742,10 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Kegiatan</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Sub-Kegiatan</label>
                 <input
                   type="text"
-                  placeholder="Contoh: PENYELENGGARAAN URUSAN SOSIAL KAPANEWON"
+                  placeholder="Contoh: Koordinasi/Sinergi Perencanaan Kegiatan"
                   value={reqKegNama}
                   onChange={(e) => setReqKegNama(e.target.value)}
                   required
@@ -763,7 +786,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Kode Rekening</label>
                 <input
                   type="text"
-                  placeholder="Contoh: 5.1.02.01.01.0024"
+                  placeholder="Contoh: 5.1.02.01.001.00058"
                   value={reqRekKode}
                   onChange={(e) => setReqRekKode(e.target.value)}
                   required
@@ -774,7 +797,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Rekening</label>
                 <input
                   type="text"
-                  placeholder="Contoh: Belanja Makan dan Minum Rapat"
+                  placeholder="Contoh: Belanja Makanan dan Minuman Rapat"
                   value={reqRekNama}
                   onChange={(e) => setReqRekNama(e.target.value)}
                   required

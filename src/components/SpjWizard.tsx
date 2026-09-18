@@ -278,7 +278,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
               <div className="flex justify-between items-center border-b pb-4">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">
-                    Formulir {activeDoc.documentTypeCode.replace("_", " ")}
+                    Formulir {activeDoc.documentTypeCode.replace(/_/g, " ")}
                   </h2>
                   <p className="text-xs text-gray-500">
                     Isi data sesuai petunjuk master template Kapanewon Temon
@@ -648,6 +648,119 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                         ></iframe>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* ================= FORM EDITOR SURAT PERINTAH ================= */}
+              {activeDoc.documentTypeCode === "SURAT_PERINTAH" && (
+                <div className="space-y-4 text-sm">
+                  <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl space-y-2">
+                    <label className="block text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                      Tautan Surat Perintah Google Drive (Wajib)
+                    </label>
+                    <p className="text-xs text-indigo-700 dark:text-indigo-300">
+                      Surat Perintah sudah dibuat di luar web app ini. Cukup paste link Google Drive untuk verifikasi & cetak.
+                    </p>
+                    <div className="flex items-center space-x-2">
+                      <LinkIcon className="w-4 h-4 text-indigo-600" />
+                      <input
+                        type="url"
+                        value={externalUrl}
+                        onChange={(e) => setExternalUrl(e.target.value)}
+                        placeholder="https://drive.google.com/file/d/..."
+                        className="w-full border border-indigo-300 dark:border-indigo-700 rounded-lg p-2 text-xs bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    {externalUrl && (
+                      <div className="mt-2 p-2 bg-white dark:bg-slate-700 rounded-lg border border-indigo-200 dark:border-slate-600">
+                        <p className="text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Preview:</p>
+                        <iframe
+                          src={externalUrl.replace("/view?usp=drive_fs", "/preview").replace("/edit", "/preview")}
+                          className="w-full h-64 rounded-lg border-0"
+                          title="Surat Perintah Preview"
+                        ></iframe>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ================= FORM EDITOR SPJ AKTIVITAS LAPANGAN ================= */}
+              {activeDoc.documentTypeCode === "SPJ_AKTIVITAS_LAPANGAN" && (
+                <div className="space-y-4 text-sm">
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4 rounded-xl">
+                    <h3 className="font-bold text-emerald-900 dark:text-emerald-200 mb-1">Formulir Laporan Aktivitas Lapangan</h3>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                      Isi data pelaksanaan tugas lapangan. Data otomatis dipakai pada cetakan Laporan Hasil Pelaksanaan Tugas.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Maksud dan Tujuan Perjalanan Dinas</label>
+                    <input
+                      type="text"
+                      value={formData.maksudTujuan || ""}
+                      onChange={(e) => handleFormChange("maksudTujuan", e.target.value)}
+                      placeholder={`Contoh: ${spj.sharedData?.judulAktivitas || "Aktivitas Lapangan"}`}
+                      className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Tempat Tujuan</label>
+                      <input
+                        type="text"
+                        value={formData.tempatTujuan || ""}
+                        onChange={(e) => handleFormChange("tempatTujuan", e.target.value)}
+                        placeholder="Contoh: Kapanewon Temon"
+                        className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Lamanya Pelaksanaan Tugas</label>
+                      <input
+                        type="text"
+                        value={formData.lamaTugas || ""}
+                        onChange={(e) => handleFormChange("lamaTugas", e.target.value)}
+                        placeholder="Contoh: 1 (hari)"
+                        className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Tanggal Pelaksanaan</label>
+                      <input
+                        type="date"
+                        value={formData.tanggalPelaksanaan || spj.tanggal}
+                        onChange={(e) => handleFormChange("tanggalPelaksanaan", e.target.value)}
+                        className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Format: {formatDateDDMMYYYY(formData.tanggalPelaksanaan || spj.tanggal)}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                      Kesimpulan (Hasil Pelaksanaan Tugas)
+                    </label>
+                    <textarea
+                      value={formData.kesimpulanHasil || ""}
+                      onChange={(e) => handleFormChange("kesimpulanHasil", e.target.value)}
+                      placeholder={`1. Kegiatan dibuka pukul 08.30 WIB dengan registrasi peserta;\n2. Kegiatan dimulai pukul 09.00 WIB dengan pembukaan dari MC;\n3. Sambutan dan pembukaan secara resmi oleh Panewu Kapanewon Temon;\n4. Pelaksanaan tugas lapangan berjalan tertib dan lancar;\n5. Kegiatan selesai pukul 12.30 WIB.`}
+                      className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white h-32"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Pembuat Laporan</label>
+                    <input
+                      type="text"
+                      value={formData.pembuatLaporan || ""}
+                      onChange={(e) => handleFormChange("pembuatLaporan", e.target.value)}
+                      placeholder={spj.userName || "Nama Pembuat Laporan"}
+                      className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                    />
                   </div>
                 </div>
               )}

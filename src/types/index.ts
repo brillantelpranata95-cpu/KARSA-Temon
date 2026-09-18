@@ -20,12 +20,12 @@ export interface KodeRekening { id: string; kode: string; nama: string; tahunAng
 export interface JenisBelanja { id: string; kode: string; nama: string; description?: string; kodeRekeningId?: string; isActive: boolean; createdAt?: any; updatedAt?: any; }
 export interface DocumentTypeItem { id: string; code: string; name: string; description: string; category: "FINANCIAL" | "ADMINISTRATIVE" | "REPORT"; isActive: boolean; createdAt?: any; updatedAt?: any; }
 export interface ChecklistDocConfig { documentTypeId: string; required: boolean; order: number; }
-export interface ChecklistConfig { id: string; jenisBelanjaId: string; tahunAnggaran: number; version: number; isActive: boolean; documents: ChecklistDocConfig[]; createdAt?: any; updatedAt?: any; }
+export interface ChecklistConfig { id: string; kodeRekeningId?: string; jenisBelanjaId?: string; tahunAnggaran: number; version: number; isActive: boolean; documents: ChecklistDocConfig[]; createdAt?: any; updatedAt?: any; }
 
 export type SpjStatus = "DRAFT" | "IN_PROGRESS" | "COMPLETE" | "FINALIZED" | "ARCHIVED";
 export interface SpjMasterSnapshot {
   kegiatan: { id: string; kode: string; nama: string };
-  jenisBelanja: { id: string; kode: string; nama: string };
+  jenisBelanja?: { id: string; kode: string; nama: string };
   kodeRekening: { id: string; kode: string; nama: string };
 }
 export interface SpjChecklistSnapshotItem { documentTypeId: string; documentTypeCode: string; documentTypeName: string; required: boolean; order: number; }
@@ -40,7 +40,7 @@ export interface SpjSharedData {
 }
 export interface SpjItem {
   id: string; nomorSpj: string; jawatanId: string; jawatanName: string; userId: string; userEmail: string; userName: string;
-  kegiatanId: string; jenisBelanjaId: string; kodeRekeningId: string; tanggal: string; tahunAnggaran: number; bulan: number;
+  kegiatanId: string; jenisBelanjaId?: string; kodeRekeningId: string; tanggal: string; tahunAnggaran: number; bulan: number;
   status: SpjStatus; progress: number; masterSnapshot: SpjMasterSnapshot;
   checklistSnapshot: { configId: string; version: number; documents: SpjChecklistSnapshotItem[] };
   sharedData?: SpjSharedData; createdAt?: any; updatedAt?: any; finalizedAt?: any; finalizedBy?: string; reopenReason?: string;

@@ -127,50 +127,27 @@ export const seedMasterDataIfEmpty = async () => {
         await setDoc(doc(db, "kodeRekening", r.id), sanitizeData({ ...r, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
       }
 
-      // 4. Jenis Belanja
-      const jenisList: JenisBelanja[] = [
-        {
-          id: "jenis-rapat",
-          kode: "RAPAT",
-          nama: "Makanan dan Minuman Rapat",
-          description: "Pertanggungjawaban kegiatan rapat internal / koordinasi",
-          kodeRekeningId: "rek-mamin-rapat",
-          isActive: true
-        },
-        {
-          id: "jenis-lapangan",
-          kode: "LAPANGAN",
-          nama: "Aktivitas Lapangan & Pentas Seni",
-          description: "Pertanggungjawaban aktivitas lapangan dan pelaksanaan acara",
-          kodeRekeningId: "rek-mamin-lapangan",
-          isActive: true
-        }
-      ];
-
-      for (const j of jenisList) {
-        await setDoc(doc(db, "jenisBelanja", j.id), sanitizeData({ ...j, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
-      }
-
-      // 5. Document Type
+      // 4. Document Type
       const docTypeList: DocumentTypeItem[] = [
         { id: "doctype-bend26", code: "BEND_26", name: "Bend 26 (Bukti Kas Pengeluaran)", description: "Kuitansi Bukti Kas Pengeluaran Keuangan", category: "FINANCIAL", isActive: true },
         { id: "doctype-undangan", code: "SURAT_UNDANGAN", name: "Surat Undangan", description: "Surat Undangan Rapat / URL Google Drive", category: "ADMINISTRATIVE", isActive: true },
         { id: "doctype-daftarhadir", code: "DAFTAR_HADIR", name: "Daftar Hadir", description: "Daftar Hadir Peserta Rapat / Acara", category: "ADMINISTRATIVE", isActive: true },
         { id: "doctype-notulen", code: "NOTULENSI_RAPAT", name: "Notulen Rapat", description: "Notulensi Rapat Koordinasi", category: "REPORT", isActive: true },
-        { id: "doctype-lap-lapangan", code: "SPJ_AKTIVITAS_LAPANGAN", name: "Laporan Aktivitas Lapangan", description: "Laporan Hasil Pelaksanaan Tugas Lapangan", category: "REPORT", isActive: true }
+        { id: "doctype-lap-lapangan", code: "SPJ_AKTIVITAS_LAPANGAN", name: "Laporan Aktivitas Lapangan", description: "Laporan Hasil Pelaksanaan Tugas Lapangan", category: "REPORT", isActive: true },
+        { id: "doctype-suratperintah", code: "SURAT_PERINTAH", name: "Surat Perintah", description: "Surat Perintah Tugas / URL Google Drive", category: "ADMINISTRATIVE", isActive: true }
       ];
 
       for (const dt of docTypeList) {
         await setDoc(doc(db, "documentTypes", dt.id), sanitizeData({ ...dt, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
       }
 
-      // 6. Checklist Config
+      // 5. Checklist Config (keyed by Kode Rekening — Jenis Belanja removed)
       const checklistList: ChecklistConfig[] = [
         {
           id: "config-rapat",
-          jenisBelanjaId: "jenis-rapat",
+          kodeRekeningId: "rek-mamin-rapat",
           tahunAnggaran: 2026,
-          version: 1,
+          version: 2,
           isActive: true,
           documents: [
             { documentTypeId: "doctype-bend26", required: true, order: 1 },
@@ -181,15 +158,26 @@ export const seedMasterDataIfEmpty = async () => {
         },
         {
           id: "config-lapangan",
-          jenisBelanjaId: "jenis-lapangan",
+          kodeRekeningId: "rek-mamin-lapangan",
           tahunAnggaran: 2026,
-          version: 1,
+          version: 2,
+          isActive: true,
+          documents: [
+            { documentTypeId: "doctype-suratperintah", required: true, order: 1 },
+            { documentTypeId: "doctype-bend26", required: true, order: 2 },
+            { documentTypeId: "doctype-lap-lapangan", required: true, order: 3 }
+          ]
+        },
+        {
+          id: "config-honor",
+          kodeRekeningId: "rek-honor-seniman",
+          tahunAnggaran: 2026,
+          version: 2,
           isActive: true,
           documents: [
             { documentTypeId: "doctype-bend26", required: true, order: 1 },
             { documentTypeId: "doctype-undangan", required: false, order: 2 },
-            { documentTypeId: "doctype-daftarhadir", required: true, order: 3 },
-            { documentTypeId: "doctype-lap-lapangan", required: true, order: 4 }
+            { documentTypeId: "doctype-daftarhadir", required: true, order: 3 }
           ]
         }
       ];
@@ -566,9 +554,14 @@ export const adminDeleteUser = async (uid: string, actor: UserProfile) => {
   });
 };
 
+// @deprecated Jenis Belanja removed — SPJ packages follow Kode Rekening only. Kept for backward compatibility.
 export const getJenisBelanjaList = async (): Promise<JenisBelanja[]> => {
-  const snap = await getDocs(collection(db, "jenisBelanja"));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as JenisBelanja));
+  try {
+    const snap = await getDocs(collection(db, "jenisBelanja"));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as JenisBelanja));
+  } catch {
+    return [];
+  }
 };
 
 export const getDocumentTypesList = async (): Promise<DocumentTypeItem[]> => {
@@ -590,7 +583,6 @@ export const generateSpjNumber = async (tahun: number): Promise<string> => {
 export const createSpjPackage = async (params: {
   user: UserProfile;
   kegiatan: Kegiatan;
-  jenisBelanja: JenisBelanja;
   kodeRekening: KodeRekening;
   tanggal: string;
   judulAktivitas: string;
@@ -598,7 +590,7 @@ export const createSpjPackage = async (params: {
   targetJawatanId?: string;
   targetJawatanName?: string;
 }): Promise<string> => {
-  const { user, kegiatan, jenisBelanja, kodeRekening, tanggal, judulAktivitas, jumlahPeserta, targetJawatanId, targetJawatanName } = params;
+  const { user, kegiatan, kodeRekening, tanggal, judulAktivitas, jumlahPeserta, targetJawatanId, targetJawatanName } = params;
   const year = new Date(tanggal).getFullYear() || 2026;
   const month = new Date(tanggal).getMonth() + 1 || 8;
   const nomorSpj = await generateSpjNumber(year);
@@ -606,8 +598,8 @@ export const createSpjPackage = async (params: {
   const activeJawatanId = targetJawatanId || user.jawatanId;
   const activeJawatanName = targetJawatanName || user.jawatanName;
 
-  // Find checklist config for jenisBelanja
-  const configSnap = await getDocs(query(collection(db, "checklistConfigs"), where("jenisBelanjaId", "==", jenisBelanja.id)));
+  // Find checklist config by kodeRekeningId (Jenis Belanja removed)
+  const configSnap = await getDocs(query(collection(db, "checklistConfigs"), where("kodeRekeningId", "==", kodeRekening.id)));
   let checklistDocs: { documentTypeId: string; required: boolean; order: number }[] = [];
   let configId = "config-default";
 
@@ -616,6 +608,7 @@ export const createSpjPackage = async (params: {
     configId = configSnap.docs[0].id;
     checklistDocs = configData.documents;
   } else {
+    // Default fallback checklist
     checklistDocs = [
       { documentTypeId: "doctype-bend26", required: true, order: 1 },
       { documentTypeId: "doctype-undangan", required: true, order: 2 },
@@ -640,10 +633,9 @@ export const createSpjPackage = async (params: {
     };
   });
 
-  // Master Snapshot
+  // Master Snapshot (Jenis Belanja removed — SPJ follows Kode Rekening only)
   const masterSnapshot = {
     kegiatan: { id: kegiatan.id, kode: kegiatan.kodeKegiatan, nama: kegiatan.namaKegiatan },
-    jenisBelanja: { id: jenisBelanja.id, kode: jenisBelanja.kode, nama: jenisBelanja.nama },
     kodeRekening: { id: kodeRekening.id, kode: kodeRekening.kode, nama: kodeRekening.nama }
   };
 
@@ -655,7 +647,6 @@ export const createSpjPackage = async (params: {
     userEmail: user.email,
     userName: user.displayName,
     kegiatanId: kegiatan.id,
-    jenisBelanjaId: jenisBelanja.id,
     kodeRekeningId: kodeRekening.id,
     tanggal,
     tahunAnggaran: year,
@@ -943,16 +934,14 @@ export const archiveSpj = async (spjId: string, user: UserProfile) => {
   });
 };
 
-// Get archived SPJs
+// Get archived SPJs (no orderBy — avoids composite index requirement)
 export const getArchivedSpjList = async (user: UserProfile): Promise<SpjItem[]> => {
-  let q;
-  if (user.role === "ADMIN") {
-    q = query(collection(db, "spj"), where("status", "==", "ARCHIVED"), orderBy("archivedAt", "desc"));
-  } else {
-    q = query(collection(db, "spj"), where("status", "==", "ARCHIVED"), where("jawatanId", "==", user.jawatanId), orderBy("archivedAt", "desc"));
+  const snap = await getDocs(query(collection(db, "spj"), where("status", "==", "ARCHIVED")));
+  let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as SpjItem));
+  if (user.role !== "ADMIN") {
+    list = list.filter(s => s.jawatanId === user.jawatanId);
   }
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as SpjItem));
+  return list;
 };
 
 // Create/Update Jawatan (Admin only)
