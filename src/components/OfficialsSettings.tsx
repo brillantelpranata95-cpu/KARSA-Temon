@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { UserProfile, OfficialPerson } from "../types";
+import { UserProfile, OfficialPerson, Jawatan } from "../types";
 import {
   getOfficialsList,
+  getJawatanList,
   adminSaveOfficial,
   adminDeleteOfficial,
   saveJawatanOfficial,
   savePemimpinRapatOption,
 } from "../services/api";
-import { UserCog, Plus, Trash2, Save, RefreshCw, CheckCircle2, Info, Gavel, Lock, Eye } from "lucide-react";
+import { UserCog, Plus, Trash2, Save, RefreshCw, CheckCircle2, Info, Gavel, Lock, Eye, Building2 } from "lucide-react";
 
 interface OfficialsSettingsProps {
   user: UserProfile;
@@ -79,6 +80,7 @@ const colorClasses: Record<string, { bg: string; border: string; text: string; b
 
 export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) => {
   const [officials, setOfficials] = useState<OfficialPerson[]>([]);
+  const [jawatanList, setJawatanList] = useState<Jawatan[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, { nama: string; nip: string; pangkat: string }>>({});
@@ -89,12 +91,11 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
   const loadOfficials = async () => {
     setLoading(true);
     try {
-      const list = await getOfficialsList();
+      const [list, jList] = await Promise.all([getOfficialsList(), getJawatanList()]);
       setOfficials(list);
+      setJawatanList(jList);
       const d: Record<string, { nama: string; nip: string; pangkat: string }> = {};
       FIELDS.forEach((f) => {
-        // For jawatan-managed fields, the draft is the jawatan's OWN entry;
-        // admins see the first entry (monitoring view).
         const entry = f.jawatanManaged && !isAdmin
           ? list.find((o) => o.type === f.type && (o.jawatanId || "") === user.jawatanId)
           : list.find((o) => o.type === f.type);
@@ -115,10 +116,15 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
     loadOfficials();
   }, []);
 
+  const getJawatanName = (jawatanId?: string): string => {
+    if (!jawatanId) return "Umum / Kapanewon";
+    const found = jawatanList.find((j) => j.id === jawatanId);
+    return found ? found.nama : jawatanId;
+  };
+
   const handleSavePrimary = async (field: FieldDef) => {
-    // Guard: PPTK/Notulis/Pemimpin Rapat are the jawatan's own domain — admin only monitors.
     if (field.jawatanManaged && isAdmin) {
-      alert("PPTK, Notulis, dan Pemimpin Rapat diatur oleh jawatan masing-masing. Admin hanya memantau data.");
+      alert("PPTK, Notulis, dan Pemimpin Rapat diatur oleh jawatan masing-masing.");
       return;
     }
     const draft = drafts[field.type];
@@ -129,7 +135,6 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
     setSaving(field.type);
     try {
       if (field.jawatanManaged && !isAdmin) {
-        // Jawatan sets its own official (PPTK / Notulis / Pemimpin Rapat)
         await saveJawatanOfficial(
           {
             type: field.type as JawatanManagedType,
@@ -141,7 +146,6 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
           user
         );
       } else {
-        // Admin-set officials (PA / Panewu / Bendahara) or admin editing any entry
         const existing = officials.find((o) => o.type === field.type);
         await adminSaveOfficial(
           {
@@ -156,7 +160,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
         );
       }
       await loadOfficials();
-      alert(`${field.label} berhasil disimpan. Dokumen SPJ baru akan otomatis memakai data ini.`);
+      alert(`${field.label} berhasil disimpan.`);
     } catch (e) {
       console.error(e);
       alert(`Gagal menyimpan ${field.label}.`);
@@ -165,9 +169,8 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
   };
 
   const handleAddAdditional = async (field: FieldDef) => {
-    // Guard: jawatan-managed lists are filled by the jawatan itself, not the admin.
     if (field.jawatanManaged && isAdmin) {
-      alert("Pilihan PPTK, Notulis, dan Pemimpin Rapat diisi oleh jawatan masing-masing. Admin hanya memantau data.");
+      alert("Pilihan PPTK, Notulis, dan Pemimpin Rapat diisi oleh jawatan masing-masing.");
       return;
     }
     const row = newRows[field.type];
@@ -205,7 +208,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
   };
 
   const handleDelete = async (official: OfficialPerson) => {
-    if (!confirm(`Hapus "${official.nama}" dari daftar ${official.type.replace(/_/g, " ")}?`)) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus "${official.nama}" (${official.type})?`)) return;
     try {
       await adminDeleteOfficial(official.id, user);
       await loadOfficials();
@@ -215,12 +218,16 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
     }
   };
 
-  // Admin monitors per-jawatan entries; jawatan users see their own + admin-set ones
   const visibleOfficialsFor = (field: FieldDef): OfficialPerson[] => {
     if (!field.jawatanManaged) return officials.filter((o) => o.type === field.type);
     if (isAdmin) return officials.filter((o) => o.type === field.type);
     return officials.filter((o) => o.type === field.type && (o.jawatanId || "") === user.jawatanId);
   };
+
+  // Jawatan-managed officials list for Admin
+  const jawatanManagedOfficialsForAdmin = officials.filter((o) =>
+    ["PPTK", "NOTULIS", "PEMIMPIN_RAPAT"].includes(o.type)
+  );
 
   return (
     <div className="space-y-6">
@@ -232,11 +239,11 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              Penandatangan — {user.jawatanName}
+              Pengaturan Penandatangan {isAdmin ? "— Kapanewon Temon" : `— ${user.jawatanName}`}
             </h1>
             <p className="text-sm text-gray-500 dark:text-slate-400">
               {isAdmin
-                ? "Pemantauan penandatangan seluruh jawatan"
+                ? "Kelola pejabat tingkat Kapanewon dan pantau/hapus data penandatangan jawatan"
                 : "PPTK, Notulis & Pemimpin Rapat diatur oleh jawatan masing-masing"}
             </p>
           </div>
@@ -255,10 +262,9 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
         <div className="text-xs text-blue-900 dark:text-blue-200 space-y-1">
           {isAdmin ? (
             <>
-              <p className="font-semibold">Pemantauan (Admin):</p>
-              <p>1. PPTK, Notulis, dan Pemimpin Rapat diatur oleh <strong>jawatan masing-masing</strong> — admin hanya menerima & memantau datanya.</p>
-              <p>2. Admin menetapkan <strong>Pengguna Anggaran/KPA, Panewu, dan Bendahara Pengeluaran</strong> untuk seluruh dokumen.</p>
-              <p>3. Data penerima pada Bend 26 <strong>tidak</strong> diambil dari sini — diisi manual per dokumen.</p>
+              <p className="font-semibold">Fungsi Administrator:</p>
+              <p>1. <strong>Pejabat Tingkat Kapanewon</strong> (PA/KPA, Panewu, Bendahara) ditetapkan langsung oleh Admin pada kartu di bawah.</p>
+              <p>2. <strong>Data Penandatangan Jawatan</strong> (PPTK, Notulis, Pemimpin Rapat) ditampilkan dalam bentuk daftar list. Admin berwewenang menghapus data yang tidak sesuai.</p>
             </>
           ) : (
             <>
@@ -275,7 +281,171 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
         <div className="bg-white dark:bg-slate-800 p-12 rounded-2xl border border-gray-200 dark:border-slate-700 text-center text-gray-400">
           Memuat data penandatangan...
         </div>
+      ) : isAdmin ? (
+        /* ================= ADMIN VIEW ================= */
+        <div className="space-y-8">
+          {/* Section 1: Admin-managed pejabat (PA, Panewu, Bendahara) in cards */}
+          <div className="space-y-4">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Lock className="w-4 h-4 text-[#32848D]" />
+              <span>Pejabat Tingkat Kapanewon (PA / Panewu / Bendahara Pengeluaran)</span>
+            </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              {FIELDS.filter((f) => !f.jawatanManaged).map((field) => {
+                const c = colorClasses[field.color];
+                const rows = visibleOfficialsFor(field);
+                const primary = rows[0];
+                const draft = drafts[field.type] || { nama: "", nip: "", pangkat: "" };
+
+                return (
+                  <div
+                    key={field.type}
+                    className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden"
+                  >
+                    <div className={`px-5 py-3 border-b ${c.bg} ${c.border}`}>
+                      <h3 className={`font-bold text-sm flex items-center gap-2 ${c.text}`}>
+                        <UserCog className="w-4 h-4" />
+                        {field.label}
+                      </h3>
+                      <p className={`text-[11px] mt-1 ${c.text} opacity-80`}>{field.helper}</p>
+                    </div>
+
+                    <div className="p-5 space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Lengkap & Gelar</label>
+                        <input
+                          type="text"
+                          value={draft.nama}
+                          onChange={(e) => setDrafts((p) => ({ ...p, [field.type]: { ...draft, nama: e.target.value } }))}
+                          placeholder="Nama Lengkap..."
+                          className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">NIP</label>
+                          <input
+                            type="text"
+                            value={draft.nip}
+                            onChange={(e) => setDrafts((p) => ({ ...p, [field.type]: { ...draft, nip: e.target.value } }))}
+                            placeholder="NIP"
+                            className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Pangkat</label>
+                          <input
+                            type="text"
+                            value={draft.pangkat}
+                            onChange={(e) => setDrafts((p) => ({ ...p, [field.type]: { ...draft, pangkat: e.target.value } }))}
+                            placeholder="Pangkat/Gol"
+                            className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleSavePrimary(field)}
+                        disabled={saving === field.type}
+                        className={`w-full py-2.5 ${c.button} text-white rounded-xl text-xs font-semibold inline-flex items-center justify-center space-x-2 shadow-sm disabled:opacity-60`}
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{primary ? "Perbarui" : "Simpan"}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Section 2: Jawatan-managed officials in a clean LIST / TABLE for Admin */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-[#32848D]" />
+                  <span>Daftar Penandatangan Jawatan (PPTK, Notulis & Pemimpin Rapat)</span>
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  Seluruh data penandatangan yang diinput oleh jawatan-jawatan. Admin berwewenang menghapus data jika diperlukan.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-gray-500 bg-gray-100 dark:bg-slate-700 px-3 py-1 rounded-full">
+                Total: {jawatanManagedOfficialsForAdmin.length} Data
+              </span>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+              {jawatanManagedOfficialsForAdmin.length === 0 ? (
+                <div className="p-8 text-center text-gray-400 text-sm">
+                  Belum ada data penandatangan yang diinput oleh jawatan.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-slate-700/50 border-b border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-500 dark:text-slate-300 uppercase">
+                        <th className="p-3.5">Jawatan</th>
+                        <th className="p-3.5">Jabatan / Tipe</th>
+                        <th className="p-3.5">Nama Lengkap & Gelar</th>
+                        <th className="p-3.5">NIP</th>
+                        <th className="p-3.5">Pangkat / Gol.</th>
+                        <th className="p-3.5 text-right">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                      {jawatanManagedOfficialsForAdmin.map((o) => (
+                        <tr key={o.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition">
+                          <td className="p-3.5 font-medium text-gray-800 dark:text-slate-200 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-100 dark:border-emerald-800/50 text-xs">
+                              {getJawatanName(o.jawatanId)}
+                            </span>
+                          </td>
+                          <td className="p-3.5 whitespace-nowrap">
+                            {o.type === "PPTK" ? (
+                              <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-lg text-xs font-bold border border-blue-200 dark:border-blue-800">
+                                PPTK
+                              </span>
+                            ) : o.type === "NOTULIS" ? (
+                              <span className="px-2.5 py-1 bg-teal-50 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300 rounded-lg text-xs font-bold border border-teal-200 dark:border-teal-800">
+                                Notulis Rapat
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded-lg text-xs font-bold border border-amber-200 dark:border-amber-800">
+                                Pemimpin Rapat
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3.5 font-bold text-gray-900 dark:text-white">
+                            {o.nama}
+                          </td>
+                          <td className="p-3.5 font-mono text-xs text-gray-600 dark:text-slate-300 whitespace-nowrap">
+                            {o.nip ? `NIP. ${o.nip}` : "—"}
+                          </td>
+                          <td className="p-3.5 text-xs text-gray-600 dark:text-slate-300 whitespace-nowrap">
+                            {o.pangkat || "—"}
+                          </td>
+                          <td className="p-3.5 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => handleDelete(o)}
+                              className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg text-xs font-semibold inline-flex items-center space-x-1 transition"
+                              title="Hapus Penandatangan Ini"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Hapus</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       ) : (
+        /* ================= JAWATAN / USER VIEW (CARDS) ================= */
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {FIELDS.map((field) => {
             const c = colorClasses[field.color];
@@ -284,10 +454,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
             const extras = rows.slice(1);
             const draft = drafts[field.type] || { nama: "", nip: "", pangkat: "" };
             const newRow = newRows[field.type] || { nama: "", nip: "", pangkat: "" };
-            // Jawatan-managed fields (PPTK/Notulis/Pemimpin Rapat) are edited by
-            // the jawatan's own users — the admin only monitors them.
-            // Admin-set fields (PA/Panewu/Bendahara) are edited by the admin only.
-            const editable = field.jawatanManaged ? !isAdmin : isAdmin;
+            const editable = field.jawatanManaged;
 
             return (
               <div
@@ -365,11 +532,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                     <div className="bg-gray-50 dark:bg-slate-700/40 rounded-xl p-4 space-y-1.5">
                       <div className="flex items-center space-x-2 text-[11px] font-semibold text-gray-500 dark:text-slate-400">
                         <Eye className="w-3.5 h-3.5" />
-                        <span>
-                          {field.jawatanManaged
-                            ? "Diatur oleh jawatan masing-masing — admin memantau"
-                            : "Data ditetapkan Administrator Kapanewon"}
-                        </span>
+                        <span>Data ditetapkan Administrator Kapanewon</span>
                       </div>
                       {primary ? (
                         <>
@@ -389,7 +552,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                   {extras.length > 0 && (
                     <div className="border-t border-gray-100 dark:border-slate-700 pt-3 space-y-2">
                       <p className="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase">
-                        {field.jawatanManaged ? "Pilihan Tambahan" : "Data Lain"} ({extras.length})
+                        Pilihan Tambahan ({extras.length})
                       </p>
                       {extras.map((o) => (
                         <div
@@ -400,7 +563,6 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                             <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{o.nama}</p>
                             <p className="text-[10px] text-gray-500 dark:text-slate-400 truncate">
                               {o.nip ? `NIP. ${o.nip}` : "Tanpa NIP"}
-                              {isAdmin && o.jawatanId ? ` • ${o.jawatanId}` : ""}
                             </p>
                           </div>
                           {editable && (
