@@ -171,7 +171,24 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
     setSaveMessage("Menyimpan...");
 
     try {
-      await saveSpjDocumentData(selectedDocId, formData, status, externalUrl);
+      // Freeze live QR attendance into the document payload. The 30-minute QR
+      // session (and its collection) is purged later, but signatures captured
+      // here stay with the document forever — so printing always works.
+      let payload = formData;
+      if (activeDoc?.documentTypeCode === "DAFTAR_HADIR" && qrAttendance.length > 0) {
+        const manual: any[] = formData.peserta || [];
+        const qrNames = new Set(qrAttendance.map((r) => r.nama.trim().toLowerCase()));
+        const manualRows = manual.filter(
+          (p: any) => p?.nama && !qrNames.has(String(p.nama).trim().toLowerCase())
+        );
+        const merged = [
+          ...qrAttendance.map((r, i) => ({ no: i + 1, nama: r.nama, jabatan: r.jabatan || "", ttdImage: r.ttdImage || "" })),
+          ...manualRows.map((p: any, i: number) => ({ no: qrAttendance.length + i + 1, nama: p.nama, jabatan: p.jabatan || "", ttdImage: p.ttdImage || "" })),
+        ];
+        payload = { ...formData, peserta: merged };
+        setFormData(payload);
+      }
+      await saveSpjDocumentData(selectedDocId, payload, status, externalUrl);
       setSaveMessage("Tersimpan!");
       setTimeout(() => setSaveMessage(null), 2000);
       await loadSpjData();
