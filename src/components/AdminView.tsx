@@ -6,6 +6,7 @@ import {
   getAllUsers,
   updateUserAccess,
   adminCreateUser,
+  adminDeleteUser,
   getJawatanList,
   createJawatan,
   updateJawatan,
@@ -18,6 +19,8 @@ import {
   adminRejectKodeRekening,
   adminCreateKegiatan,
   adminCreateKodeRekening,
+  adminUpdateKegiatan,
+  adminUpdateKodeRekening,
 } from "../services/api";
 import { formatDateDDMMYYYY } from "../utils/date";
 import {
@@ -91,6 +94,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
   const [newRekNama, setNewRekNama] = useState("");
   const [newRekKategori, setNewRekKategori] = useState("MAKAN_MINUM");
   const [newRekTahun, setNewRekTahun] = useState(2026);
+
+  // Edit Kegiatan Modal State
+  const [editingKegiatan, setEditingKegiatan] = useState<Kegiatan | null>(null);
+  const [editKegKode, setEditKegKode] = useState("");
+  const [editKegNama, setEditKegNama] = useState("");
+  const [editKegJawatanId, setEditKegJawatanId] = useState("");
+  const [editKegTahun, setEditKegTahun] = useState(2026);
+
+  // Edit Rekening Modal State
+  const [editingRekening, setEditingRekening] = useState<KodeRekening | null>(null);
+  const [editRekKode, setEditRekKode] = useState("");
+  const [editRekNama, setEditRekNama] = useState("");
+  const [editRekKategori, setEditRekKategori] = useState("MAKAN_MINUM");
+
+  // Delete User Modal State
+  const [deleteUserUid, setDeleteUserUid] = useState<string | null>(null);
 
   const fetchAuditLogs = async () => {
     setLoading(true);
@@ -350,6 +369,71 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
     }
   };
 
+  // Delete User Handler
+  const handleDeleteUser = async () => {
+    if (!deleteUserUid) return;
+    try {
+      await adminDeleteUser(deleteUserUid, user);
+      setDeleteUserUid(null);
+      await fetchMasterData();
+      alert("Pengguna berhasil dihapus.");
+    } catch (e) {
+      console.error(e);
+      alert("Gagal menghapus pengguna.");
+    }
+  };
+
+  // Edit Kegiatan Handlers
+  const handleOpenEditKegiatan = (k: Kegiatan) => {
+    setEditingKegiatan(k);
+    setEditKegKode(k.kodeKegiatan);
+    setEditKegNama(k.namaKegiatan);
+    setEditKegJawatanId(k.jawatanId);
+    setEditKegTahun(k.tahunAnggaran || 2026);
+  };
+
+  const handleSaveEditKegiatan = async () => {
+    if (!editingKegiatan) return;
+    try {
+      await adminUpdateKegiatan(
+        editingKegiatan.id,
+        { kodeKegiatan: editKegKode, namaKegiatan: editKegNama, jawatanId: editKegJawatanId, tahunAnggaran: editKegTahun },
+        user
+      );
+      setEditingKegiatan(null);
+      await fetchMasterData();
+      alert("Kode kegiatan berhasil diperbarui!");
+    } catch (e) {
+      console.error(e);
+      alert("Gagal memperbarui kode kegiatan.");
+    }
+  };
+
+  // Edit Rekening Handlers
+  const handleOpenEditRekening = (r: KodeRekening) => {
+    setEditingRekening(r);
+    setEditRekKode(r.kode);
+    setEditRekNama(r.nama);
+    setEditRekKategori(r.kategori || "MAKAN_MINUM");
+  };
+
+  const handleSaveEditRekening = async () => {
+    if (!editingRekening) return;
+    try {
+      await adminUpdateKodeRekening(
+        editingRekening.id,
+        { kode: editRekKode, nama: editRekNama, kategori: editRekKategori },
+        user
+      );
+      setEditingRekening(null);
+      await fetchMasterData();
+      alert("Kode rekening berhasil diperbarui!");
+    } catch (e) {
+      console.error(e);
+      alert("Gagal memperbarui kode rekening.");
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -485,13 +569,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                             </span>
                           )}
                         </td>
-                        <td className="p-4 text-right">
+                        <td className="p-4 text-right space-x-2">
                           <button
                             onClick={() => handleOpenEditUser(u)}
                             className="px-3 py-1.5 bg-[#32848D] hover:bg-[#276972] text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1 shadow-sm"
                           >
                             <Edit className="w-3.5 h-3.5" />
                             <span>Ubah Akses</span>
+                          </button>
+                          <button
+                            onClick={() => setDeleteUserUid(u.uid)}
+                            className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Hapus</span>
                           </button>
                         </td>
                       </tr>
@@ -661,13 +752,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                               </button>
                             </>
                           ) : (
-                            <button
-                              onClick={() => handleRejectKegiatan(k.id)}
-                              className="px-2.5 py-1 text-gray-400 hover:text-red-600 rounded-lg text-xs"
-                              title="Hapus Kegiatan"
-                            >
-                              <Trash2 className="w-4 h-4 inline" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleOpenEditKegiatan(k)}
+                                className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                onClick={() => handleRejectKegiatan(k.id)}
+                                className="px-2.5 py-1 text-gray-400 hover:text-red-600 rounded-lg text-xs"
+                                title="Hapus Kegiatan"
+                              >
+                                <Trash2 className="w-4 h-4 inline" />
+                              </button>
+                            </>
                           )}
                         </td>
                       </tr>
@@ -762,13 +862,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                               </button>
                             </>
                           ) : (
-                            <button
-                              onClick={() => handleRejectRekening(r.id)}
-                              className="px-2.5 py-1 text-gray-400 hover:text-red-600 rounded-lg text-xs"
-                              title="Hapus Rekening"
-                            >
-                              <Trash2 className="w-4 h-4 inline" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleOpenEditRekening(r)}
+                                className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                onClick={() => handleRejectRekening(r.id)}
+                                className="px-2.5 py-1 text-gray-400 hover:text-red-600 rounded-lg text-xs"
+                                title="Hapus Rekening"
+                              >
+                                <Trash2 className="w-4 h-4 inline" />
+                              </button>
+                            </>
                           )}
                         </td>
                       </tr>
@@ -1147,6 +1256,162 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {deleteUserUid && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="flex items-center space-x-2 text-red-600 font-bold text-lg border-b pb-3">
+              <Trash2 className="w-5 h-5" />
+              <span>Hapus Pengguna</span>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-slate-300">
+              Yakin ingin menghapus pengguna ini? Tindakan ini tidak dapat dibatalkan. Pengguna akan kehilangan akses ke aplikasi.
+            </p>
+            <div className="flex justify-end space-x-3 pt-3 border-t">
+              <button
+                onClick={() => setDeleteUserUid(null)}
+                className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl font-medium text-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteUser}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl text-sm shadow-sm"
+              >
+                Hapus Pengguna
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Kegiatan Modal */}
+      {editingKegiatan && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
+              <Edit className="w-5 h-5" />
+              <span>Edit Kode Kegiatan</span>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nomor Kode Kegiatan</label>
+                <input
+                  type="text"
+                  value={editKegKode}
+                  onChange={(e) => setEditKegKode(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Kegiatan</label>
+                <input
+                  type="text"
+                  value={editKegNama}
+                  onChange={(e) => setEditKegNama(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Jawatan Naungan</label>
+                <select
+                  value={editKegJawatanId}
+                  onChange={(e) => setEditKegJawatanId(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white"
+                >
+                  {jawatanList.map((j) => (
+                    <option key={j.id} value={j.id}>{j.nama}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Tahun Anggaran</label>
+                <input
+                  type="number"
+                  value={editKegTahun}
+                  onChange={(e) => setEditKegTahun(Number(e.target.value))}
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 pt-3 border-t">
+              <button
+                onClick={() => setEditingKegiatan(null)}
+                className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl font-medium text-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveEditKegiatan}
+                className="px-5 py-2 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-xl text-sm shadow-sm"
+              >
+                Simpan Perubahan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Rekening Modal */}
+      {editingRekening && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
+              <Edit className="w-5 h-5" />
+              <span>Edit Kode Rekening</span>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nomor Kode Rekening</label>
+                <input
+                  type="text"
+                  value={editRekKode}
+                  onChange={(e) => setEditRekKode(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Rekening Belanja</label>
+                <input
+                  type="text"
+                  value={editRekNama}
+                  onChange={(e) => setEditRekNama(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Kategori Pengeluaran</label>
+                <select
+                  value={editRekKategori}
+                  onChange={(e) => setEditRekKategori(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white"
+                >
+                  <option value="MAKAN_MINUM">Makanan dan Minuman</option>
+                  <option value="HONOR">Honorarium / Jasa</option>
+                  <option value="ATK">Alat Tulis Kantor (ATK)</option>
+                  <option value="TRANSPORT">Perjalanan Dinas / Transport</option>
+                  <option value="LAINNYA">Lain-Lain</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 pt-3 border-t">
+              <button
+                onClick={() => setEditingRekening(null)}
+                className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl font-medium text-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveEditRekening}
+                className="px-5 py-2 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-xl text-sm shadow-sm"
+              >
+                Simpan Perubahan
+              </button>
+            </div>
           </div>
         </div>
       )}

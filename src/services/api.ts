@@ -486,6 +486,86 @@ export const adminCreateKodeRekening = async (data: {
   return id;
 };
 
+// Admin Update Kegiatan (Edit existing kegiatan)
+export const adminUpdateKegiatan = async (kegiatanId: string, data: {
+  kodeKegiatan?: string;
+  namaKegiatan?: string;
+  jawatanId?: string;
+  tahunAnggaran?: number;
+  status?: Kegiatan["status"];
+}, actor: UserProfile) => {
+  const kegRef = doc(db, "kegiatan", kegiatanId);
+  const snap = await getDoc(kegRef);
+  if (!snap.exists()) throw new Error("Kegiatan tidak ditemukan");
+  const oldData = snap.data() as Kegiatan;
+  const updateData: Record<string, any> = { updatedAt: serverTimestamp() };
+  if (data.kodeKegiatan !== undefined) updateData.kodeKegiatan = data.kodeKegiatan.trim();
+  if (data.namaKegiatan !== undefined) updateData.namaKegiatan = data.namaKegiatan.trim();
+  if (data.jawatanId !== undefined) updateData.jawatanId = data.jawatanId;
+  if (data.tahunAnggaran !== undefined) updateData.tahunAnggaran = data.tahunAnggaran;
+  if (data.status !== undefined) updateData.status = data.status;
+  await updateDoc(kegRef, sanitizeData(updateData));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: kegiatanId,
+    oldValue: oldData,
+    newValue: updateData
+  });
+};
+
+// Admin Update Kode Rekening (Edit existing rekening)
+export const adminUpdateKodeRekening = async (rekId: string, data: {
+  kode?: string;
+  nama?: string;
+  kategori?: string;
+  tahunAnggaran?: number;
+  status?: KodeRekening["status"];
+  isActive?: boolean;
+}, actor: UserProfile) => {
+  const rekRef = doc(db, "kodeRekening", rekId);
+  const snap = await getDoc(rekRef);
+  if (!snap.exists()) throw new Error("Rekening tidak ditemukan");
+  const oldData = snap.data() as KodeRekening;
+  const updateData: Record<string, any> = { updatedAt: serverTimestamp() };
+  if (data.kode !== undefined) updateData.kode = data.kode.trim();
+  if (data.nama !== undefined) updateData.nama = data.nama.trim();
+  if (data.kategori !== undefined) updateData.kategori = data.kategori;
+  if (data.tahunAnggaran !== undefined) updateData.tahunAnggaran = data.tahunAnggaran;
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.isActive !== undefined) updateData.isActive = data.isActive;
+  await updateDoc(rekRef, sanitizeData(updateData));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: rekId,
+    oldValue: oldData,
+    newValue: updateData
+  });
+};
+
+// Admin Delete User
+export const adminDeleteUser = async (uid: string, actor: UserProfile) => {
+  const userRef = doc(db, "users", uid);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) throw new Error("Pengguna tidak ditemukan");
+  const oldData = snap.data();
+  await deleteDoc(userRef);
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "UPDATE_USER_ACCESS",
+    entityType: "USER",
+    entityId: uid,
+    oldValue: oldData,
+    reason: "Pengguna dihapus oleh admin"
+  });
+};
+
 export const getJenisBelanjaList = async (): Promise<JenisBelanja[]> => {
   const snap = await getDocs(collection(db, "jenisBelanja"));
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as JenisBelanja));
@@ -651,15 +731,22 @@ export const createSpjPackage = async (params: {
   return spjRef.id;
 };
 
-// Fetch SPJ List
+// Fetch SPJ List — excludes ARCHIVED (use getArchivedSpjList for archived)
 export const getSpjList = async (user: UserProfile): Promise<SpjItem[]> => {
-  let q = collection(db, "spj");
+  const colRef = collection(db, "spj");
   if (user.role !== "ADMIN") {
-    const snap = await getDocs(query(q, where("jawatanId", "==", user.jawatanId)));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as SpjItem));
+    // For regular users: fetch by jawatanId, then filter out ARCHIVED in-memory
+    // (avoids composite index requirement for status != ARCHIVED + jawatanId ==)
+    const snap = await getDocs(query(colRef, where("jawatanId", "==", user.jawatanId)));
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() } as SpjItem))
+      .filter(s => s.status !== "ARCHIVED");
   }
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as SpjItem));
+  // For ADMIN: fetch all, filter out ARCHIVED in-memory
+  const snap = await getDocs(colRef);
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() } as SpjItem))
+    .filter(s => s.status !== "ARCHIVED");
 };
 
 // Fetch Single SPJ

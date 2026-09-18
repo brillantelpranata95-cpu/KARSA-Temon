@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { Navbar } from "./components/Navbar";
 import { Dashboard } from "./components/Dashboard";
@@ -7,11 +8,14 @@ import { SpjWizard } from "./components/SpjWizard";
 import { PrintPreview } from "./components/PrintPreview";
 import { AdminView } from "./components/AdminView";
 import { PublicDashboard } from "./components/PublicDashboard";
+import QRAttendancePage from "./components/QRAttendancePage";
 import { getSpjById, getSpjDocuments } from "./services/api";
 import { SpjItem, SpjDocumentItem } from "./types";
 
-export function App() {
+function MainApp() {
   const { user, loading, signInWithGoogle, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<"dashboard" | "spj" | "master" | "audit">("dashboard");
 
   const [selectedSpjId, setSelectedSpjId] = useState<string | null>(null);
@@ -31,6 +35,15 @@ export function App() {
     setActiveTab("spj");
     setViewMode("list");
   };
+
+  // Jika di route /absen, jangan render layout utama
+  if (location.pathname.startsWith("/absen")) {
+    return (
+      <Routes>
+        <Route path="/absen/:spjId" element={<QRAttendancePage />} />
+      </Routes>
+    );
+  }
 
   if (!user) {
     return <PublicDashboard loading={loading} onLogin={signInWithGoogle} />;
@@ -71,6 +84,14 @@ export function App() {
         )}
       </main>
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <MainApp />
+    </BrowserRouter>
   );
 }
 

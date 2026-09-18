@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { UserProfile, SpjItem, Kegiatan, KodeRekening } from "../types";
+import { UserProfile, SpjItem, Kegiatan, JenisBelanja, KodeRekening } from "../types";
 import {
   getSpjList,
   getKegiatanList,
+  getJenisBelanjaList,
   getKodeRekeningList,
   getJawatanList,
   createSpjPackage,
@@ -12,7 +13,6 @@ import {
   getArchivedSpjList,
   requestNewKegiatan,
   requestNewKodeRekening,
-  getSpjDocuments,
 } from "../services/api";
 import { formatDateDDMMYYYY } from "../utils/date";
 import {
@@ -43,10 +43,12 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [showArchive, setShowArchive] = useState(false);
 
   const [kegiatanList, setKegiatanList] = useState<Kegiatan[]>([]);
+  const [jenisList, setJenisList] = useState<JenisBelanja[]>([]);
   const [rekList, setRekList] = useState<KodeRekening[]>([]);
   const [jawatanList, setJawatanList] = useState<{ id: string; nama: string }[]>([]);
 
   const [selectedKegiatanId, setSelectedKegiatanId] = useState("");
+  const [selectedJenisId, setSelectedJenisId] = useState("");
   const [selectedRekId, setSelectedRekId] = useState("");
   const [judulAktivitas, setJudulAktivitas] = useState("");
   const [jumlahPeserta, setJumlahPeserta] = useState<number>(20);
@@ -76,21 +78,28 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [spjData, archivedData, kData, rData, jawatanData] = await Promise.all([
+      const [spjData, archivedData, kData, jData, rData, jawatanData] = await Promise.all([
         getSpjList(user),
         getArchivedSpjList(user),
         getKegiatanList(user.role === "ADMIN" ? undefined : user.jawatanId),
+        getJenisBelanjaList(),
         getKodeRekeningList(),
         getJawatanList(),
       ]);
       setSpjs(spjData);
       setArchivedSpjs(archivedData);
       setKegiatanList(kData);
+      setJenisList(jData);
       setRekList(rData);
       setJawatanList(jawatanData);
 
       if (kData.length > 0) setSelectedKegiatanId(kData[0].id);
-      if (rData.length > 0) setSelectedRekId(rData[0].id);
+      if (rData.length > 0) {
+        setSelectedRekId(rData[0].id);
+        // Auto-sync Jenis Belanja from Kode Rekening
+        const linkedJenis = jData.find((j) => j.kodeRekeningId === rData[0].id);
+        if (linkedJenis) setSelectedJenisId(linkedJenis.id);
+      }
     } catch (e) {
       console.error("Gagal memuat data SPJ:", e);
     } finally {
@@ -102,6 +111,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     e.preventDefault();
     const k = kegiatanList.find((x) => x.id === selectedKegiatanId);
     const r = rekList.find((x) => x.id === selectedRekId);
+    const j = jenisList.find((x) => x.id === selectedJenisId);
 
     if (!k || !r) {
       alert("Mohon lengkapi pilihan Kegiatan dan Kode Rekening.");
@@ -124,7 +134,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       await createSpjPackage({
         user,
         kegiatan: k,
-        jenisBelanja: { id: "", kode: "", nama: "", isActive: true },
+        jenisBelanja: j || { id: "", kode: "", nama: "", isActive: true },
         kodeRekening: r,
         tanggal: tanggalSpj,
         judulAktivitas,
@@ -510,7 +520,13 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 </div>
                 <select
                   value={selectedRekId}
-                  onChange={(e) => setSelectedRekId(e.target.value)}
+                  onChange={(e) => {
+                    const nextRekId = e.target.value;
+                    setSelectedRekId(nextRekId);
+                    // Auto-sync Jenis Belanja from Kode Rekening
+                    const linkedJenis = jenisList.find((j) => j.kodeRekeningId === nextRekId);
+                    if (linkedJenis) setSelectedJenisId(linkedJenis.id);
+                  }}
                   className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                 >
                   {rekList.map((r) => (
@@ -519,6 +535,15 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Jenis Belanja (Otomatis dari Kode Rekening)</label>
+                <input
+                  value={jenisList.find((j) => j.id === selectedJenisId)?.nama || "Belum dikonfigurasi untuk kode rekening ini"}
+                  readOnly
+                  className="w-full border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50 rounded-xl p-2.5 text-gray-600 dark:text-slate-300"
+                />
               </div>
 
               {/* Grid 12: Judul Aktivitas (span 9), Jumlah Peserta (span 3) */}

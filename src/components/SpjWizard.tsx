@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { UserProfile, SpjItem, SpjDocumentItem } from "../types";
 import { getSpjById, getSpjDocuments, saveSpjDocumentData, finalizeSpj, updateSpjSharedData } from "../services/api";
 import { terbilangRupiah } from "../utils/format";
 import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari } from "../utils/date";
+import QRCode from "qrcode";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -15,7 +16,10 @@ import {
   Printer,
   ShieldCheck,
   UserCheck,
-  Users
+  Users,
+  QrCode,
+  Download,
+  ExternalLink
 } from "lucide-react";
 
 interface SpjWizardProps {
@@ -41,6 +45,29 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
   const [pptkNama, setPptkNama] = useState("");
   const [pptkNip, setPptkNip] = useState("");
   const [pptkPangkat, setPptkPangkat] = useState("");
+
+  // QR Code State
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [qrLink, setQrLink] = useState<string>("");
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  const generateQRCode = async () => {
+    if (!spj) return;
+    const attendanceUrl = `${window.location.origin}/absen/${spjId}`;
+    setQrLink(attendanceUrl);
+    try {
+      const dataUrl = await QRCode.toDataURL(attendanceUrl, {
+        width: 300,
+        margin: 2,
+        color: { dark: "#1a1a1a", light: "#ffffff" },
+        errorCorrectionLevel: "M",
+      });
+      setQrDataUrl(dataUrl);
+    } catch (e) {
+      console.error("QR generation error:", e);
+      alert("Gagal membuat QR code.");
+    }
+  };
 
   const loadSpjData = async () => {
     try {
@@ -455,6 +482,61 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                     >
                       Reset / Generate Baris ({spj.sharedData?.jumlahPeserta || 20})
                     </button>
+                  </div>
+
+                  {/* QR Code Online Attendance Section */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <QrCode className="w-5 h-5 text-blue-600" />
+                        <h3 className="font-bold text-blue-900 dark:text-blue-200">Absensi Online via QR Code</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={generateQRCode}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1.5"
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                        <span>Buat QR Absensi</span>
+                      </button>
+                    </div>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
+                      Peserta scan QR ini → diarahkan ke halaman input nama + tanda tangan digital → data otomatis masuk ke daftar hadir.
+                    </p>
+                    {qrDataUrl && (
+                      <div className="flex items-start space-x-4">
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-200">
+                          <img src={qrDataUrl} alt="QR Code Absensi" className="w-32 h-32" />
+                        </div>
+                        <div className="flex-1 space-y-2">
+                          <div className="text-xs">
+                            <p className="font-semibold text-blue-900 dark:text-blue-200 mb-1">Link Absensi:</p>
+                            <div className="flex items-center space-x-1">
+                              <code className="text-[11px] text-blue-600 bg-blue-50 dark:bg-blue-900/40 px-2 py-1 rounded break-all">{qrLink}</code>
+                            </div>
+                          </div>
+                          <div className="flex flex-col space-y-1.5">
+                            <a
+                              href={qrLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center space-x-1"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Buka Halaman Absensi</span>
+                            </a>
+                            <a
+                              href={qrDataUrl}
+                              download={`qr-absensi-${spjId}.png`}
+                              className="text-xs text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center space-x-1"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Download QR PNG</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Header Preview in Editor */}
