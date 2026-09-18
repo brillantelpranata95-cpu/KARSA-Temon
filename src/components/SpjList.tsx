@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { UserProfile, SpjItem, Kegiatan, KodeRekening } from "../types";
+import { UserProfile, SpjItem, Kegiatan, KodeRekening, PackageTemplate } from "../types";
 import {
   getSpjList,
   getKegiatanList,
@@ -12,6 +12,7 @@ import {
   getArchivedSpjList,
   requestNewKegiatan,
   requestNewKodeRekening,
+  getPackageTemplatesList,
 } from "../services/api";
 import { formatDateDDMMYYYY } from "../utils/date";
 import {
@@ -45,7 +46,9 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [kegiatanList, setKegiatanList] = useState<Kegiatan[]>([]);
   const [rekList, setRekList] = useState<KodeRekening[]>([]);
   const [jawatanList, setJawatanList] = useState<{ id: string; nama: string }[]>([]);
+  const [packageTemplates, setPackageTemplates] = useState<PackageTemplate[]>([]);
 
+  const [selectedPackageTemplateId, setSelectedPackageTemplateId] = useState<string>("");
   const [selectedKegiatanId, setSelectedKegiatanId] = useState("");
   const [selectedRekId, setSelectedRekId] = useState("");
   const [taggingSubKegiatan, setTaggingSubKegiatan] = useState("");
@@ -83,9 +86,10 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       getKegiatanList(user.role === "ADMIN" ? undefined : user.jawatanId),
       getKodeRekeningList(),
       getJawatanList(),
+      getPackageTemplatesList(),
     ]);
 
-    const [spjRes, archRes, kegRes, rekRes, jawRes] = results;
+    const [spjRes, archRes, kegRes, rekRes, jawRes, pkgRes] = results;
 
     const errors: string[] = [];
     if (spjRes.status === "fulfilled") {
@@ -113,6 +117,9 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     if (jawRes.status === "fulfilled") {
       setJawatanList(jawRes.value);
     }
+    if (pkgRes.status === "fulfilled") {
+      setPackageTemplates(pkgRes.value);
+    }
 
     if (errors.length > 0) {
       console.error("Load errors:", errors);
@@ -131,6 +138,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     e.preventDefault();
     const k = visibleKegiatanList.find((x) => x.id === selectedKegiatanId);
     const r = rekList.find((x) => x.id === selectedRekId);
+    const pkg = packageTemplates.find((p) => p.id === selectedPackageTemplateId) || null;
 
     if (!k || !r) {
       alert("Mohon lengkapi pilihan Sub-Kegiatan dan Kode Rekening.");
@@ -159,6 +167,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         jumlahPeserta,
         targetJawatanId,
         targetJawatanName,
+        packageTemplate: pkg,
       });
       setIsModalOpen(false);
       setTaggingSubKegiatan("");
@@ -363,41 +372,46 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/50 dark:bg-slate-700/50 text-gray-500 dark:text-slate-300 text-xs font-semibold border-b border-gray-100 dark:border-slate-700">
-                  <th className="p-4">TANGGAL</th>
-                  <th className="p-4">JAWATAN</th>
+                  <th className="p-4 whitespace-nowrap">TANGGAL</th>
+                  <th className="p-4 whitespace-nowrap">JAWATAN</th>
                   <th className="p-4">SUB-KEGIATAN & REKENING</th>
                   <th className="p-4">TAGGING SUB-KEGIATAN</th>
-                  <th className="p-4">PROGRESS</th>
-                  <th className="p-4">STATUS</th>
-                  <th className="p-4 text-right">AKSI</th>
+                  <th className="p-4 whitespace-nowrap">PROGRESS</th>
+                  <th className="p-4 whitespace-nowrap">STATUS</th>
+                  <th className="p-4 text-right whitespace-nowrap">AKSI</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-slate-700 text-xs">
                 {spjs.map((spj) => (
-                  <tr key={spj.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition">
-                    <td className="p-4 font-mono font-medium text-gray-700 dark:text-slate-300">
+                  <tr key={spj.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition align-top">
+                    <td className="p-4 font-mono font-medium text-gray-700 dark:text-slate-300 whitespace-nowrap">
                       {formatDateDDMMYYYY(spj.tanggal)}
                     </td>
                     <td className="p-4">
-                      <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-100 dark:border-emerald-800/50">
+                      <span className="inline-flex items-center max-w-[150px] truncate px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-100 dark:border-emerald-800/50" title={spj.jawatanName}>
                         {spj.jawatanName}
                       </span>
                     </td>
-                    <td className="p-4 space-y-0.5">
-                      <p className="font-bold text-gray-900 dark:text-white">{spj.masterSnapshot?.kegiatan?.nama}</p>
-                      <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                    <td className="p-4 space-y-1 max-w-[220px]">
+                      <p className="font-bold text-gray-900 dark:text-white leading-snug">{spj.masterSnapshot?.kegiatan?.nama}</p>
+                      <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-snug">
                         [{spj.masterSnapshot?.kodeRekening?.kode}] {spj.masterSnapshot?.kodeRekening?.nama}
                       </p>
+                      {spj.packageTemplateName && (
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border border-violet-100 dark:border-violet-800/50 text-[10px] font-semibold">
+                          {spj.packageTemplateName}
+                        </span>
+                      )}
                     </td>
-                    <td className="p-4">
-                      <p className="font-semibold text-gray-800 dark:text-slate-200">
+                    <td className="p-4 max-w-[200px]">
+                      <p className="font-semibold text-gray-800 dark:text-slate-200 leading-snug">
                         {spj.sharedData?.judulAktivitas || "—"}
                       </p>
                       {spj.sharedData?.jumlahPeserta && (
-                        <p className="text-[11px] text-gray-400">{spj.sharedData.jumlahPeserta} Peserta</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{spj.sharedData.jumlahPeserta} Peserta</p>
                       )}
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
                         <div className="w-16 bg-gray-200 dark:bg-slate-600 rounded-full h-2 overflow-hidden">
                           <div
@@ -408,71 +422,73 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                         <span className="font-bold text-gray-700 dark:text-slate-200">{spj.progress}%</span>
                       </div>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 whitespace-nowrap">
                       {spj.status === "FINALIZED" ? (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full font-semibold bg-emerald-100 text-emerald-800">
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Final
+                        <span className="inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full font-semibold bg-emerald-100 text-emerald-800">
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1 shrink-0" /> Final
                         </span>
                       ) : spj.status === "COMPLETE" ? (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full font-semibold bg-blue-100 text-blue-800">
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Lengkap
+                        <span className="inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full font-semibold bg-blue-100 text-blue-800">
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1 shrink-0" /> Lengkap
                         </span>
                       ) : spj.status === "IN_PROGRESS" ? (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full font-semibold bg-amber-100 text-amber-800">
-                          <Clock className="w-3.5 h-3.5 mr-1" /> Proses
+                        <span className="inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full font-semibold bg-amber-100 text-amber-800">
+                          <Clock className="w-3.5 h-3.5 mr-1 shrink-0" /> Proses
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full font-semibold bg-gray-100 text-gray-700">
+                        <span className="inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full font-semibold bg-gray-100 text-gray-700">
                           Draft
                         </span>
                       )}
                     </td>
-                    <td className="p-4 text-right space-x-2">
-                      <button
-                        onClick={() => onSelectSpj(spj.id, "preview")}
-                        className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg inline-flex items-center space-x-1"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Preview</span>
-                      </button>
+                    <td className="p-4 text-right">
+                      <div className="inline-flex items-center justify-end gap-1.5 flex-wrap">
+                        <button
+                          onClick={() => onSelectSpj(spj.id, "preview")}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
+                        >
+                          <Eye className="w-3.5 h-3.5 shrink-0" />
+                          <span>Preview</span>
+                        </button>
 
-                      {spj.status !== "FINALIZED" ? (
-                        <button
-                          onClick={() => onSelectSpj(spj.id, "edit")}
-                          className="px-3 py-1.5 text-xs font-semibold text-white bg-[#32848D] hover:bg-[#276972] rounded-lg inline-flex items-center space-x-1 shadow-sm"
-                        >
-                          <span>Kelola</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setArchiveSpjId(spj.id)}
-                          className="px-3 py-1.5 text-xs font-medium text-[#32848D] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1"
-                        >
-                          <Archive className="w-3.5 h-3.5" />
-                          <span>Arsipkan</span>
-                        </button>
-                      )}
+                        {spj.status !== "FINALIZED" ? (
+                          <button
+                            onClick={() => onSelectSpj(spj.id, "edit")}
+                            className="px-3 py-1.5 text-xs font-semibold text-white bg-[#32848D] hover:bg-[#276972] rounded-lg inline-flex items-center space-x-1 shadow-sm whitespace-nowrap"
+                          >
+                            <span>Kelola</span>
+                            <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setArchiveSpjId(spj.id)}
+                            className="px-3 py-1.5 text-xs font-medium text-[#32848D] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
+                          >
+                            <Archive className="w-3.5 h-3.5 shrink-0" />
+                            <span>Arsipkan</span>
+                          </button>
+                        )}
 
-                      {spj.status === "FINALIZED" && user.role === "ADMIN" && (
-                        <button
-                          onClick={() => setReopenSpjId(spj.id)}
-                          className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg inline-flex items-center space-x-1"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          <span>Reopen</span>
-                        </button>
-                      )}
+                        {spj.status === "FINALIZED" && user.role === "ADMIN" && (
+                          <button
+                            onClick={() => setReopenSpjId(spj.id)}
+                            className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                            <span>Reopen</span>
+                          </button>
+                        )}
 
-                      {user.role === "ADMIN" && (
-                        <button
-                          onClick={() => setDeleteSpjId(spj.id)}
-                          className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg inline-flex items-center space-x-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Hapus</span>
-                        </button>
-                      )}
+                        {user.role === "ADMIN" && (
+                          <button
+                            onClick={() => setDeleteSpjId(spj.id)}
+                            className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                            <span>Hapus</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -517,6 +533,46 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                   </select>
                 </div>
               )}
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                  Jenis Paket SPJ {user.role === "ADMIN" ? "(Dibuat Admin)" : ""}
+                </label>
+                <select
+                  value={selectedPackageTemplateId}
+                  onChange={(e) => setSelectedPackageTemplateId(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                >
+                  <option value="">— Paket Standar (mengikuti Kode Rekening) —</option>
+                  {packageTemplates.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nama} ({p.documents?.length || 0} dokumen)
+                    </option>
+                  ))}
+                </select>
+                {selectedPackageTemplateId && (
+                  <div className="mt-2 p-2.5 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-lg">
+                    <p className="text-[11px] font-semibold text-violet-900 dark:text-violet-200 mb-1">
+                      Dokumen wajib paket ini:
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {packageTemplates
+                        .find((p) => p.id === selectedPackageTemplateId)
+                        ?.documents?.slice()
+                        .sort((a, b) => a.order - b.order)
+                        .map((d) => (
+                          <span
+                            key={d.documentTypeId}
+                            className="px-2 py-0.5 bg-white dark:bg-slate-700 text-violet-700 dark:text-violet-300 rounded text-[10px] font-medium border border-violet-200 dark:border-violet-700"
+                          >
+                            {d.documentTypeId.replace("doctype-", "").replace(/_/g, " ").toUpperCase()}
+                            {d.required ? "" : " (opsional)"}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div>
                 <div className="flex justify-between items-center mb-1">

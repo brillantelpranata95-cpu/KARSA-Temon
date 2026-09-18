@@ -22,6 +22,40 @@ export interface DocumentTypeItem { id: string; code: string; name: string; desc
 export interface ChecklistDocConfig { documentTypeId: string; required: boolean; order: number; }
 export interface ChecklistConfig { id: string; kodeRekeningId?: string; jenisBelanjaId?: string; tahunAnggaran: number; version: number; isActive: boolean; documents: ChecklistDocConfig[]; createdAt?: any; updatedAt?: any; }
 
+// ------------------- OFFICIALS (PENANDATANGAN) -------------------
+export type OfficialType = "PPTK" | "NOTULIS" | "PEMIMPIN_RAPAT" | "PA" | "PANEWU" | "BENDAHARA";
+export interface OfficialPerson {
+  id: string;
+  type: OfficialType;
+  nama: string;
+  nip?: string;
+  pangkat?: string;
+  jawatanId?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+// ------------------- ADMIN-DEFINED SPJ PACKAGE TEMPLATES -------------------
+export interface PackageTemplate {
+  id: string;
+  kode: string;
+  nama: string;
+  description?: string;
+  documents: ChecklistDocConfig[];
+  isActive: boolean;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+// ------------------- QR ATTENDANCE SESSION (30 MINUTES TTL) -------------------
+export interface AttendanceSession {
+  id: string;
+  spjId: string;
+  createdAtMs: number;
+  expiresAtMs: number;
+  createdBy?: string;
+}
+
 export type SpjStatus = "DRAFT" | "IN_PROGRESS" | "COMPLETE" | "FINALIZED" | "ARCHIVED";
 export interface SpjMasterSnapshot {
   kegiatan: { id: string; kode: string; nama: string };
@@ -33,15 +67,19 @@ export interface SpjSharedData {
   namaKegiatan?: string; kodeKegiatan?: string; kodeRekening?: string; namaRekening?: string;
   judulAktivitas?: string; jumlahPeserta?: number;
   hari?: string; tanggal?: string; jam?: string; tempat?: string; acara?: string;
-  pemimpinRapat?: string; pemimpinRapatNip?: string; pemimpinRapatJabatan?: string; notulis?: string;
+  pemimpinRapat?: string; pemimpinRapatNip?: string; pemimpinRapatJabatan?: string;
+  notulis?: string; notulisNip?: string; notulisJabatan?: string;
   pptkNama?: string; pptkNip?: string; pptkPangkat?: string;
   paNama?: string; paNip?: string; bendaharaNama?: string; bendaharaNip?: string;
   panewuNama?: string; panewuNip?: string;
+  penerimaNama?: string;
+  tanggalPelaksanaanList?: string[];
 }
 export interface SpjItem {
   id: string; nomorSpj: string; jawatanId: string; jawatanName: string; userId: string; userEmail: string; userName: string;
   kegiatanId: string; jenisBelanjaId?: string; kodeRekeningId: string; tanggal: string; tahunAnggaran: number; bulan: number;
   status: SpjStatus; progress: number; masterSnapshot: SpjMasterSnapshot;
+  packageTemplateId?: string | null; packageTemplateName?: string | null;
   checklistSnapshot: { configId: string; version: number; documents: SpjChecklistSnapshotItem[] };
   sharedData?: SpjSharedData; createdAt?: any; updatedAt?: any; finalizedAt?: any; finalizedBy?: string; reopenReason?: string;
 }

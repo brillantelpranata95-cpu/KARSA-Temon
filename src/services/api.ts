@@ -9,7 +9,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
   writeBatch
 } from "firebase/firestore";
@@ -25,7 +24,10 @@ import {
   SpjItem,
   SpjDocumentItem,
   AuditLogItem,
-  SpjStatus
+  SpjStatus,
+  OfficialPerson,
+  OfficialType,
+  PackageTemplate
 } from "../types";
 
 // Helper for Firestore data sanitization (removes undefined)
@@ -569,6 +571,272 @@ export const getDocumentTypesList = async (): Promise<DocumentTypeItem[]> => {
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as DocumentTypeItem));
 };
 
+// ------------------- OFFICIALS (PENANDATANGAN) — CROSS-JAWATAN -------------------
+// Master officials are set once by admin and auto-injected into every document
+// that needs their signature (PPTK, Notulis, PA/KPA/Panewu, Bendahara).
+export const getOfficialsList = async (type?: OfficialType): Promise<OfficialPerson[]> => {
+  const snap = await getDocs(collection(db, "officials"));
+  let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as OfficialPerson));
+  if (type) list = list.filter(o => o.type === type);
+  return list;
+};
+
+export const adminSaveOfficial = async (data: {
+  id?: string;
+  type: OfficialType;
+  nama: string;
+  nip?: string;
+  pangkat?: string;
+  jawatanId?: string;
+}, actor: UserProfile): Promise<string> => {
+  const id = data.id || `official-${data.type.toLowerCase()}-${Date.now()}`;
+  const ref = doc(db, "officials", id);
+  const payload = {
+    id,
+    type: data.type,
+    nama: data.nama.trim(),
+    nip: (data.nip || "").trim(),
+    pangkat: (data.pangkat || "").trim(),
+    jawatanId: data.jawatanId || "",
+  };
+  await setDoc(ref, sanitizeData({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }), { merge: true });
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: id,
+    newValue: { type: "OFFICIAL", data: payload }
+  });
+  return id;
+};
+
+export const adminDeleteOfficial = async (officialId: string, actor: UserProfile) => {
+  await deleteDoc(doc(db, "officials", officialId));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: officialId,
+    reason: "Penandatangan dihapus oleh admin"
+  });
+};
+
+// Helper: resolve officials of a given type into signature fields for a document.
+export const resolveOfficialsForSignature = async (): Promise<{
+  pptk: OfficialPerson | null;
+  notulis: OfficialPerson | null;
+  pa: OfficialPerson | null;
+  panewu: OfficialPerson | null;
+  bendahara: OfficialPerson | null;
+}> => {
+  const list = await getOfficialsList();
+  const pick = (t: OfficialType) => list.find(o => o.type === t) || null;
+  return {
+    pptk: pick("PPTK"),
+    notulis: pick("NOTULIS"),
+    pa: pick("PA"),
+    panewu: pick("PANEWU"),
+    bendahara: pick("BENDAHARA"),
+  };
+};
+
+// Save a Pemimpin Rapat option — usable by ANY user (not admin-only) so that
+// names entered in notulensi are reusable later across all jawatan.
+export const savePemimpinRapatOption = async (data: {
+  nama: string;
+  nip?: string;
+  pangkat?: string;
+}, actor: UserProfile): Promise<string> => {
+  const existing = await getOfficialsList("PEMIMPIN_RAPAT");
+  const dup = existing.find(o => o.nama.toLowerCase() === data.nama.trim().toLowerCase());
+  if (dup) return dup.id;
+
+  const id = `official-pemimpin-rapat-${Date.now()}`;
+  await setDoc(doc(db, "officials", id), sanitizeData({
+    id,
+    type: "PEMIMPIN_RAPAT" as OfficialType,
+    nama: data.nama.trim(),
+    nip: (data.nip || "").trim(),
+    pangkat: (data.pangkat || "").trim(),
+    jawatanId: actor.jawatanId || "",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }));
+  return id;
+};
+
+// Notulis options per-jawatan: each jawatan may set its own notulis.
+export const getNotulisOptions = async (jawatanId?: string): Promise<OfficialPerson[]> => {
+  const list = await getOfficialsList("NOTULIS");
+  if (!jawatanId) return list;
+  // Jawatan-specific first, then global (no jawatanId) as fallback options
+  return list.filter(o => !o.jawatanId || o.jawatanId === jawatanId);
+};
+
+export const saveNotulisOption = async (data: {
+  nama: string;
+  nip?: string;
+  pangkat?: string;
+  jawatanId?: string;
+}, actor: UserProfile): Promise<string> => {
+  const existing = await getOfficialsList("NOTULIS");
+  const dup = existing.find(
+    o => o.nama.toLowerCase() === data.nama.trim().toLowerCase() && (o.jawatanId || "") === (data.jawatanId || "")
+  );
+  if (dup) return dup.id;
+
+  const id = `official-notulis-${Date.now()}`;
+  await setDoc(doc(db, "officials", id), sanitizeData({
+    id,
+    type: "NOTULIS" as OfficialType,
+    nama: data.nama.trim(),
+    nip: (data.nip || "").trim(),
+    pangkat: (data.pangkat || "").trim(),
+    jawatanId: data.jawatanId || actor.jawatanId || "",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }));
+  return id;
+};
+
+// ------------------- PACKAGE TEMPLATES (ADMIN-DEFINED SPJ PACKAGES) -------------------
+export const getPackageTemplatesList = async (includeInactive = false): Promise<PackageTemplate[]> => {
+  const snap = await getDocs(collection(db, "packageTemplates"));
+  let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as PackageTemplate));
+  if (!includeInactive) list = list.filter(p => p.isActive !== false);
+  return list;
+};
+
+export const adminCreatePackageTemplate = async (data: {
+  kode: string;
+  nama: string;
+  description?: string;
+  documents: { documentTypeId: string; required: boolean; order: number }[];
+}, actor: UserProfile): Promise<string> => {
+  const id = `pkg-${Date.now()}`;
+  const ref = doc(db, "packageTemplates", id);
+  const payload: PackageTemplate = {
+    id,
+    kode: data.kode.trim().toUpperCase(),
+    nama: data.nama.trim(),
+    description: (data.description || "").trim(),
+    documents: data.documents,
+    isActive: true,
+  };
+  await setDoc(ref, sanitizeData({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: id,
+    newValue: { type: "PACKAGE_TEMPLATE", data: payload }
+  });
+  return id;
+};
+
+export const adminUpdatePackageTemplate = async (id: string, data: {
+  kode?: string;
+  nama?: string;
+  description?: string;
+  documents?: { documentTypeId: string; required: boolean; order: number }[];
+  isActive?: boolean;
+}, actor: UserProfile) => {
+  const ref = doc(db, "packageTemplates", id);
+  const patch: Record<string, any> = { updatedAt: serverTimestamp() };
+  if (data.kode !== undefined) patch.kode = data.kode.trim().toUpperCase();
+  if (data.nama !== undefined) patch.nama = data.nama.trim();
+  if (data.description !== undefined) patch.description = data.description.trim();
+  if (data.documents !== undefined) patch.documents = data.documents;
+  if (data.isActive !== undefined) patch.isActive = data.isActive;
+  await updateDoc(ref, sanitizeData(patch));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: id,
+    newValue: { type: "PACKAGE_TEMPLATE_UPDATE", data: patch }
+  });
+};
+
+export const adminDeletePackageTemplate = async (id: string, actor: UserProfile) => {
+  await deleteDoc(doc(db, "packageTemplates", id));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: id,
+    reason: "Paket SPJ dihapus oleh admin"
+  });
+};
+
+// ------------------- QR ATTENDANCE SESSIONS (30-MINUTE TTL) -------------------
+// A QR attendance session is valid for 30 minutes only; an expiry sweep
+// permanently removes expired sessions AND their captured attendance rows
+// so storage never fills up with stale records.
+export const QR_SESSION_TTL_MS = 30 * 60 * 1000;
+
+export const createAttendanceSession = async (spjId: string, actor: UserProfile): Promise<{ id: string; expiresAtMs: number }> => {
+  const now = Date.now();
+  const expiresAtMs = now + QR_SESSION_TTL_MS;
+  const ref = await addDoc(collection(db, "attendanceSessions"), sanitizeData({
+    spjId,
+    createdAtMs: now,
+    expiresAtMs,
+    createdBy: actor.email,
+    createdAt: serverTimestamp(),
+  }));
+  return { id: ref.id, expiresAtMs };
+};
+
+export const getActiveAttendanceSession = async (spjId: string): Promise<{ id: string; expiresAtMs: number } | null> => {
+  const snap = await getDocs(query(collection(db, "attendanceSessions"), where("spjId", "==", spjId)));
+  const now = Date.now();
+  const active = snap.docs
+    .map(d => ({ id: d.id, ...d.data() } as any))
+    .filter(s => Number(s.expiresAtMs) > now)
+    .sort((a, b) => Number(b.expiresAtMs) - Number(a.expiresAtMs))[0];
+  return active ? { id: active.id, expiresAtMs: Number(active.expiresAtMs) } : null;
+};
+
+export const validateAttendanceSession = async (spjId: string): Promise<boolean> => {
+  const active = await getActiveAttendanceSession(spjId);
+  return !!active;
+};
+
+// Permanently purge expired QR sessions and their attendance payloads.
+export const purgeExpiredAttendanceSessions = async (): Promise<number> => {
+  const snap = await getDocs(collection(db, "attendanceSessions"));
+  const now = Date.now();
+  const expired = snap.docs.filter(d => Number((d.data() as any).expiresAtMs) <= now);
+  let purged = 0;
+  for (const s of expired) {
+    const sessionData = s.data() as any;
+    const spjId = sessionData.spjId;
+    // Remove attendance rows captured by this expired session
+    if (spjId) {
+      try {
+        const attSnap = await getDocs(collection(db, "spj", spjId, "attendance"));
+        const batch = writeBatch(db);
+        attSnap.docs.forEach(a => {
+          const att = a.data() as any;
+          if (!att.sessionId || att.sessionId === s.id) batch.delete(a.ref);
+        });
+        await batch.commit();
+      } catch (e) {
+        console.warn("Failed to purge attendance rows:", e);
+      }
+    }
+    await deleteDoc(s.ref);
+    purged++;
+  }
+  return purged;
+};
+
 // ------------------- SPJ NUMBER GENERATOR -------------------
 export const generateSpjNumber = async (tahun: number): Promise<string> => {
   const spjRef = collection(db, "spj");
@@ -589,8 +857,9 @@ export const createSpjPackage = async (params: {
   jumlahPeserta: number;
   targetJawatanId?: string;
   targetJawatanName?: string;
+  packageTemplate?: PackageTemplate | null;
 }): Promise<string> => {
-  const { user, kegiatan, kodeRekening, tanggal, judulAktivitas, jumlahPeserta, targetJawatanId, targetJawatanName } = params;
+  const { user, kegiatan, kodeRekening, tanggal, judulAktivitas, jumlahPeserta, targetJawatanId, targetJawatanName, packageTemplate } = params;
   const year = new Date(tanggal).getFullYear() || 2026;
   const month = new Date(tanggal).getMonth() + 1 || 8;
   const nomorSpj = await generateSpjNumber(year);
@@ -598,23 +867,30 @@ export const createSpjPackage = async (params: {
   const activeJawatanId = targetJawatanId || user.jawatanId;
   const activeJawatanName = targetJawatanName || user.jawatanName;
 
-  // Find checklist config by kodeRekeningId (Jenis Belanja removed)
-  const configSnap = await getDocs(query(collection(db, "checklistConfigs"), where("kodeRekeningId", "==", kodeRekening.id)));
+  // Checklist resolution priority:
+  // 1) Admin-defined package template (e.g. "SPJ ATK") — user must complete exactly these docs.
+  // 2) Checklist config keyed by kodeRekeningId.
+  // 3) Default fallback.
   let checklistDocs: { documentTypeId: string; required: boolean; order: number }[] = [];
   let configId = "config-default";
 
-  if (!configSnap.empty) {
-    const configData = configSnap.docs[0].data() as ChecklistConfig;
-    configId = configSnap.docs[0].id;
-    checklistDocs = configData.documents;
+  if (packageTemplate && packageTemplate.documents?.length > 0) {
+    configId = packageTemplate.id;
+    checklistDocs = [...packageTemplate.documents].sort((a, b) => a.order - b.order);
   } else {
-    // Default fallback checklist
-    checklistDocs = [
-      { documentTypeId: "doctype-bend26", required: true, order: 1 },
-      { documentTypeId: "doctype-undangan", required: true, order: 2 },
-      { documentTypeId: "doctype-daftarhadir", required: true, order: 3 },
-      { documentTypeId: "doctype-notulen", required: true, order: 4 }
-    ];
+    const configSnap = await getDocs(query(collection(db, "checklistConfigs"), where("kodeRekeningId", "==", kodeRekening.id)));
+    if (!configSnap.empty) {
+      const configData = configSnap.docs[0].data() as ChecklistConfig;
+      configId = configSnap.docs[0].id;
+      checklistDocs = configData.documents;
+    } else {
+      checklistDocs = [
+        { documentTypeId: "doctype-bend26", required: true, order: 1 },
+        { documentTypeId: "doctype-undangan", required: true, order: 2 },
+        { documentTypeId: "doctype-daftarhadir", required: true, order: 3 },
+        { documentTypeId: "doctype-notulen", required: true, order: 4 }
+      ];
+    }
   }
 
   // Get doc types details
@@ -639,6 +915,14 @@ export const createSpjPackage = async (params: {
     kodeRekening: { id: kodeRekening.id, kode: kodeRekening.kode, nama: kodeRekening.nama }
   };
 
+  // Auto-inject admin-configured officials (PPTK, PA/KPA, Panewu, Bendahara, Notulis)
+  let officials: Awaited<ReturnType<typeof resolveOfficialsForSignature>> | null = null;
+  try {
+    officials = await resolveOfficialsForSignature();
+  } catch (e) {
+    console.warn("Failed to resolve officials:", e);
+  }
+
   const spjData: Omit<SpjItem, "id"> = {
     nomorSpj,
     jawatanId: activeJawatanId,
@@ -654,6 +938,8 @@ export const createSpjPackage = async (params: {
     status: "DRAFT",
     progress: 0,
     masterSnapshot,
+    packageTemplateId: packageTemplate?.id || null,
+    packageTemplateName: packageTemplate?.nama || null,
     checklistSnapshot: {
       configId,
       version: 1,
@@ -666,15 +952,18 @@ export const createSpjPackage = async (params: {
       namaRekening: kodeRekening.nama,
       judulAktivitas: judulAktivitas.trim(),
       jumlahPeserta: Math.max(1, Math.floor(jumlahPeserta)),
-      paNama: "RUSDI SUWARNO, SIP, M.M",
-      paNip: "19770721 199603 1 001",
-      bendaharaNama: "SUBARI",
-      bendaharaNip: "19700110 200801 1 013",
-      pptkNama: "SURADIMAN, S.I.P., M.M.",
-      pptkNip: "19730101 199303 1 008",
-      pptkPangkat: "Pembina; IV/a",
-      panewuNama: "RUSDI SUWARNO, SIP, M.M",
-      panewuNip: "19770721 199603 1 001"
+      paNama: officials?.pa?.nama || officials?.panewu?.nama || "",
+      paNip: officials?.pa?.nip || officials?.panewu?.nip || "",
+      bendaharaNama: officials?.bendahara?.nama || "",
+      bendaharaNip: officials?.bendahara?.nip || "",
+      pptkNama: officials?.pptk?.nama || "",
+      pptkNip: officials?.pptk?.nip || "",
+      pptkPangkat: officials?.pptk?.pangkat || "",
+      panewuNama: officials?.panewu?.nama || "",
+      panewuNip: officials?.panewu?.nip || "",
+      notulis: officials?.notulis?.nama || "",
+      notulisNip: officials?.notulis?.nip || "",
+      notulisJabatan: officials?.notulis?.pangkat || ""
     }
   };
 

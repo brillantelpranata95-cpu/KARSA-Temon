@@ -1,7 +1,22 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Public SPJ read (used by the QR attendance landing page)
     match /spj/{spjId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+
+      // Attendance capture is public (participants scan a QR and sign in).
+      // Rows are permanently purged when their 30-minute session expires.
+      match /attendance/{attendanceId} {
+        allow read: if request.auth != null;
+        allow create: if true;
+        allow update, delete: if request.auth != null;
+      }
+    }
+
+    // Attendance sessions: creators (logged-in) manage them; purge sweep deletes expired ones.
+    match /attendanceSessions/{sessionId} {
       allow read: if true;
       allow write: if request.auth != null;
     }

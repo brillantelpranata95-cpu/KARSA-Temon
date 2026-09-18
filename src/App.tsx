@@ -1,27 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
-import { Navbar } from "./components/Navbar";
+import { Navbar, AppTab } from "./components/Navbar";
 import { Dashboard } from "./components/Dashboard";
 import { SpjList } from "./components/SpjList";
 import { SpjWizard } from "./components/SpjWizard";
 import { PrintPreview } from "./components/PrintPreview";
 import { AdminView } from "./components/AdminView";
+import { PackageTemplates } from "./components/PackageTemplates";
+import { OfficialsSettings } from "./components/OfficialsSettings";
 import { PublicDashboard } from "./components/PublicDashboard";
 import QRAttendancePage from "./components/QRAttendancePage";
-import { getSpjById, getSpjDocuments } from "./services/api";
+import { getSpjById, getSpjDocuments, purgeExpiredAttendanceSessions } from "./services/api";
 import { SpjItem, SpjDocumentItem } from "./types";
 
 function MainApp() {
   const { user, loading, signInWithGoogle, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "spj" | "master" | "audit">("dashboard");
+  const [activeTab, setActiveTab] = useState<AppTab>("dashboard");
 
   const [selectedSpjId, setSelectedSpjId] = useState<string | null>(null);
   const [selectedSpj, setSelectedSpj] = useState<SpjItem | null>(null);
   const [selectedDocs, setSelectedDocs] = useState<SpjDocumentItem[]>([]);
   const [viewMode, setViewMode] = useState<"list" | "edit" | "preview">("list");
+
+  // Housekeeping: permanently purge expired QR attendance sessions (30-min TTL)
+  // and their captured attendance payloads so storage never accumulates.
+  useEffect(() => {
+    if (!user) return;
+    const sweep = () => {
+      purgeExpiredAttendanceSessions().catch((e) =>
+        console.warn("Attendance purge sweep failed:", e)
+      );
+    };
+    sweep();
+    const iv = setInterval(sweep, 5 * 60 * 1000); // every 5 minutes
+    return () => clearInterval(iv);
+  }, [user]);
 
   const handleSelectSpj = async (spjId: string, mode: "edit" | "preview") => {
     setSelectedSpjId(spjId);
@@ -79,6 +95,10 @@ function MainApp() {
           <Dashboard user={user} onCreateSpj={handleCreateSpj} />
         ) : activeTab === "spj" ? (
           <SpjList user={user} onSelectSpj={handleSelectSpj} />
+        ) : activeTab === "packages" ? (
+          <PackageTemplates user={user} />
+        ) : activeTab === "officials" ? (
+          <OfficialsSettings user={user} />
         ) : (
           <AdminView user={user} activeTab={activeTab as "master" | "audit"} />
         )}

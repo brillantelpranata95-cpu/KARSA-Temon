@@ -7,3 +7,36 @@
   --color-karsa-accent: #CBDCA5;
   --color-karsa-bg: #F6FAF5;
 }
+
+/* ============================================================
+   PRINT ISOLATION — only the official document is printed.
+   All KARSA app chrome (navbar, headers, buttons) is excluded.
+   ============================================================ */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .print-doc,
+  .print-doc * {
+    visibility: visible !important;
+  }
+  .print-doc {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 12mm;
+}

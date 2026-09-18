@@ -1,25 +1,34 @@
 import React, { useEffect, useState, useRef } from "react";
-import { UserProfile, SpjItem, SpjDocumentItem } from "../types";
-import { getSpjById, getSpjDocuments, saveSpjDocumentData, finalizeSpj, updateSpjSharedData } from "../services/api";
+import { UserProfile, SpjItem, SpjDocumentItem, OfficialPerson } from "../types";
+import {
+  getSpjById,
+  getSpjDocuments,
+  saveSpjDocumentData,
+  finalizeSpj,
+  getNotulisOptions,
+  saveNotulisOption,
+  getOfficialsList,
+  savePemimpinRapatOption,
+  createAttendanceSession,
+  getActiveAttendanceSession,
+  QR_SESSION_TTL_MS,
+} from "../services/api";
 import { terbilangRupiah } from "../utils/format";
 import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari } from "../utils/date";
 import QRCode from "qrcode";
 import {
   ArrowLeft,
   CheckCircle2,
-  AlertCircle,
   FileCheck,
   Save,
   Link as LinkIcon,
-  Plus,
-  Trash2,
   Printer,
   ShieldCheck,
-  UserCheck,
-  Users,
   QrCode,
   Download,
-  ExternalLink
+  ExternalLink,
+  Plus,
+  X,
 } from "lucide-react";
 
 interface SpjWizardProps {
@@ -40,22 +49,61 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [externalUrl, setExternalUrl] = useState<string>("");
 
-  // PPTK Settings State
-  const [isPptkModalOpen, setIsPptkModalOpen] = useState(false);
-  const [pptkNama, setPptkNama] = useState("");
-  const [pptkNip, setPptkNip] = useState("");
-  const [pptkPangkat, setPptkPangkat] = useState("");
+  // Officials options (auto-sourced from admin settings + user-added entries)
+  const [notulisOptions, setNotulisOptions] = useState<OfficialPerson[]>([]);
+  const [pemimpinOptions, setPemimpinOptions] = useState<OfficialPerson[]>([]);
+  const [showNewNotulis, setShowNewNotulis] = useState(false);
+  const [newNotulisNama, setNewNotulisNama] = useState("");
+  const [newNotulisNip, setNewNotulisNip] = useState("");
+  const [showNewPemimpin, setShowNewPemimpin] = useState(false);
+  const [newPemimpinNama, setNewPemimpinNama] = useState("");
+  const [newPemimpinNip, setNewPemimpinNip] = useState("");
+  const [newPemimpinPangkat, setNewPemimpinPangkat] = useState("");
 
   // QR Code State
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [qrLink, setQrLink] = useState<string>("");
+  const [qrExpiresAt, setQrExpiresAt] = useState<number | null>(null);
+  const [qrRemaining, setQrRemaining] = useState<number>(0);
+  const [qrGenerating, setQrGenerating] = useState(false);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Countdown for the active QR session (30 minutes TTL)
+  useEffect(() => {
+    if (!qrExpiresAt) return;
+    const tick = () => {
+      const left = qrExpiresAt - Date.now();
+      setQrRemaining(left > 0 ? left : 0);
+      if (left <= 0) {
+        // Session expired — hide the QR (record is purged by the sweep)
+        setQrDataUrl("");
+        setQrLink("");
+        setQrExpiresAt(null);
+      }
+    };
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, [qrExpiresAt]);
+
+  const formatQrRemaining = (ms: number): string => {
+    if (ms <= 0) return "00:00";
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60).toString().padStart(2, "0");
+    const s = (totalSec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
   const generateQRCode = async () => {
     if (!spj) return;
-    const attendanceUrl = `${window.location.origin}/absen/${spjId}`;
-    setQrLink(attendanceUrl);
+    setQrGenerating(true);
     try {
+      // Create a fresh 30-minute attendance session on the server
+      const session = await createAttendanceSession(spjId, user);
+      const attendanceUrl = `${window.location.origin}/absen/${spjId}`;
+      setQrLink(attendanceUrl);
+      setQrExpiresAt(session.expiresAtMs);
+
       const dataUrl = await QRCode.toDataURL(attendanceUrl, {
         width: 300,
         margin: 2,
@@ -67,6 +115,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
       console.error("QR generation error:", e);
       alert("Gagal membuat QR code.");
     }
+    setQrGenerating(false);
   };
 
   const loadSpjData = async () => {
@@ -75,10 +124,18 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
       setSpj(s);
       setDocuments(docs);
 
-      if (s?.sharedData) {
-        setPptkNama(s.sharedData.pptkNama || "SURADIMAN, S.I.P., M.M.");
-        setPptkNip(s.sharedData.pptkNip || "19730101 199303 1 008");
-        setPptkPangkat(s.sharedData.pptkPangkat || "Pembina; IV/a");
+      // Load officials options for dropdowns (cross-jawatan)
+      try {
+        const [notulisList, pemimpinList, activeSession] = await Promise.all([
+          getNotulisOptions(user.jawatanId),
+          getOfficialsList("PEMIMPIN_RAPAT"),
+          getActiveAttendanceSession(spjId),
+        ]);
+        setNotulisOptions(notulisList);
+        setPemimpinOptions(pemimpinList);
+        if (activeSession) setQrExpiresAt(activeSession.expiresAtMs);
+      } catch (e) {
+        console.warn("Failed to load officials:", e);
       }
 
       if (docs.length > 0 && !selectedDocId) {
@@ -136,23 +193,6 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
     }
   };
 
-  const handleSavePptk = async () => {
-    if (!spj) return;
-    try {
-      await updateSpjSharedData(spj.id, {
-        pptkNama: pptkNama.trim(),
-        pptkNip: pptkNip.trim(),
-        pptkPangkat: pptkPangkat.trim()
-      });
-      setIsPptkModalOpen(false);
-      await loadSpjData();
-      alert("Penandatangan PPTK berhasil diperbarui!");
-    } catch (err) {
-      console.error("Failed to update PPTK:", err);
-      alert("Gagal memperbarui PPTK.");
-    }
-  };
-
   if (!spj) {
     return <div className="p-8 text-center text-gray-500">Memuat SPJ...</div>;
   }
@@ -181,14 +221,6 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
         {/* Action Controls */}
         <div className="flex items-center space-x-3 w-full md:w-auto justify-end">
-          <button
-            onClick={() => setIsPptkModalOpen(true)}
-            className="px-4 py-2 bg-[#F6FAF5] hover:bg-[#CBDCA5]/40 text-[#32848D] border border-[#32848D]/20 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-colors"
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>Atur PPTK</span>
-          </button>
-
           <button
             onClick={onPreview}
             className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-semibold flex items-center space-x-2"
@@ -305,26 +337,71 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                     <input
                       type="number"
                       min="0"
-                      value={formData.nominal ?? 0}
-                      onChange={(e) => handleFormChange("nominal", Math.max(0, Number(e.target.value) || 0))}
+                      value={formData.nominal ?? ""}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        handleFormChange("nominal", raw === "" ? "" : Math.max(0, Number(raw) || 0));
+                      }}
+                      placeholder="0"
                       className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 font-bold text-gray-900 dark:text-white"
                     />
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 capitalize font-medium">{terbilangRupiah(Number(formData.nominal || 0))}</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 capitalize font-medium">
+                      {terbilangRupiah(Number(formData.nominal || 0))}
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    {["phr", "pph", "ppn"].map((pajak) => (
-                      <label key={pajak} className="block text-xs font-semibold uppercase text-gray-700 dark:text-slate-300">
-                        Pajak {pajak}
+                  <div className="border-t border-gray-200 dark:border-slate-700 pt-4">
+                    <p className="text-xs font-bold text-gray-700 dark:text-slate-300 mb-2 uppercase tracking-wide">Rincian Pajak (Opsional)</p>
+                    <div className="grid grid-cols-3 gap-4">
+                      {[
+                        { key: "phr", label: "PPh 21 / PHR" },
+                        { key: "pph", label: "PPh" },
+                        { key: "ppn", label: "PPN" },
+                      ].map(({ key, label }) => (
+                        <label key={key} className="block text-xs font-semibold text-gray-700 dark:text-slate-300">
+                          {label}
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData[key] ?? ""}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              handleFormChange(key, raw === "" ? "" : Math.max(0, Number(raw) || 0));
+                            }}
+                            placeholder="0"
+                            className="mt-1 w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 font-normal text-gray-900 dark:text-white"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Penerima — diisi manual (bukan PPTK) */}
+                  <div className="border-t border-gray-200 dark:border-slate-700 pt-4">
+                    <p className="text-xs font-bold text-gray-700 dark:text-slate-300 mb-2 uppercase tracking-wide">Penerima Pembayaran</p>
+                    <p className="text-[11px] text-gray-400 mb-2 italic">Diisi manual — boleh dikosongkan bila penerima berbeda atau belum ditentukan.</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Penerima</label>
                         <input
-                          type="number"
-                          min="0"
-                          value={formData[pajak] ?? 0}
-                          onChange={(e) => handleFormChange(pajak, Math.max(0, Number(e.target.value) || 0))}
-                          className="mt-1 w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 font-normal text-gray-900 dark:text-white"
+                          type="text"
+                          value={formData.penerima || ""}
+                          onChange={(e) => handleFormChange("penerima", e.target.value)}
+                          placeholder="(kosongkan bila perlu)"
+                          className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                         />
-                      </label>
-                    ))}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">NIP Penerima</label>
+                        <input
+                          type="text"
+                          value={formData.penerimaNip || ""}
+                          onChange={(e) => handleFormChange("penerimaNip", e.target.value)}
+                          placeholder="(kosongkan bila perlu)"
+                          className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -357,6 +434,196 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       />
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Pemimpin Rapat</label>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={formData.pemimpinRapat || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "__NEW__") {
+                              setShowNewPemimpin(true);
+                              return;
+                            }
+                            handleFormChange("pemimpinRapat", val);
+                            const picked = pemimpinOptions.find((p) => p.nama === val);
+                            if (picked) {
+                              handleFormChange("pemimpinRapatNip", picked.nip || "");
+                              handleFormChange("pemimpinRapatPangkat", picked.pangkat || "");
+                            }
+                          }}
+                          className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                        >
+                          <option value="">— Pilih Pemimpin Rapat —</option>
+                          {pemimpinOptions.map((p) => (
+                            <option key={p.id} value={p.nama}>
+                              {p.nama}
+                            </option>
+                          ))}
+                          <option value="__NEW__">+ Tambah Pemimpin Rapat Baru</option>
+                        </select>
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        Pilihan tersimpan otomatis & dapat dipakai lintas jawatan.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Notulis</label>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={formData.notulis || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "__NEW__") {
+                              setShowNewNotulis(true);
+                              return;
+                            }
+                            handleFormChange("notulis", val);
+                            const picked = notulisOptions.find((p) => p.nama === val);
+                            if (picked) {
+                              handleFormChange("notulisNip", picked.nip || "");
+                            }
+                          }}
+                          className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                        >
+                          <option value="">— Pilih Notulis —</option>
+                          {notulisOptions.map((p) => (
+                            <option key={p.id} value={p.nama}>
+                              {p.nama}
+                            </option>
+                          ))}
+                          <option value="__NEW__">+ Tambah Notulis Baru</option>
+                        </select>
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        Setiap jawatan dapat memiliki notulis sendiri.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Inline add-new Pemimpin Rapat */}
+                  {showNewPemimpin && (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-amber-900 dark:text-amber-200">Tambah Pemimpin Rapat Baru</p>
+                        <button type="button" onClick={() => setShowNewPemimpin(false)} className="text-amber-600 hover:text-amber-800">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          value={newPemimpinNama}
+                          onChange={(e) => setNewPemimpinNama(e.target.value)}
+                          placeholder="Nama lengkap & gelar"
+                          className="border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-700 rounded-lg p-2 text-xs text-gray-900 dark:text-white"
+                        />
+                        <input
+                          type="text"
+                          value={newPemimpinNip}
+                          onChange={(e) => setNewPemimpinNip(e.target.value)}
+                          placeholder="NIP (opsional)"
+                          className="border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-700 rounded-lg p-2 text-xs text-gray-900 dark:text-white"
+                        />
+                        <input
+                          type="text"
+                          value={newPemimpinPangkat}
+                          onChange={(e) => setNewPemimpinPangkat(e.target.value)}
+                          placeholder="Pangkat / Gol (opsional)"
+                          className="border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-700 rounded-lg p-2 text-xs text-gray-900 dark:text-white"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!newPemimpinNama.trim()) {
+                            alert("Nama pemimpin rapat wajib diisi.");
+                            return;
+                          }
+                          try {
+                            await savePemimpinRapatOption(
+                              { nama: newPemimpinNama, nip: newPemimpinNip, pangkat: newPemimpinPangkat },
+                              user
+                            );
+                            const refreshed = await getOfficialsList("PEMIMPIN_RAPAT");
+                            setPemimpinOptions(refreshed);
+                            handleFormChange("pemimpinRapat", newPemimpinNama.trim());
+                            handleFormChange("pemimpinRapatNip", newPemimpinNip.trim());
+                            handleFormChange("pemimpinRapatPangkat", newPemimpinPangkat.trim());
+                            setNewPemimpinNama("");
+                            setNewPemimpinNip("");
+                            setNewPemimpinPangkat("");
+                            setShowNewPemimpin(false);
+                          } catch (e) {
+                            console.error(e);
+                            alert("Gagal menyimpan pemimpin rapat.");
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold"
+                      >
+                        Simpan & Pakai
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Inline add-new Notulis */}
+                  {showNewNotulis && (
+                    <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-xl p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-teal-900 dark:text-teal-200">Tambah Notulis Baru</p>
+                        <button type="button" onClick={() => setShowNewNotulis(false)} className="text-teal-600 hover:text-teal-800">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={newNotulisNama}
+                          onChange={(e) => setNewNotulisNama(e.target.value)}
+                          placeholder="Nama lengkap & gelar"
+                          className="border border-teal-300 dark:border-teal-700 bg-white dark:bg-slate-700 rounded-lg p-2 text-xs text-gray-900 dark:text-white"
+                        />
+                        <input
+                          type="text"
+                          value={newNotulisNip}
+                          onChange={(e) => setNewNotulisNip(e.target.value)}
+                          placeholder="NIP (opsional)"
+                          className="border border-teal-300 dark:border-teal-700 bg-white dark:bg-slate-700 rounded-lg p-2 text-xs text-gray-900 dark:text-white"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!newNotulisNama.trim()) {
+                            alert("Nama notulis wajib diisi.");
+                            return;
+                          }
+                          try {
+                            await saveNotulisOption(
+                              { nama: newNotulisNama, nip: newNotulisNip, jawatanId: user.jawatanId },
+                              user
+                            );
+                            const refreshed = await getNotulisOptions(user.jawatanId);
+                            setNotulisOptions(refreshed);
+                            handleFormChange("notulis", newNotulisNama.trim());
+                            handleFormChange("notulisNip", newNotulisNip.trim());
+                            setNewNotulisNama("");
+                            setNewNotulisNip("");
+                            setShowNewNotulis(false);
+                          } catch (e) {
+                            console.error(e);
+                            alert("Gagal menyimpan notulis.");
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold"
+                      >
+                        Simpan & Pakai
+                      </button>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -494,15 +761,27 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       <button
                         type="button"
                         onClick={generateQRCode}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1.5"
+                        disabled={qrGenerating}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1.5 disabled:opacity-60"
                       >
                         <QrCode className="w-3.5 h-3.5" />
-                        <span>Buat QR Absensi</span>
+                        <span>{qrGenerating ? "Membuat..." : qrExpiresAt ? "Perbarui QR (30 mnt)" : "Buat QR Absensi"}</span>
                       </button>
                     </div>
                     <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
                       Peserta scan QR ini → diarahkan ke halaman input nama + tanda tangan digital → data otomatis masuk ke daftar hadir.
+                      QR hanya berlaku 30 menit, setelah itu sesi & datanya dihapus permanen.
                     </p>
+                    {qrExpiresAt && qrRemaining > 0 && (
+                      <div className="mb-3 flex items-center justify-between bg-white dark:bg-slate-800 rounded-xl px-3 py-2 border border-blue-200 dark:border-blue-800">
+                        <span className="text-[11px] font-semibold text-blue-900 dark:text-blue-200">
+                          QR aktif — kedaluwarsa dalam
+                        </span>
+                        <span className={`text-sm font-mono font-bold ${qrRemaining < 5 * 60 * 1000 ? "text-red-600" : "text-emerald-600"}`}>
+                          {formatQrRemaining(qrRemaining)}
+                        </span>
+                      </div>
+                    )}
                     {qrDataUrl && (
                       <div className="flex items-start space-x-4">
                         <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-200">
@@ -719,25 +998,102 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Lamanya Pelaksanaan Tugas</label>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Lamanya Pelaksanaan Tugas (hari)</label>
                       <input
-                        type="text"
-                        value={formData.lamaTugas || ""}
-                        onChange={(e) => handleFormChange("lamaTugas", e.target.value)}
-                        placeholder="Contoh: 1 (hari)"
+                        type="number"
+                        min="1"
+                        value={formData.lamaHari ?? 1}
+                        onChange={(e) => {
+                          const hari = Math.max(1, Number(e.target.value) || 1);
+                          handleFormChange("lamaHari", hari);
+                          handleFormChange("lamaTugas", `${hari} (hari)`);
+                          // Reset the date list when switching back to a single day
+                          if (hari <= 1) {
+                            handleFormChange("tanggalPelaksanaanList", []);
+                          }
+                        }}
                         className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                       />
+                      <p className="text-[10px] text-gray-400 mt-1">Isi 1 untuk kegiatan sehari.</p>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Tanggal Pelaksanaan</label>
-                      <input
-                        type="date"
-                        value={formData.tanggalPelaksanaan || spj.tanggal}
-                        onChange={(e) => handleFormChange("tanggalPelaksanaan", e.target.value)}
-                        className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Format: {formatDateDDMMYYYY(formData.tanggalPelaksanaan || spj.tanggal)}</p>
-                    </div>
+                  </div>
+
+                  {/* Tanggal: single date when 1 day, multi-select when > 1 day */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                      Tanggal Pelaksanaan {(formData.lamaHari || 1) > 1 ? "(Pilih beberapa tanggal)" : ""}
+                    </label>
+
+                    {(formData.lamaHari || 1) <= 1 ? (
+                      <>
+                        <input
+                          type="date"
+                          value={formData.tanggalPelaksanaan || spj.tanggal}
+                          onChange={(e) => handleFormChange("tanggalPelaksanaan", e.target.value)}
+                          className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">
+                          Format: {formatDateDDMMYYYY(formData.tanggalPelaksanaan || spj.tanggal)}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="space-y-2">
+                        {(formData.tanggalPelaksanaanList && formData.tanggalPelaksanaanList.length > 0) && (
+                          <div className="flex flex-wrap gap-2">
+                            {formData.tanggalPelaksanaanList.map((d: string, i: number) => (
+                              <span
+                                key={`${d}-${i}`}
+                                className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg text-xs font-semibold border border-emerald-200 dark:border-emerald-800"
+                              >
+                                <span>{formatDateDDMMYYYY(d)}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = formData.tanggalPelaksanaanList.filter((_: string, idx: number) => idx !== i);
+                                    handleFormChange("tanggalPelaksanaanList", next);
+                                  }}
+                                  className="text-emerald-600 hover:text-red-600"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="date"
+                            id="multi-date-input"
+                            className="flex-1 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const el = document.getElementById("multi-date-input") as HTMLInputElement | null;
+                              const val = el?.value;
+                              if (!val) {
+                                alert("Pilih tanggal terlebih dahulu.");
+                                return;
+                              }
+                              const current: string[] = formData.tanggalPelaksanaanList || [];
+                              if (current.includes(val)) {
+                                alert("Tanggal ini sudah ditambahkan.");
+                                return;
+                              }
+                              handleFormChange("tanggalPelaksanaanList", [...current, val].sort());
+                              if (el) el.value = "";
+                            }}
+                            className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold inline-flex items-center space-x-1"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Tambah</span>
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400">
+                          Tambahkan satu tanggal per hari pelaksanaan. Total {formData.tanggalPelaksanaanList?.length || 0} dari {formData.lamaHari} hari.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -791,73 +1147,6 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
           )}
         </div>
       </div>
-
-      {/* Modal Edit PPTK Penandatangan */}
-      {isPptkModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
-              <UserCheck className="w-5 h-5" />
-              <span>Pengaturan Penandatangan PPTK</span>
-            </div>
-            <p className="text-xs text-gray-500">
-              Atur nama, NIP, dan pangkat/jabatan PPTK yang akan mencetak di seluruh dokumen SPJ ini.
-            </p>
-
-            <div className="space-y-3 text-sm">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Nama PPTK</label>
-                <input
-                  type="text"
-                  value={pptkNama}
-                  onChange={(e) => setPptkNama(e.target.value)}
-                  placeholder="SURADIMAN, S.I.P., M.M."
-                  className="w-full border border-gray-300 rounded-xl p-2.5"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">NIP PPTK</label>
-                <input
-                  type="text"
-                  value={pptkNip}
-                  onChange={(e) => setPptkNip(e.target.value)}
-                  placeholder="19730101 199303 1 008"
-                  className="w-full border border-gray-300 rounded-xl p-2.5"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Pangkat / Golongan PPTK</label>
-                <input
-                  type="text"
-                  value={pptkPangkat}
-                  onChange={(e) => setPptkPangkat(e.target.value)}
-                  placeholder="Pembina; IV/a"
-                  className="w-full border border-gray-300 rounded-xl p-2.5"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-3 border-t">
-              <button
-                type="button"
-                onClick={() => setIsPptkModalOpen(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl font-medium text-sm"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleSavePptk}
-                className="px-5 py-2 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-xl text-sm shadow-sm"
-              >
-                Simpan Penandatangan
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { db } from "../config/firebase";
 import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import SignaturePad from "signature_pad";
+import { getActiveAttendanceSession } from "../services/api";
 
 interface SpjData {
   id: string;
@@ -15,38 +16,83 @@ const QRAttendancePage: React.FC = () => {
   const { spjId } = useParams<{ spjId: string }>();
   const [spjData, setSpjData] = useState<SpjData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionValid, setSessionValid] = useState<boolean | null>(null);
+  const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [remainingMs, setRemainingMs] = useState<number>(0);
   const [namaPeserta, setNamaPeserta] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const signaturePadRef = useRef<SignaturePad | null>(null);
+  // Signals that the canvas is mounted so the pad-init effect can run
+  const [canvasReady, setCanvasReady] = useState(false);
 
+  // ---- Load SPJ + validate 30-minute attendance session ----
   useEffect(() => {
     if (!spjId) return;
-    const fetchSpj = async () => {
+    const fetchData = async () => {
       try {
         const spjDoc = await getDoc(doc(db, "spj", spjId));
         if (spjDoc.exists()) {
           const d = spjDoc.data();
           setSpjData({
             id: spjDoc.id,
-            judulAktivitas: d.judulAktivitas || "Kegiatan",
+            judulAktivitas: d.sharedData?.judulAktivitas || d.masterSnapshot?.kegiatan?.nama || "Kegiatan",
             tanggal: d.tanggal || "",
             jawatanName: d.jawatanName || "",
           });
         } else {
           setSpjData(null);
         }
-      } catch {
+
+        // Session must exist and be unexpired (30-minute TTL)
+        const active = await getActiveAttendanceSession(spjId);
+        if (active) {
+          setSessionValid(true);
+          setSessionId(active.id);
+          setSessionExpiresAt(active.expiresAtMs);
+        } else {
+          setSessionValid(false);
+        }
+      } catch (e) {
+        console.error("Failed to load attendance data:", e);
         setSpjData(null);
+        setSessionValid(false);
       }
       setLoading(false);
     };
-    fetchSpj();
+    fetchData();
   }, [spjId]);
 
+  // ---- Countdown timer for session expiry ----
   useEffect(() => {
-    if (!canvasRef.current) return;
-    const pad = new SignaturePad(canvasRef.current, {
+    if (!sessionExpiresAt) return;
+    const tick = () => {
+      const left = sessionExpiresAt - Date.now();
+      setRemainingMs(left);
+      if (left <= 0) setSessionValid(false);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [sessionExpiresAt]);
+
+  // ---- Initialize SignaturePad ONLY after the canvas is actually mounted ----
+  // (previously the effect ran on first render while the canvas was still absent)
+  useEffect(() => {
+    if (!canvasReady || !canvasRef.current || signaturePadRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+
+    // Size the drawing buffer from the rendered element; this also clears the canvas.
+    canvas.width = canvas.offsetWidth * ratio;
+    canvas.height = canvas.offsetHeight * ratio;
+
+    const ctx = canvas.getContext("2d");
+    if (ctx) ctx.scale(ratio, ratio);
+
+    const pad = new SignaturePad(canvas, {
       backgroundColor: "#ffffff",
       penColor: "#1a1a1a",
       minWidth: 1.5,
@@ -54,38 +100,57 @@ const QRAttendancePage: React.FC = () => {
     });
     signaturePadRef.current = pad;
 
-    // Responsive resize
     const handleResize = () => {
-      if (canvasRef.current && pad) {
-        const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        canvasRef.current.width = canvasRef.current.offsetWidth * ratio;
-        canvasRef.current.height = 200 * ratio;
-        pad.fromData(pad.toData());
-      }
+      if (!canvasRef.current || !signaturePadRef.current) return;
+      const r = Math.max(window.devicePixelRatio || 1, 1);
+      const data = signaturePadRef.current.toData();
+      canvasRef.current.width = canvasRef.current.offsetWidth * r;
+      canvasRef.current.height = canvasRef.current.offsetHeight * r;
+      const c = canvasRef.current.getContext("2d");
+      if (c) c.scale(r, r);
+      signaturePadRef.current.clear();
+      signaturePadRef.current.fromData(data);
     };
-    handleResize();
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      pad.off();
+      signaturePadRef.current = null;
+    };
+  }, [canvasReady]);
+
+  // Callback ref: flips canvasReady once the element is attached to the DOM.
+  const attachCanvas = useCallback((node: HTMLCanvasElement | null) => {
+    (canvasRef as React.MutableRefObject<HTMLCanvasElement | null>).current = node;
+    setCanvasReady(!!node);
   }, []);
 
   const handleSubmit = async () => {
-    if (!spjId || !namaPeserta.trim()) {
+    if (!spjId) return;
+    if (sessionValid === false) {
+      alert("Sesi absensi sudah berakhir (melebihi 30 menit). Minta panitia membuat QR baru.");
+      return;
+    }
+    if (!namaPeserta.trim()) {
       alert("Mohon isi nama lengkap Anda.");
       return;
     }
-    if (signaturePadRef.current?.isEmpty()) {
+    if (!signaturePadRef.current || signaturePadRef.current.isEmpty()) {
       alert("Mohon tanda tangan di kotak yang tersedia.");
       return;
     }
 
     try {
-      const ttdDataUrl = signaturePadRef.current?.toDataURL("image/png") || "";
+      const ttdDataUrl = signaturePadRef.current.toDataURL("image/png") || "";
       const attCol = collection(db, "spj", spjId, "attendance");
       await addDoc(attCol, {
         nama: namaPeserta.trim(),
         ttdImage: ttdDataUrl,
         timestamp: serverTimestamp(),
+        timestampMs: Date.now(),
         method: "QR_SIGNATURE",
+        sessionId: sessionId || null,
       });
       setSubmitted(true);
     } catch (e) {
@@ -96,6 +161,14 @@ const QRAttendancePage: React.FC = () => {
 
   const handleClearSignature = () => {
     signaturePadRef.current?.clear();
+  };
+
+  const formatRemaining = (ms: number): string => {
+    if (ms <= 0) return "00:00";
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60).toString().padStart(2, "0");
+    const s = (totalSec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
   };
 
   if (loading) {
@@ -111,7 +184,7 @@ const QRAttendancePage: React.FC = () => {
 
   if (!spjData) {
     return (
-      <div className="min-h-screen bg-[#F6FAF5] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F6FAF5] flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
           <div className="text-red-500 text-5xl mb-4">⚠️</div>
           <h1 className="text-xl font-bold text-gray-800 mb-2">Link Tidak Valid</h1>
@@ -121,9 +194,27 @@ const QRAttendancePage: React.FC = () => {
     );
   }
 
+  if (sessionValid === false) {
+    return (
+      <div className="min-h-screen bg-[#F6FAF5] flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-5">
+            <svg className="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-bold text-amber-700 mb-2">Sesi Absensi Berakhir</h1>
+          <p className="text-sm text-gray-500">
+            QR code absensi ini hanya berlaku 30 menit sejak dibuat. Silakan minta panitia membuat QR code baru.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#F6FAF5] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F6FAF5] flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
           <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
             <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,19 +232,28 @@ const QRAttendancePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F6FAF5] via-white to-[#E8F5E9] py-8 px-4">
-      {/* Header Card */}
       <div className="max-w-lg mx-auto">
         <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl border border-white/60 p-7 mb-6">
-          <div className="flex items-center space-x-3 mb-5 pb-4 border-b border-gray-100">
-            <div className="w-11 h-11 bg-[#32848D]/10 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-[#32848D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+          <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
+            <div className="flex items-center space-x-3">
+              <div className="w-11 h-11 bg-[#32848D]/10 rounded-xl flex items-center justify-center">
+                <svg className="w-6 h-6 text-[#32848D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-base font-bold text-[#32848D] leading-tight">Daftar Hadir Online</h1>
+                <p className="text-xs text-gray-400 mt-0.5">Sistem Pengelolaan SPJ Kecamatan Temon</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-base font-bold text-[#32848D] leading-tight">Daftar Hadir Online</h1>
-              <p className="text-xs text-gray-400 mt-0.5">Sistem Pengelolaan SPJ Kecamatan Temon</p>
-            </div>
+            {remainingMs > 0 && (
+              <div className="text-right">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase">Berlaku</p>
+                <p className={`text-sm font-mono font-bold ${remainingMs < 5 * 60 * 1000 ? "text-red-600" : "text-emerald-600"}`}>
+                  {formatRemaining(remainingMs)}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Info Kegiatan */}
@@ -185,7 +285,6 @@ const QRAttendancePage: React.FC = () => {
                 value={namaPeserta}
                 onChange={(e) => setNamaPeserta(e.target.value)}
                 placeholder="Ketik nama lengkap Anda..."
-                autoFocus
                 className="w-full border-2 border-gray-200 focus:border-[#32848D] rounded-2xl px-4 py-3.5 text-base font-medium outline-none transition-colors"
               />
             </div>
@@ -195,16 +294,22 @@ const QRAttendancePage: React.FC = () => {
               <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">
                 Tanda Tangan Digital
               </label>
-              <p className="text-[11px] text-gray-400 mb-2 italic">Silahkan tanda tangan di kotak putih di bawah ini</p>
-              <div className="border-2 border-dashed border-gray-300 rounded-2xl overflow-hidden bg-white relative">
-                <canvas ref={canvasRef} className="w-full touch-none" style={{ height: "200px" }} />
+              <p className="text-[11px] text-gray-400 mb-2 italic">
+                Silahkan tanda tangan (coret-coret) di kotak putih di bawah ini menggunakan jari atau mouse
+              </p>
+              <div className="border-2 border-dashed border-gray-300 rounded-2xl overflow-hidden bg-white">
+                <canvas
+                  ref={attachCanvas}
+                  className="w-full block"
+                  style={{ height: "200px", touchAction: "none" }}
+                />
               </div>
               <button
                 type="button"
                 onClick={handleClearSignature}
                 className="mt-2 text-xs text-[#32848D] hover:text-[#276972] font-medium underline"
               >
-                Hapus & Ulangi Tanda Tangan
+                Hapus &amp; Ulangi Tanda Tangan
               </button>
             </div>
 

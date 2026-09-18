@@ -10,6 +10,14 @@ interface PrintPreviewProps {
   onBack: () => void;
 }
 
+/** Format a list of ISO dates as "01-02-2026 s.d. 03-02-2026" or comma-joined. */
+const formatDateList = (dates?: string[], fallback?: string): string => {
+  if (!dates || dates.length === 0) return formatDateDDMMYYYY(fallback);
+  const sorted = [...dates].sort();
+  if (sorted.length === 1) return formatDateDDMMYYYY(sorted[0]);
+  return sorted.map((d) => formatDateDDMMYYYY(d)).join(", ");
+};
+
 export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack }) => {
   const [selectedDocCode, setSelectedDocCode] = React.useState<string>("BEND_26");
 
@@ -35,10 +43,12 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
     ].join("\n");
   };
 
+  const totalPajak = Number(data.phr || 0) + Number(data.pph || 0) + Number(data.ppn || 0);
+
   return (
     <div className="space-y-6">
       {/* Header controls (Hidden on Print) */}
-      <div className="print:hidden bg-white dark:bg-slate-800 p-4 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm flex justify-between items-center">
+      <div className="print:hidden bg-white dark:bg-slate-800 p-4 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm flex flex-wrap gap-3 justify-between items-center">
         <div className="flex items-center space-x-3">
           <button
             onClick={onBack}
@@ -52,7 +62,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center flex-wrap gap-2">
           {documents.map((d) => (
             <button
               key={d.id}
@@ -68,7 +78,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
           ))}
           <button
             onClick={handlePrint}
-            className="ml-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold flex items-center space-x-2 shadow-sm transition-all"
+            className="ml-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold flex items-center space-x-2 shadow-sm transition-all"
           >
             <Printer className="w-4 h-4" />
             <span>Cetak / Simpan PDF</span>
@@ -76,8 +86,8 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
         </div>
       </div>
 
-      {/* DOCUMENT PRINT CONTAINER (Apple HIG Clean Typography) */}
-      <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-lg max-w-4xl mx-auto print:p-0 print:border-none print:shadow-none print:max-w-none">
+      {/* DOCUMENT PRINT CONTAINER — only .print-doc is visible when printing */}
+      <div className="print-doc bg-white p-8 rounded-2xl border border-gray-200 shadow-lg max-w-4xl mx-auto print:p-0 print:border-none print:shadow-none print:max-w-none">
         
         {/* ==================== BEND 26 TEMPLATE ==================== */}
         {selectedDocCode === "BEND_26" && (
@@ -120,26 +130,51 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               </span>
             </div>
 
+            {/* Rincian Pajak — kembali di bagian bawah Bend 26 */}
+            <div className="border border-black">
+              <div className="bg-gray-100 px-3 py-1 text-xs font-bold uppercase border-b border-black">
+                Rincian Pajak
+              </div>
+              <div className="grid grid-cols-4 text-xs divide-x divide-black">
+                <div className="p-2">
+                  <p className="font-semibold">PPh 21 / PHR</p>
+                  <p className="font-mono mt-1">Rp. {Number(data.phr || 0).toLocaleString("id-ID")},-</p>
+                </div>
+                <div className="p-2">
+                  <p className="font-semibold">PPh</p>
+                  <p className="font-mono mt-1">Rp. {Number(data.pph || 0).toLocaleString("id-ID")},-</p>
+                </div>
+                <div className="p-2">
+                  <p className="font-semibold">PPN</p>
+                  <p className="font-mono mt-1">Rp. {Number(data.ppn || 0).toLocaleString("id-ID")},-</p>
+                </div>
+                <div className="p-2 bg-gray-50">
+                  <p className="font-semibold">Total Pajak</p>
+                  <p className="font-mono font-bold mt-1">Rp. {totalPajak.toLocaleString("id-ID")},-</p>
+                </div>
+              </div>
+            </div>
+
             {/* Signature Area */}
             <div className="grid grid-cols-3 text-center py-6 text-xs gap-4">
               <div>
                 <p className="font-semibold">Mengetahui dan menyetujui</p>
                 <p className="font-semibold">Pengguna Anggaran / KPA</p>
                 <div className="h-16"></div>
-                <p className="font-bold underline">{spj.sharedData?.paNama || "RUSDI SUWARNO, SIP, M.M"}</p>
-                <p>NIP. {spj.sharedData?.paNip || "19770721 199603 1 001"}</p>
+                <p className="font-bold underline">{spj.sharedData?.paNama || "…………………"}</p>
+                <p>NIP. {spj.sharedData?.paNip || "…………………"}</p>
               </div>
               <div>
                 <p className="font-semibold">Bendahara Pengeluaran</p>
                 <div className="h-20"></div>
-                <p className="font-bold underline">{spj.sharedData?.bendaharaNama || "SUBARI"}</p>
-                <p>NIP. {spj.sharedData?.bendaharaNip || "19700110 200801 1 013"}</p>
+                <p className="font-bold underline">{spj.sharedData?.bendaharaNama || "…………………"}</p>
+                <p>NIP. {spj.sharedData?.bendaharaNip || "…………………"}</p>
               </div>
               <div>
-                <p className="font-semibold">PPTK</p>
+                <p className="font-semibold">Penerima</p>
                 <div className="h-20"></div>
-                <p className="font-bold underline">{spj.sharedData?.pptkNama || "SURADIMAN, S.I.P., M.M."}</p>
-                <p>NIP. {spj.sharedData?.pptkNip || "19730101 199303 1 008"}</p>
+                <p className="font-bold underline">{data.penerima || "…………………………"}</p>
+                <p>NIP. {data.penerimaNip || "…………………………"}</p>
               </div>
             </div>
 
@@ -207,12 +242,12 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold">Pemimpin Rapat</td>
                   <td className="py-2 text-center">:</td>
-                  <td className="py-2">{data.pemimpinRapat || spj.sharedData?.pptkNama || "SURADIMAN, S.I.P., M.M."}</td>
+                  <td className="py-2">{data.pemimpinRapat || spj.sharedData?.pemimpinRapat || "…………………………"}</td>
                 </tr>
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold">Notulis</td>
                   <td className="py-2 text-center">:</td>
-                  <td className="py-2">{data.notulis || "BRILLANT ELPRANATA, S.Sos."}</td>
+                  <td className="py-2">{data.notulis || spj.sharedData?.notulis || "…………………………"}</td>
                 </tr>
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold">Peserta Rapat</td>
@@ -233,9 +268,9 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               <div className="text-center w-64">
                 <p className="font-semibold">Pemimpin Rapat,</p>
                 <div className="h-20"></div>
-                <p className="font-bold underline">{data.pemimpinRapat || spj.sharedData?.pptkNama || "SURADIMAN, S.I.P., M.M."}</p>
-                <p className="text-xs">{spj.sharedData?.pptkPangkat || "Pembina; IV/a"}</p>
-                <p className="text-xs">NIP. {spj.sharedData?.pptkNip || "19730101 199303 1 008"}</p>
+                <p className="font-bold underline">{data.pemimpinRapat || spj.sharedData?.pemimpinRapat || "…………………………"}</p>
+                <p className="text-xs">{data.pemimpinRapatPangkat || spj.sharedData?.pemimpinRapatJabatan || ""}</p>
+                <p className="text-xs">NIP. {data.pemimpinRapatNip || spj.sharedData?.pemimpinRapatNip || "…………………………"}</p>
               </div>
             </div>
           </div>
@@ -285,8 +320,16 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                     <td className="border-r border-black text-left px-2">
                       {data.peserta?.[idx]?.jabatan || ""}
                     </td>
-                    <td className="text-left px-2 font-mono text-[10px]">
-                      {idx % 2 === 0 ? `${idx + 1}. .........` : `        ${idx + 1}. .........`}
+                    <td className="text-left px-2">
+                      {data.peserta?.[idx]?.ttdImage ? (
+                        <img
+                          src={data.peserta[idx].ttdImage}
+                          alt="ttd"
+                          className="h-8 object-contain mx-auto"
+                        />
+                      ) : (
+                        <span className="font-mono text-[10px]">{idx % 2 === 0 ? `${idx + 1}. .........` : `        ${idx + 1}. .........`}</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -298,8 +341,8 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <p>Temon, {formatDateDDMMYYYY(spj.tanggal)}</p>
                 <p className="font-semibold">PPTK</p>
                 <div className="h-16"></div>
-                <p className="font-bold underline">{spj.sharedData?.pptkNama || "SURADIMAN, S.I.P., M.M."}</p>
-                <p>NIP. {spj.sharedData?.pptkNip || "19730101 199303 1 008"}</p>
+                <p className="font-bold underline">{spj.sharedData?.pptkNama || "…………………………"}</p>
+                <p>NIP. {spj.sharedData?.pptkNip || "…………………………"}</p>
               </div>
             </div>
           </div>
@@ -341,7 +384,9 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <tr className="border-b border-black">
                   <td className="p-3 font-semibold text-center border-r border-black">4.</td>
                   <td className="p-3 font-semibold border-r border-black">Pelaksanaan Tanggal</td>
-                  <td className="p-3">: {data.tanggalPelaksanaan || formatDateDDMMYYYY(spj.tanggal)}</td>
+                  <td className="p-3">
+                    : {formatDateList(data.tanggalPelaksanaanList, data.tanggalPelaksanaan || spj.tanggal)}
+                  </td>
                 </tr>
                 <tr>
                   <td className="p-3 font-semibold text-center border-r border-black align-top">5.</td>
@@ -359,10 +404,11 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <p>Mengetahui,</p>
                 <p className="font-bold">PANEWU</p>
                 <div className="h-20"></div>
-                <p className="font-bold underline">{spj.sharedData?.panewuNama || "RUSDI SUWARNO, SIP, M.M"}</p>
+                <p className="font-bold underline">{spj.sharedData?.panewuNama || "…………………………"}</p>
+                <p>NIP. {spj.sharedData?.panewuNip || "…………………………"}</p>
               </div>
               <div>
-                <p>Temon, {data.tanggalPelaksanaan || formatDateDDMMYYYY(spj.tanggal)}</p>
+                <p>Temon, {formatDateList(data.tanggalPelaksanaanList, data.tanggalPelaksanaan || spj.tanggal)}</p>
                 <p className="font-bold">Yang Membuat Laporan</p>
                 <div className="h-20"></div>
                 <p className="font-bold underline">{data.pembuatLaporan || spj.userName}</p>

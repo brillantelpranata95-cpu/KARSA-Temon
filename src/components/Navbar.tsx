@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { UserProfile } from "../types";
-import { LogOut, Building2, Shield, Moon, Sun, Home } from "lucide-react";
+import { LogOut, Building2, Shield, Moon, Sun, Settings, FileStack, UserCog } from "lucide-react";
+
+export type AppTab = "dashboard" | "spj" | "master" | "audit" | "packages" | "officials";
 
 interface NavbarProps {
   user: UserProfile;
-  activeTab: "dashboard" | "spj" | "master" | "audit";
-  setActiveTab: (tab: "dashboard" | "spj" | "master" | "audit") => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   onLogout: () => void;
 }
 
@@ -17,6 +19,8 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
     }
     return false;
   });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (darkMode) {
@@ -27,10 +31,28 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
     localStorage.setItem("karsa-dark-mode", darkMode.toString());
   }, [darkMode]);
 
-  const navItems: [string, string][] = [
+  // Close the settings dropdown when clicking outside
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const navItems: [AppTab, string][] = [
     ["dashboard", "Dashboard"],
     ["spj", "Daftar SPJ"],
-    ...(user.role === "ADMIN" ? ([["master", "Master Data"], ["audit", "Audit Log"]] as [string, string][]) : []),
+    ...(user.role === "ADMIN"
+      ? ([
+          ["packages", "Paket SPJ"],
+          ["officials", "Penandatangan"],
+          ["master", "Master Data"],
+          ["audit", "Audit Log"],
+        ] as [AppTab, string][])
+      : []),
   ];
 
   return (
@@ -49,8 +71,8 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
             {navItems.map(([tab, label]) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab as any)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                onClick={() => setActiveTab(tab)}
+                className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                   activeTab === tab
                     ? "bg-white dark:bg-slate-600 text-[#32848D] dark:text-white shadow-sm font-semibold"
                     : "text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/70 dark:hover:bg-slate-600/50"
@@ -71,28 +93,114 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            <div className="text-right hidden sm:block">
-              <div className="text-sm font-semibold text-gray-900 dark:text-white flex items-center justify-end space-x-1">
-                <span>{user.displayName}</span>
-                {user.role === "ADMIN" && (
-                  <span className="bg-[#CBDCA5]/50 text-[#32848D] text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center">
-                    <Shield className="w-3 h-3 mr-0.5" /> ADMIN
-                  </span>
+            {/* User chip — clicking opens the Pengaturan menu */}
+            <div className="relative" ref={settingsRef}>
+              <button
+                onClick={() => setSettingsOpen((v) => !v)}
+                className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                title="Buka menu pengaturan"
+              >
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt={user.displayName} className="w-8 h-8 rounded-full object-cover" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-[#32848D]/15 flex items-center justify-center text-[#32848D] font-bold text-sm">
+                    {user.displayName?.charAt(0)?.toUpperCase() || "U"}
+                  </div>
                 )}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-slate-400 flex items-center justify-end space-x-1">
-                <Building2 className="w-3 h-3 text-gray-400" />
-                <span>{user.jawatanName}</span>
-              </div>
-            </div>
+                <div className="text-right hidden sm:block">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white flex items-center justify-end space-x-1">
+                    <span className="max-w-[140px] truncate">{user.displayName}</span>
+                    {user.role === "ADMIN" && (
+                      <span className="bg-[#CBDCA5]/50 text-[#32848D] text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center shrink-0">
+                        <Shield className="w-3 h-3 mr-0.5" /> ADMIN
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400 flex items-center justify-end space-x-1">
+                    <Building2 className="w-3 h-3 text-gray-400 shrink-0" />
+                    <span className="max-w-[140px] truncate">{user.jawatanName}</span>
+                  </div>
+                </div>
+                <Settings className={`w-4 h-4 text-gray-400 transition-transform ${settingsOpen ? "rotate-90" : ""}`} />
+              </button>
 
-            <button
-              onClick={onLogout}
-              className="p-2 text-gray-500 dark:text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-              title="Keluar / Logout"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
+              {settingsOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-xl overflow-hidden z-50">
+                  <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30">
+                    <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Pengaturan</p>
+                    <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-0.5">Kelola konfigurasi penandatangan & paket</p>
+                  </div>
+
+                  {user.role === "ADMIN" ? (
+                    <div className="p-1.5">
+                      <button
+                        onClick={() => {
+                          setActiveTab("officials");
+                          setSettingsOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
+                      >
+                        <UserCog className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Atur Penandatangan</p>
+                          <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                            PPTK, Notulis, KPA/Panewu, Bendahara
+                          </p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveTab("packages");
+                          setSettingsOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
+                      >
+                        <FileStack className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Buat Paket SPJ</p>
+                          <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                            Tentukan dokumen wajib per jenis paket
+                          </p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveTab("master");
+                          setSettingsOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
+                      >
+                        <Settings className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Master Data & Akses</p>
+                          <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                            Pengguna, jawatan, sub-kegiatan, rekening
+                          </p>
+                        </div>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-1.5">
+                      <div className="px-3 py-2.5">
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
+                          Pengaturan penandatangan (PPTK, Notulis, KPA, Bendahara) ditetapkan oleh Administrator Kapanewon.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="border-t border-gray-100 dark:border-slate-700 p-1.5">
+                    <button
+                      onClick={onLogout}
+                      className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2.5 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4 text-red-600 shrink-0" />
+                      <span className="text-sm font-semibold text-red-600">Keluar / Logout</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -101,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
           {navItems.map(([tab, label]) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => setActiveTab(tab)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
                 activeTab === tab
                   ? "bg-[#32848D] text-white shadow-sm"
