@@ -22,7 +22,7 @@ import {
   adminUpdateKegiatan,
   adminUpdateKodeRekening,
 } from "../services/api";
-import { formatDateDDMMYYYY } from "../utils/date";
+import { formatDateDDMMYYYY, getCurrentYear } from "../utils/date";
 import {
   RefreshCw,
   Users,
@@ -86,21 +86,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
   const [newKegKode, setNewKegKode] = useState("");
   const [newKegNama, setNewKegNama] = useState("");
   const [newKegJawatanId, setNewKegJawatanId] = useState("");
-  const [newKegTahun, setNewKegTahun] = useState(2026);
 
   // Admin Direct Create Rekening Modal State
   const [isCreateRekModalOpen, setIsCreateRekModalOpen] = useState(false);
   const [newRekKode, setNewRekKode] = useState("");
   const [newRekNama, setNewRekNama] = useState("");
   const [newRekKategori, setNewRekKategori] = useState("MAKAN_MINUM");
-  const [newRekTahun, setNewRekTahun] = useState(2026);
 
   // Edit Kegiatan Modal State
   const [editingKegiatan, setEditingKegiatan] = useState<Kegiatan | null>(null);
   const [editKegKode, setEditKegKode] = useState("");
   const [editKegNama, setEditKegNama] = useState("");
   const [editKegJawatanId, setEditKegJawatanId] = useState("");
-  const [editKegTahun, setEditKegTahun] = useState(2026);
 
   // Edit Rekening Modal State
   const [editingRekening, setEditingRekening] = useState<KodeRekening | null>(null);
@@ -303,7 +300,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           kodeKegiatan: newKegKode,
           namaKegiatan: newKegNama,
           jawatanId: newKegJawatanId,
-          tahunAnggaran: newKegTahun,
+          // Tahun anggaran follows the current year automatically
+          tahunAnggaran: getCurrentYear(),
         },
         user
       );
@@ -354,7 +352,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           kode: newRekKode,
           nama: newRekNama,
           kategori: newRekKategori,
-          tahunAnggaran: newRekTahun,
+          tahunAnggaran: getCurrentYear(),
         },
         user
       );
@@ -389,7 +387,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
     setEditKegKode(k.kodeKegiatan);
     setEditKegNama(k.namaKegiatan);
     setEditKegJawatanId(k.jawatanId);
-    setEditKegTahun(k.tahunAnggaran || 2026);
   };
 
   const handleSaveEditKegiatan = async () => {
@@ -397,7 +394,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
     try {
       await adminUpdateKegiatan(
         editingKegiatan.id,
-        { kodeKegiatan: editKegKode, namaKegiatan: editKegNama, jawatanId: editKegJawatanId, tahunAnggaran: editKegTahun },
+        { kodeKegiatan: editKegKode, namaKegiatan: editKegNama, jawatanId: editKegJawatanId },
         user
       );
       setEditingKegiatan(null);
@@ -684,7 +681,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                   setNewKegKode("");
                   setNewKegNama("");
                   setNewKegJawatanId(jawatanList[0]?.id || "jawatan-sosial");
-                  setNewKegTahun(2026);
                   setIsCreateKegiatanModalOpen(true);
                 }}
                 className="px-4 py-2 bg-[#32848D] hover:bg-[#276972] text-white rounded-xl text-xs font-semibold flex items-center space-x-1 shadow-sm"
@@ -793,7 +789,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                   setNewRekKode("");
                   setNewRekNama("");
                   setNewRekKategori("MAKAN_MINUM");
-                  setNewRekTahun(2026);
                   setIsCreateRekModalOpen(true);
                 }}
                 className="px-4 py-2 bg-[#32848D] hover:bg-[#276972] text-white rounded-xl text-xs font-semibold flex items-center space-x-1 shadow-sm"
@@ -1162,16 +1157,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Tahun Anggaran</label>
-                <input
-                  type="number"
-                  value={newKegTahun}
-                  onChange={(e) => setNewKegTahun(Number(e.target.value) || 2026)}
-                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white"
-                />
-              </div>
-
               <div className="flex justify-end space-x-3 pt-3 border-t">
                 <button
                   type="button"
@@ -1327,15 +1312,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                     <option key={j.id} value={j.id}>{j.nama}</option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Tahun Anggaran</label>
-                <input
-                  type="number"
-                  value={editKegTahun}
-                  onChange={(e) => setEditKegTahun(Number(e.target.value))}
-                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white"
-                />
               </div>
             </div>
             <div className="flex justify-end space-x-3 pt-3 border-t">

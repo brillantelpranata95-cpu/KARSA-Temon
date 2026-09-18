@@ -13,6 +13,7 @@ import {
   writeBatch
 } from "firebase/firestore";
 import { db } from "../config/firebase";
+import { normalizeDateToDDMMYYYY, todayDDMMYYYY, getYearFromDate, parseAnyDate } from "../utils/date";
 import {
   UserProfile,
   Jawatan,
@@ -675,6 +676,65 @@ export const getNotulisOptions = async (jawatanId?: string): Promise<OfficialPer
   return list.filter(o => !o.jawatanId || o.jawatanId === jawatanId);
 };
 
+/** PPTK options per-jawatan: each jawatan sets its own PPTK. */
+export const getPptkOptions = async (jawatanId?: string): Promise<OfficialPerson[]> => {
+  const list = await getOfficialsList("PPTK");
+  if (!jawatanId) return list;
+  return list.filter(o => !o.jawatanId || o.jawatanId === jawatanId);
+};
+
+/** Save (or replace) the PPTK of a jawatan — done by that jawatan's own user. */
+export const savePptkOption = async (data: {
+  nama: string;
+  nip?: string;
+  pangkat?: string;
+  jawatanId?: string;
+}, actor: UserProfile): Promise<string> => {
+  const jawatanId = data.jawatanId || actor.jawatanId || "";
+  const existing = await getOfficialsList("PPTK");
+  const mine = existing.find(o => (o.jawatanId || "") === jawatanId);
+  const id = mine?.id || `official-pptk-${jawatanId || Date.now()}`;
+  await setDoc(doc(db, "officials", id), sanitizeData({
+    id,
+    type: "PPTK" as OfficialType,
+    nama: data.nama.trim(),
+    nip: (data.nip || "").trim(),
+    pangkat: (data.pangkat || "").trim(),
+    jawatanId,
+    createdAt: mine?.createdAt || serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }), { merge: true });
+  return id;
+};
+
+/**
+ * Set the jawatan's own officials (PPTK / NOTULIS / PEMIMPIN_RAPAT).
+ * These three are the jawatan's own domain — admin only monitors them.
+ */
+export const saveJawatanOfficial = async (data: {
+  type: "PPTK" | "NOTULIS" | "PEMIMPIN_RAPAT";
+  nama: string;
+  nip?: string;
+  pangkat?: string;
+  jawatanId?: string;
+}, actor: UserProfile): Promise<string> => {
+  const jawatanId = data.jawatanId || actor.jawatanId || "";
+  const existing = await getOfficialsList(data.type);
+  const mine = existing.find(o => (o.jawatanId || "") === jawatanId);
+  const id = mine?.id || `official-${data.type.toLowerCase()}-${jawatanId || Date.now()}`;
+  await setDoc(doc(db, "officials", id), sanitizeData({
+    id,
+    type: data.type,
+    nama: data.nama.trim(),
+    nip: (data.nip || "").trim(),
+    pangkat: (data.pangkat || "").trim(),
+    jawatanId,
+    createdAt: mine?.createdAt || serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }), { merge: true });
+  return id;
+};
+
 export const saveNotulisOption = async (data: {
   nama: string;
   nip?: string;
@@ -701,7 +761,10 @@ export const saveNotulisOption = async (data: {
   return id;
 };
 
-// ------------------- PACKAGE TEMPLATES (ADMIN-DEFINED SPJ PACKAGES) -------------------
+// ------------------- PACKAGE TEMPLATES (ADMIN-DEFINED, PER KODE REKENING) -------------------
+// A package template defines which documents are required for a given Kode
+// Rekening. When a user picks that Kode Rekening while creating an SPJ, the
+// checklist is applied automatically — no separate package picker needed.
 export const getPackageTemplatesList = async (includeInactive = false): Promise<PackageTemplate[]> => {
   const snap = await getDocs(collection(db, "packageTemplates"));
   let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as PackageTemplate));
@@ -709,18 +772,34 @@ export const getPackageTemplatesList = async (includeInactive = false): Promise<
   return list;
 };
 
+/** Find the active package template bound to a Kode Rekening (or null). */
+export const getPackageTemplateByKodeRekening = async (kodeRekeningId: string): Promise<PackageTemplate | null> => {
+  if (!kodeRekeningId) return null;
+  const snap = await getDocs(query(collection(db, "packageTemplates"), where("kodeRekeningId", "==", kodeRekeningId)));
+  const active = snap.docs
+    .map(d => ({ id: d.id, ...d.data() } as PackageTemplate))
+    .filter(p => p.isActive !== false);
+  return active[0] || null;
+};
+
 export const adminCreatePackageTemplate = async (data: {
-  kode: string;
-  nama: string;
+  kodeRekeningId: string;
+  kodeRekeningKode?: string;
+  kodeRekeningNama?: string;
   description?: string;
   documents: { documentTypeId: string; required: boolean; order: number }[];
 }, actor: UserProfile): Promise<string> => {
+  if (!data.kodeRekeningId) throw new Error("Kode Rekening wajib dipilih.");
+  const existing = await getPackageTemplateByKodeRekening(data.kodeRekeningId);
+  if (existing) throw new Error("Paket SPJ untuk kode rekening ini sudah ada. Silakan edit paket tersebut.");
+
   const id = `pkg-${Date.now()}`;
   const ref = doc(db, "packageTemplates", id);
   const payload: PackageTemplate = {
     id,
-    kode: data.kode.trim().toUpperCase(),
-    nama: data.nama.trim(),
+    kodeRekeningId: data.kodeRekeningId,
+    kodeRekeningKode: (data.kodeRekeningKode || "").trim(),
+    kodeRekeningNama: (data.kodeRekeningNama || "").trim(),
     description: (data.description || "").trim(),
     documents: data.documents,
     isActive: true,
@@ -738,16 +817,18 @@ export const adminCreatePackageTemplate = async (data: {
 };
 
 export const adminUpdatePackageTemplate = async (id: string, data: {
-  kode?: string;
-  nama?: string;
+  kodeRekeningId?: string;
+  kodeRekeningKode?: string;
+  kodeRekeningNama?: string;
   description?: string;
   documents?: { documentTypeId: string; required: boolean; order: number }[];
   isActive?: boolean;
 }, actor: UserProfile) => {
   const ref = doc(db, "packageTemplates", id);
   const patch: Record<string, any> = { updatedAt: serverTimestamp() };
-  if (data.kode !== undefined) patch.kode = data.kode.trim().toUpperCase();
-  if (data.nama !== undefined) patch.nama = data.nama.trim();
+  if (data.kodeRekeningId !== undefined) patch.kodeRekeningId = data.kodeRekeningId;
+  if (data.kodeRekeningKode !== undefined) patch.kodeRekeningKode = data.kodeRekeningKode.trim();
+  if (data.kodeRekeningNama !== undefined) patch.kodeRekeningNama = data.kodeRekeningNama.trim();
   if (data.description !== undefined) patch.description = data.description.trim();
   if (data.documents !== undefined) patch.documents = data.documents;
   if (data.isActive !== undefined) patch.isActive = data.isActive;
@@ -859,18 +940,32 @@ export const createSpjPackage = async (params: {
   targetJawatanName?: string;
   packageTemplate?: PackageTemplate | null;
 }): Promise<string> => {
-  const { user, kegiatan, kodeRekening, tanggal, judulAktivitas, jumlahPeserta, targetJawatanId, targetJawatanName, packageTemplate } = params;
-  const year = new Date(tanggal).getFullYear() || 2026;
-  const month = new Date(tanggal).getMonth() + 1 || 8;
+  const { user, kegiatan, kodeRekening, judulAktivitas, jumlahPeserta, targetJawatanId, targetJawatanName } = params;
+  // Dates are ALWAYS stored as dd-mm-yyyy
+  const tanggal = normalizeDateToDDMMYYYY(params.tanggal) || todayDDMMYYYY();
+  // Tahun anggaran follows the year the document is created (from its date)
+  const year = getYearFromDate(tanggal);
+  const month = parseAnyDate(tanggal)?.getMonth() ?? 0;
+  const bulan = month + 1;
   const nomorSpj = await generateSpjNumber(year);
 
   const activeJawatanId = targetJawatanId || user.jawatanId;
   const activeJawatanName = targetJawatanName || user.jawatanName;
 
   // Checklist resolution priority:
-  // 1) Admin-defined package template (e.g. "SPJ ATK") — user must complete exactly these docs.
-  // 2) Checklist config keyed by kodeRekeningId.
-  // 3) Default fallback.
+  // 1) Package template bound to the chosen Kode Rekening (admin-defined).
+  // 2) Passed-in package template (explicit override).
+  // 3) Checklist config keyed by kodeRekeningId.
+  // 4) Default fallback.
+  let packageTemplate = params.packageTemplate || null;
+  if (!packageTemplate) {
+    try {
+      packageTemplate = await getPackageTemplateByKodeRekening(kodeRekening.id);
+    } catch (e) {
+      console.warn("Failed to resolve package template:", e);
+    }
+  }
+
   let checklistDocs: { documentTypeId: string; required: boolean; order: number }[] = [];
   let configId = "config-default";
 
@@ -934,7 +1029,7 @@ export const createSpjPackage = async (params: {
     kodeRekeningId: kodeRekening.id,
     tanggal,
     tahunAnggaran: year,
-    bulan: month,
+    bulan,
     status: "DRAFT",
     progress: 0,
     masterSnapshot,

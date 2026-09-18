@@ -1,5 +1,7 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { UserProfile, SpjItem, SpjDocumentItem, OfficialPerson } from "../types";
+import { db } from "../config/firebase";
+import { collection, onSnapshot } from "firebase/firestore";
 import {
   getSpjById,
   getSpjDocuments,
@@ -11,11 +13,9 @@ import {
   savePemimpinRapatOption,
   createAttendanceSession,
   getActiveAttendanceSession,
-  QR_SESSION_TTL_MS,
 } from "../services/api";
 import { terbilangRupiah } from "../utils/format";
-import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari } from "../utils/date";
-import QRCode from "qrcode";
+import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari, toDateInputValue, sortDates } from "../utils/date";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -25,7 +25,6 @@ import {
   Printer,
   ShieldCheck,
   QrCode,
-  Download,
   ExternalLink,
   Plus,
   X,
@@ -60,13 +59,13 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
   const [newPemimpinNip, setNewPemimpinNip] = useState("");
   const [newPemimpinPangkat, setNewPemimpinPangkat] = useState("");
 
-  // QR Code State
-  const [qrDataUrl, setQrDataUrl] = useState<string>("");
-  const [qrLink, setQrLink] = useState<string>("");
+  // QR Code State — the QR itself is displayed on a dedicated full-screen page
+  // (/qr-display/:spjId) opened in a new tab so it can be scanned from afar.
   const [qrExpiresAt, setQrExpiresAt] = useState<number | null>(null);
   const [qrRemaining, setQrRemaining] = useState<number>(0);
   const [qrGenerating, setQrGenerating] = useState(false);
-  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  // Attendance rows captured via QR — synced live so the daftar hadir fills itself
+  const [qrAttendance, setQrAttendance] = useState<Array<{ id: string; nama: string; ttdImage?: string }>>([]);
 
   // Countdown for the active QR session (30 minutes TTL)
   useEffect(() => {
@@ -74,12 +73,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
     const tick = () => {
       const left = qrExpiresAt - Date.now();
       setQrRemaining(left > 0 ? left : 0);
-      if (left <= 0) {
-        // Session expired — hide the QR (record is purged by the sweep)
-        setQrDataUrl("");
-        setQrLink("");
-        setQrExpiresAt(null);
-      }
+      if (left <= 0) setQrExpiresAt(null);
     };
     tick();
     const iv = setInterval(tick, 1000);
@@ -97,26 +91,33 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
   const generateQRCode = async () => {
     if (!spj) return;
     setQrGenerating(true);
+    // Open the tab synchronously on the click so browsers never treat it as a
+    // popup. The QR display page owns the 30-minute session lifecycle; here we
+    // only open it and then read back the active session for the countdown.
+    window.open(`${window.location.origin}/qr-display/${spjId}`, "_blank", "noopener,noreferrer");
     try {
-      // Create a fresh 30-minute attendance session on the server
-      const session = await createAttendanceSession(spjId, user);
-      const attendanceUrl = `${window.location.origin}/absen/${spjId}`;
-      setQrLink(attendanceUrl);
-      setQrExpiresAt(session.expiresAtMs);
-
-      const dataUrl = await QRCode.toDataURL(attendanceUrl, {
-        width: 300,
-        margin: 2,
-        color: { dark: "#1a1a1a", light: "#ffffff" },
-        errorCorrectionLevel: "M",
-      });
-      setQrDataUrl(dataUrl);
+      // Give the new tab a moment to create the session, then mirror it here.
+      await new Promise((r) => setTimeout(r, 1500));
+      const active = await getActiveAttendanceSession(spjId);
+      if (active) setQrExpiresAt(active.expiresAtMs);
     } catch (e) {
-      console.error("QR generation error:", e);
-      alert("Gagal membuat QR code.");
+      console.error("QR session mirror error:", e);
     }
     setQrGenerating(false);
   };
+
+  // Live-sync attendance captured through the QR page into this wizard
+  useEffect(() => {
+    if (!spjId) return;
+    const unsub = onSnapshot(collection(db, "spj", spjId, "attendance"), (snap) => {
+      const rows = snap.docs.map((d) => {
+        const data = d.data() as any;
+        return { id: d.id, nama: data.nama || "", ttdImage: data.ttdImage || "" };
+      });
+      setQrAttendance(rows);
+    });
+    return () => unsub();
+  }, [spjId]);
 
   const loadSpjData = async () => {
     try {
@@ -764,12 +765,13 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                         disabled={qrGenerating}
                         className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1.5 disabled:opacity-60"
                       >
-                        <QrCode className="w-3.5 h-3.5" />
-                        <span>{qrGenerating ? "Membuat..." : qrExpiresAt ? "Perbarui QR (30 mnt)" : "Buat QR Absensi"}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>{qrGenerating ? "Membuat..." : qrExpiresAt ? "Buka QR Lagi (30 mnt)" : "Buat QR Absensi"}</span>
                       </button>
                     </div>
                     <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
-                      Peserta scan QR ini → diarahkan ke halaman input nama + tanda tangan digital → data otomatis masuk ke daftar hadir.
+                      Klik tombol di atas — QR besar akan terbuka di <strong>tab baru</strong> sehingga bisa dipindai dari jauh.
+                      Peserta scan → isi nama + tanda tangan digital → data <strong>otomatis muncul real-time</strong> di daftar hadir.
                       QR hanya berlaku 30 menit, setelah itu sesi & datanya dihapus permanen.
                     </p>
                     {qrExpiresAt && qrRemaining > 0 && (
@@ -782,40 +784,12 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                         </span>
                       </div>
                     )}
-                    {qrDataUrl && (
-                      <div className="flex items-start space-x-4">
-                        <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-200">
-                          <img src={qrDataUrl} alt="QR Code Absensi" className="w-32 h-32" />
-                        </div>
-                        <div className="flex-1 space-y-2">
-                          <div className="text-xs">
-                            <p className="font-semibold text-blue-900 dark:text-blue-200 mb-1">Link Absensi:</p>
-                            <div className="flex items-center space-x-1">
-                              <code className="text-[11px] text-blue-600 bg-blue-50 dark:bg-blue-900/40 px-2 py-1 rounded break-all">{qrLink}</code>
-                            </div>
-                          </div>
-                          <div className="flex flex-col space-y-1.5">
-                            <a
-                              href={qrLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center space-x-1"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              <span>Buka Halaman Absensi</span>
-                            </a>
-                            <a
-                              href={qrDataUrl}
-                              download={`qr-absensi-${spjId}.png`}
-                              className="text-xs text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center space-x-1"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              <span>Download QR PNG</span>
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-xl px-3 py-2.5 border border-blue-200 dark:border-blue-800">
+                      <span className="text-[11px] font-semibold text-blue-900 dark:text-blue-200">
+                        Peserta sudah absen via QR
+                      </span>
+                      <span className="text-lg font-mono font-extrabold text-[#32848D]">{qrAttendance.length}</span>
+                    </div>
                   </div>
 
                   {/* Header Preview in Editor */}
@@ -849,47 +823,84 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-                          {Array.from({ length: spj.sharedData?.jumlahPeserta || formData.peserta?.length || 15 }).map((_, idx) => {
+                          {(() => {
                             const pList = formData.peserta || [];
-                            const current = pList[idx] || { nama: "", jabatan: "" };
-
-                            return (
-                              <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700/40">
-                                <td className="p-2 text-center border-r font-bold text-gray-500">{idx + 1}</td>
-                                <td className="p-1 border-r">
-                                  <input
-                                    type="text"
-                                    value={current.nama || ""}
-                                    onChange={(e) => {
-                                      const updated = [...pList];
-                                      while (updated.length <= idx) updated.push({ no: updated.length + 1, nama: "", jabatan: "" });
-                                      updated[idx] = { ...updated[idx], nama: e.target.value };
-                                      handleFormChange("peserta", updated);
-                                    }}
-                                    placeholder={`Nama Peserta #${idx + 1}`}
-                                    className="w-full bg-transparent p-1 rounded border border-gray-200 dark:border-slate-600 text-xs text-gray-900 dark:text-white"
-                                  />
-                                </td>
-                                <td className="p-1 border-r">
-                                  <input
-                                    type="text"
-                                    value={current.jabatan || ""}
-                                    onChange={(e) => {
-                                      const updated = [...pList];
-                                      while (updated.length <= idx) updated.push({ no: updated.length + 1, nama: "", jabatan: "" });
-                                      updated[idx] = { ...updated[idx], jabatan: e.target.value };
-                                      handleFormChange("peserta", updated);
-                                    }}
-                                    placeholder={`Jabatan / Unit`}
-                                    className="w-full bg-transparent p-1 rounded border border-gray-200 dark:border-slate-600 text-xs text-gray-900 dark:text-white"
-                                  />
-                                </td>
-                                <td className="p-2 text-xs font-mono text-gray-400">
-                                  {idx % 2 === 0 ? `${idx + 1}. ........` : `   ${idx + 1}. ........`}
-                                </td>
-                              </tr>
+                            // QR attendance rows come first (real-time), then manual rows
+                            const qrRows = qrAttendance;
+                            const qrNames = new Set(qrRows.map((r) => r.nama.trim().toLowerCase()));
+                            const manualRows = pList.filter(
+                              (p: any) => p?.nama && !qrNames.has(String(p.nama).trim().toLowerCase())
                             );
-                          })}
+                            const merged = [
+                              ...qrRows.map((r) => ({ nama: r.nama, jabatan: "", ttdImage: r.ttdImage })),
+                              ...manualRows.map((p: any) => ({ nama: p.nama, jabatan: p.jabatan || "", ttdImage: p.ttdImage || "" })),
+                            ];
+                            const totalRows = Math.max(
+                              spj.sharedData?.jumlahPeserta || 15,
+                              merged.length
+                            );
+
+                            return Array.from({ length: totalRows }).map((_, idx) => {
+                              const current = merged[idx];
+
+                              // Row filled by QR attendance — show name + signature image
+                              if (current && current.ttdImage) {
+                                return (
+                                  <tr key={`qr-${idx}`} className="bg-emerald-50/60 dark:bg-emerald-900/20">
+                                    <td className="p-2 text-center border-r font-bold text-emerald-700">{idx + 1}</td>
+                                    <td className="p-2 border-r font-semibold text-gray-900 dark:text-white">
+                                      {current.nama}
+                                      <span className="ml-1.5 text-[9px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/50 px-1.5 py-0.5 rounded-full">
+                                        QR
+                                      </span>
+                                    </td>
+                                    <td className="p-2 border-r text-gray-500">{current.jabatan || "—"}</td>
+                                    <td className="p-1 text-center">
+                                      <img src={current.ttdImage} alt="ttd" className="h-9 mx-auto object-contain" />
+                                    </td>
+                                  </tr>
+                                );
+                              }
+
+                              // Manual row — editable inputs
+                              return (
+                                <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700/40">
+                                  <td className="p-2 text-center border-r font-bold text-gray-500">{idx + 1}</td>
+                                  <td className="p-1 border-r">
+                                    <input
+                                      type="text"
+                                      value={current?.nama || ""}
+                                      onChange={(e) => {
+                                        const updated = [...pList];
+                                        while (updated.length <= idx) updated.push({ no: updated.length + 1, nama: "", jabatan: "" });
+                                        updated[idx] = { ...updated[idx], nama: e.target.value };
+                                        handleFormChange("peserta", updated);
+                                      }}
+                                      placeholder={`Nama Peserta #${idx + 1}`}
+                                      className="w-full bg-transparent p-1 rounded border border-gray-200 dark:border-slate-600 text-xs text-gray-900 dark:text-white"
+                                    />
+                                  </td>
+                                  <td className="p-1 border-r">
+                                    <input
+                                      type="text"
+                                      value={current?.jabatan || ""}
+                                      onChange={(e) => {
+                                        const updated = [...pList];
+                                        while (updated.length <= idx) updated.push({ no: updated.length + 1, nama: "", jabatan: "" });
+                                        updated[idx] = { ...updated[idx], jabatan: e.target.value };
+                                        handleFormChange("peserta", updated);
+                                      }}
+                                      placeholder={`Jabatan / Unit`}
+                                      className="w-full bg-transparent p-1 rounded border border-gray-200 dark:border-slate-600 text-xs text-gray-900 dark:text-white"
+                                    />
+                                  </td>
+                                  <td className="p-2 text-xs font-mono text-gray-400">
+                                    {idx % 2 === 0 ? `${idx + 1}. ........` : `   ${idx + 1}. ........`}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>
@@ -1032,9 +1043,6 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                           onChange={(e) => handleFormChange("tanggalPelaksanaan", e.target.value)}
                           className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                         />
-                        <p className="text-xs text-gray-400 mt-1">
-                          Format: {formatDateDDMMYYYY(formData.tanggalPelaksanaan || spj.tanggal)}
-                        </p>
                       </>
                     ) : (
                       <div className="space-y-2">

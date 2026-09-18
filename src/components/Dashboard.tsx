@@ -7,7 +7,6 @@ import {
   Clock,
   AlertCircle,
   DollarSign,
-  Plus,
   RefreshCw,
   TrendingUp,
 } from "lucide-react";
@@ -27,7 +26,7 @@ import {
 
 interface DashboardProps {
   user: UserProfile;
-  onCreateSpj: () => void;
+  onCreateSpj?: () => void;
 }
 
 interface SpjStats {
@@ -103,30 +102,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Ringkasan SPJ</h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
-            {user.jawatanName} — Analisis PEPIN
-          </p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={loadStats}
-            disabled={loading}
-            className="p-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
-            title="Refresh Data"
-          >
-            <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
-          </button>
-          <button
-            onClick={onCreateSpj}
-            className="px-5 py-2.5 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow-md hover:shadow-lg transition-all"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Buat SPJ Baru</span>
-          </button>
-        </div>
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Ringkasan SPJ</h1>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+          {user.jawatanName} — Analisis PEPIN
+        </p>
       </div>
 
       {/* Stat Cards */}

@@ -36,10 +36,15 @@ export interface OfficialPerson {
 }
 
 // ------------------- ADMIN-DEFINED SPJ PACKAGE TEMPLATES -------------------
+// Every package is associated with a Kode Rekening: when a user picks that
+// Kode Rekening, the package's document checklist is applied automatically.
 export interface PackageTemplate {
   id: string;
-  kode: string;
-  nama: string;
+  kodeRekeningId: string;
+  kodeRekeningKode?: string;
+  kodeRekeningNama?: string;
+  kode?: string;
+  nama?: string;
   description?: string;
   documents: ChecklistDocConfig[];
   isActive: boolean;

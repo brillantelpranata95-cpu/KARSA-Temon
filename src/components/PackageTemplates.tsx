@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { UserProfile, PackageTemplate, DocumentTypeItem } from "../types";
+import { UserProfile, PackageTemplate, DocumentTypeItem, KodeRekening } from "../types";
 import {
   getPackageTemplatesList,
   adminCreatePackageTemplate,
   adminUpdatePackageTemplate,
   adminDeletePackageTemplate,
   getDocumentTypesList,
+  getKodeRekeningList,
 } from "../services/api";
 import { FileStack, Plus, Edit, Trash2, Save, RefreshCw, Info, X, CheckCircle2, Package } from "lucide-react";
 
@@ -22,12 +23,12 @@ interface DocRow {
 export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
   const [templates, setTemplates] = useState<PackageTemplate[]>([]);
   const [docTypes, setDocTypes] = useState<DocumentTypeItem[]>([]);
+  const [rekList, setRekList] = useState<KodeRekening[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<PackageTemplate | null>(null);
-  const [formKode, setFormKode] = useState("");
-  const [formNama, setFormNama] = useState("");
+  const [formRekId, setFormRekId] = useState("");
   const [formDesc, setFormDesc] = useState("");
   const [formDocs, setFormDocs] = useState<DocRow[]>([]);
   const [saving, setSaving] = useState(false);
@@ -35,9 +36,14 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [tList, dList] = await Promise.all([getPackageTemplatesList(true), getDocumentTypesList()]);
+      const [tList, dList, rList] = await Promise.all([
+        getPackageTemplatesList(true),
+        getDocumentTypesList(),
+        getKodeRekeningList(),
+      ]);
       setTemplates(tList);
       setDocTypes(dList);
+      setRekList(rList);
     } catch (e) {
       console.error("Failed to load package templates:", e);
     }
@@ -48,20 +54,22 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
     loadData();
   }, []);
 
+  // Kode rekening that do not yet have a package (available for a new one)
+  const usedRekIds = new Set(templates.map((t) => t.kodeRekeningId).filter(Boolean));
+  const availableRekList = rekList.filter((r) => !usedRekIds.has(r.id) || r.id === formRekId);
+
   const openCreate = () => {
     setEditing(null);
-    setFormKode("");
-    setFormNama("");
+    setFormRekId("");
     setFormDesc("");
-    // Default: Bend 26 only (as the user described: "misal bend 26")
+    // Default: Bend 26 only — the most common requirement
     setFormDocs([{ documentTypeId: "doctype-bend26", required: true, order: 1 }]);
     setIsModalOpen(true);
   };
 
   const openEdit = (t: PackageTemplate) => {
     setEditing(t);
-    setFormKode(t.kode);
-    setFormNama(t.nama);
+    setFormRekId(t.kodeRekeningId || "");
     setFormDesc(t.description || "");
     setFormDocs(
       (t.documents || []).slice().sort((a, b) => a.order - b.order).map((d) => ({ ...d }))
@@ -82,8 +90,8 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
   };
 
   const handleSave = async () => {
-    if (!formKode.trim() || !formNama.trim()) {
-      alert("Kode dan Nama Paket wajib diisi.");
+    if (!formRekId) {
+      alert("Pilih Kode Rekening terlebih dahulu. Paket SPJ mengikuti kode rekening.");
       return;
     }
     if (formDocs.length === 0) {
@@ -93,31 +101,45 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
     setSaving(true);
     try {
       const normalizedDocs = formDocs.map((d, i) => ({ ...d, order: i + 1 }));
+      const rek = rekList.find((r) => r.id === formRekId);
+
       if (editing) {
         await adminUpdatePackageTemplate(
           editing.id,
-          { kode: formKode, nama: formNama, description: formDesc, documents: normalizedDocs },
+          {
+            kodeRekeningId: formRekId,
+            kodeRekeningKode: rek?.kode || "",
+            kodeRekeningNama: rek?.nama || "",
+            description: formDesc,
+            documents: normalizedDocs,
+          },
           user
         );
         alert("Paket SPJ berhasil diperbarui.");
       } else {
         await adminCreatePackageTemplate(
-          { kode: formKode, nama: formNama, description: formDesc, documents: normalizedDocs },
+          {
+            kodeRekeningId: formRekId,
+            kodeRekeningKode: rek?.kode || "",
+            kodeRekeningNama: rek?.nama || "",
+            description: formDesc,
+            documents: normalizedDocs,
+          },
           user
         );
-        alert("Paket SPJ baru berhasil dibuat. Pengguna kini dapat memilihnya saat membuat SPJ.");
+        alert("Paket SPJ baru berhasil dibuat. Setiap pengguna yang memilih kode rekening ini akan otomatis mengikuti paket tersebut.");
       }
       setIsModalOpen(false);
       await loadData();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Gagal menyimpan paket SPJ.");
+      alert(e?.message || "Gagal menyimpan paket SPJ.");
     }
     setSaving(false);
   };
 
   const handleDelete = async (t: PackageTemplate) => {
-    if (!confirm(`Hapus paket "${t.nama}"? Pengguna tidak akan bisa memilih paket ini lagi.`)) return;
+    if (!confirm(`Hapus paket untuk rekening "${t.kodeRekeningNama || t.kodeRekeningKode}"? Kode rekening ini akan kembali memakai checklist standar.`)) return;
     try {
       await adminDeletePackageTemplate(t.id, user);
       await loadData();
@@ -143,6 +165,14 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
     return dt?.name || documentTypeId.replace("doctype-", "").replace(/_/g, " ").toUpperCase();
   };
 
+  const getRekLabel = (t: PackageTemplate): string => {
+    if (t.kodeRekeningKode || t.kodeRekeningNama) {
+      return `[${t.kodeRekeningKode || "-"}] ${t.kodeRekeningNama || ""}`;
+    }
+    const r = rekList.find((x) => x.id === t.kodeRekeningId);
+    return r ? `[${r.kode}] ${r.nama}` : t.kodeRekeningId || "-";
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -154,7 +184,7 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Buat Paket SPJ</h1>
             <p className="text-sm text-gray-500 dark:text-slate-400">
-              Tentukan dokumen wajib untuk setiap jenis paket — pengguna harus melengkapi persis sesuai paket
+              Tentukan dokumen wajib untuk tiap Kode Rekening — pengguna otomatis mengikuti paket ini
             </p>
           </div>
         </div>
@@ -179,10 +209,10 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
       <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl p-4 flex items-start space-x-3">
         <Info className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" />
         <div className="text-xs text-violet-900 dark:text-violet-200 space-y-1">
-          <p className="font-semibold">Contoh penggunaan:</p>
+          <p className="font-semibold">Cara kerja:</p>
           <p>
-            Buat paket baru bernama <strong>"SPJ ATK"</strong> dan centang dokumen yang dibutuhkan (misal hanya Bend 26).
-            Setiap pengguna yang membuat paket SPJ ATK wajib melengkapi tepat dokumen tersebut.
+            Pilih satu <strong>Kode Rekening</strong> lalu centang dokumen yang dibutuhkan (misal hanya Bend 26).
+            Setiap pengguna yang membuat SPJ dengan kode rekening tersebut otomatis wajib melengkapi tepat dokumen itu.
           </p>
           <p className="font-semibold">Bend 26 diperlakukan sama dengan Bend 26 pada paket yang sudah ada — form nominal, pajak, dan penerima tetap identik.</p>
         </div>
@@ -196,7 +226,7 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
         <div className="bg-white dark:bg-slate-800 p-12 rounded-2xl border border-gray-200 dark:border-slate-700 text-center space-y-3">
           <Package className="w-10 h-10 text-gray-300 dark:text-slate-600 mx-auto" />
           <p className="text-sm font-medium text-gray-500 dark:text-slate-400">
-            Belum ada paket SPJ khusus. Paket standar (mengikuti Kode Rekening) tetap tersedia untuk pengguna.
+            Belum ada paket SPJ khusus. Paket standar (checklist bawaan per Kode Rekening) tetap tersedia untuk pengguna.
           </p>
           <button
             onClick={openCreate}
@@ -216,8 +246,12 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
               <div className="p-5 border-b border-gray-100 dark:border-slate-700">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-mono font-bold text-[#32848D]">{t.kode}</p>
-                    <h3 className="font-bold text-gray-900 dark:text-white truncate">{t.nama}</h3>
+                    <p className="text-[10px] font-mono font-bold text-[#32848D]">
+                      {t.kodeRekeningKode || "REKENING"}
+                    </p>
+                    <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-snug">
+                      {t.kodeRekeningNama || getRekLabel(t)}
+                    </h3>
                   </div>
                   <span
                     className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -304,27 +338,25 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
             </div>
 
             <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Kode Paket</label>
-                  <input
-                    type="text"
-                    value={formKode}
-                    onChange={(e) => setFormKode(e.target.value)}
-                    placeholder="SPJ-ATK"
-                    className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nama Paket</label>
-                  <input
-                    type="text"
-                    value={formNama}
-                    onChange={(e) => setFormNama(e.target.value)}
-                    placeholder="SPJ ATK"
-                    className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                  Kode Rekening (Paket mengikuti kode rekening ini)
+                </label>
+                <select
+                  value={formRekId}
+                  onChange={(e) => setFormRekId(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                >
+                  <option value="">— Pilih Kode Rekening —</option>
+                  {availableRekList.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      [{r.kode}] {r.nama}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Kode rekening yang sudah punya paket tidak muncul di sini — pilih Edit pada kartu paket tersebut.
+                </p>
               </div>
 
               <div>

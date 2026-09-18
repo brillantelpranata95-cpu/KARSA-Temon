@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { UserProfile } from "../types";
-import { LogOut, Building2, Shield, Moon, Sun, Settings, FileStack, UserCog } from "lucide-react";
+import {
+  LogOut,
+  Building2,
+  Shield,
+  Moon,
+  Sun,
+  Settings,
+  FileStack,
+  UserCog,
+  Database,
+  ScrollText,
+} from "lucide-react";
 
 export type AppTab = "dashboard" | "spj" | "master" | "audit" | "packages" | "officials";
 
@@ -42,18 +53,17 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
+  // Main navigation shows only Dashboard and Daftar SPJ.
+  // Every other section lives in the account (username) menu.
   const navItems: [AppTab, string][] = [
     ["dashboard", "Dashboard"],
     ["spj", "Daftar SPJ"],
-    ...(user.role === "ADMIN"
-      ? ([
-          ["packages", "Paket SPJ"],
-          ["officials", "Penandatangan"],
-          ["master", "Master Data"],
-          ["audit", "Audit Log"],
-        ] as [AppTab, string][])
-      : []),
   ];
+
+  const openTab = (tab: AppTab) => {
+    setActiveTab(tab);
+    setSettingsOpen(false);
+  };
 
   return (
     <header className="bg-white dark:bg-slate-800 border-b border-[#32848D]/10 dark:border-slate-700 sticky top-0 z-50 transition-colors">
@@ -125,69 +135,70 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
               </button>
 
               {settingsOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-xl overflow-hidden z-50">
+                <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-xl overflow-hidden z-50">
                   <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30">
                     <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Pengaturan</p>
-                    <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-0.5">Kelola konfigurasi penandatangan & paket</p>
+                    <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-0.5">
+                      Penandatangan, paket SPJ, master data
+                    </p>
                   </div>
 
-                  {user.role === "ADMIN" ? (
-                    <div className="p-1.5">
-                      <button
-                        onClick={() => {
-                          setActiveTab("officials");
-                          setSettingsOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
-                      >
-                        <UserCog className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Atur Penandatangan</p>
-                          <p className="text-[11px] text-gray-500 dark:text-slate-400">
-                            PPTK, Notulis, KPA/Panewu, Bendahara
-                          </p>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setActiveTab("packages");
-                          setSettingsOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
-                      >
-                        <FileStack className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Buat Paket SPJ</p>
-                          <p className="text-[11px] text-gray-500 dark:text-slate-400">
-                            Tentukan dokumen wajib per jenis paket
-                          </p>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setActiveTab("master");
-                          setSettingsOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
-                      >
-                        <Settings className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Master Data & Akses</p>
-                          <p className="text-[11px] text-gray-500 dark:text-slate-400">
-                            Pengguna, jawatan, sub-kegiatan, rekening
-                          </p>
-                        </div>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="p-1.5">
-                      <div className="px-3 py-2.5">
-                        <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
-                          Pengaturan penandatangan (PPTK, Notulis, KPA, Bendahara) ditetapkan oleh Administrator Kapanewon.
+                  <div className="p-1.5">
+                    {/* All users: officials are managed per jawatan */}
+                    <button
+                      onClick={() => openTab("officials")}
+                      className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
+                    >
+                      <UserCog className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Penandatangan Jawatan</p>
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                          PPTK, Notulis & Pemimpin Rapat jawatan Anda
                         </p>
                       </div>
-                    </div>
-                  )}
+                    </button>
+
+                    {user.role === "ADMIN" && (
+                      <>
+                        <button
+                          onClick={() => openTab("packages")}
+                          className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
+                        >
+                          <FileStack className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">Buat Paket SPJ</p>
+                            <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                              Dokumen wajib per Kode Rekening
+                            </p>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => openTab("master")}
+                          className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
+                        >
+                          <Database className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">Master Data & Akses</p>
+                            <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                              Pengguna, jawatan, sub-kegiatan, rekening
+                            </p>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => openTab("audit")}
+                          className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
+                        >
+                          <ScrollText className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">Audit Log</p>
+                            <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                              Riwayat seluruh aktivitas sistem
+                            </p>
+                          </div>
+                        </button>
+                      </>
+                    )}
+                  </div>
 
                   <div className="border-t border-gray-100 dark:border-slate-700 p-1.5">
                     <button
@@ -224,3 +235,5 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
     </header>
   );
 };
+
+export default Navbar;

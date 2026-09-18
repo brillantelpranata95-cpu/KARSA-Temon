@@ -1,8 +1,10 @@
 import React from "react";
 import { SpjItem, SpjDocumentItem } from "../types";
 import { terbilangRupiah } from "../utils/format";
-import { formatDateDDMMYYYY, getNamaHari, getNamaHariCapitalized } from "../utils/date";
+import { formatDateDDMMYYYY, getNamaHari, getNamaHariCapitalized, getYearFromDate } from "../utils/date";
 import { ArrowLeft, ExternalLink, Printer } from "lucide-react";
+import { db } from "../config/firebase";
+import { collection, onSnapshot } from "firebase/firestore";
 
 interface PrintPreviewProps {
   spj: SpjItem;
@@ -20,9 +22,35 @@ const formatDateList = (dates?: string[], fallback?: string): string => {
 
 export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack }) => {
   const [selectedDocCode, setSelectedDocCode] = React.useState<string>("BEND_26");
+  // Live QR attendance rows so the printed daftar hadir matches what was submitted
+  const [qrAttendance, setQrAttendance] = React.useState<Array<{ id: string; nama: string; ttdImage?: string }>>([]);
+
+  React.useEffect(() => {
+    if (!spj?.id) return;
+    const unsub = onSnapshot(collection(db, "spj", spj.id, "attendance"), (snap) => {
+      setQrAttendance(
+        snap.docs.map((d) => {
+          const row = d.data() as any;
+          return { id: d.id, nama: row.nama || "", ttdImage: row.ttdImage || "" };
+        })
+      );
+    });
+    return () => unsub();
+  }, [spj?.id]);
 
   const activeDoc = documents.find(d => d.documentTypeCode === selectedDocCode);
   const data = activeDoc?.data || {};
+
+  /** Merge QR attendance (real-time) with manually typed peserta rows, QR first. */
+  const mergedPeserta = React.useMemo(() => {
+    const manual: any[] = data.peserta || [];
+    const qrNames = new Set(qrAttendance.map((r) => r.nama.trim().toLowerCase()));
+    const manualRows = manual
+      .filter((p: any) => p?.nama && !qrNames.has(String(p.nama).trim().toLowerCase()))
+      .map((p: any) => ({ nama: p.nama, jabatan: p.jabatan || "", ttdImage: p.ttdImage || "" }));
+    const qrRows = qrAttendance.map((r) => ({ nama: r.nama, jabatan: "", ttdImage: r.ttdImage }));
+    return [...qrRows, ...manualRows];
+  }, [data.peserta, qrAttendance]);
 
   const handlePrint = () => {
     window.print();
@@ -189,7 +217,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               <div>
                 <p>Telah dibukukan BK. Tgl: ……………</p>
                 <p className="font-mono">Kode Rek: {spj.masterSnapshot.kegiatan.kode} {spj.masterSnapshot.kodeRekening.kode}</p>
-                <p>Tahun Anggaran: {spj.tahunAnggaran}</p>
+                <p>Tahun Anggaran: {getYearFromDate(spj.tanggal) || spj.tahunAnggaran}</p>
               </div>
             </div>
           </div>
@@ -311,28 +339,31 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 </tr>
               </thead>
               <tbody>
-                {Array.from({ length: Number(spj.sharedData?.jumlahPeserta || data.peserta?.length || 15) }).map((_, idx) => (
-                  <tr key={idx} className="border-b border-black h-8">
-                    <td className="border-r border-black">{idx + 1}</td>
-                    <td className="border-r border-black text-left px-2">
-                      {data.peserta?.[idx]?.nama || ""}
-                    </td>
-                    <td className="border-r border-black text-left px-2">
-                      {data.peserta?.[idx]?.jabatan || ""}
-                    </td>
-                    <td className="text-left px-2">
-                      {data.peserta?.[idx]?.ttdImage ? (
-                        <img
-                          src={data.peserta[idx].ttdImage}
-                          alt="ttd"
-                          className="h-8 object-contain mx-auto"
-                        />
-                      ) : (
-                        <span className="font-mono text-[10px]">{idx % 2 === 0 ? `${idx + 1}. .........` : `        ${idx + 1}. .........`}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {Array.from({ length: Math.max(Number(spj.sharedData?.jumlahPeserta || 15), mergedPeserta.length) }).map((_, idx) => {
+                  const row = mergedPeserta[idx];
+                  return (
+                    <tr key={idx} className="border-b border-black h-8">
+                      <td className="border-r border-black">{idx + 1}</td>
+                      <td className="border-r border-black text-left px-2">
+                        {row?.nama || ""}
+                      </td>
+                      <td className="border-r border-black text-left px-2">
+                        {row?.jabatan || ""}
+                      </td>
+                      <td className="text-left px-2">
+                        {row?.ttdImage ? (
+                          <img
+                            src={row.ttdImage}
+                            alt="ttd"
+                            className="h-8 object-contain mx-auto"
+                          />
+                        ) : (
+                          <span className="font-mono text-[10px]">{idx % 2 === 0 ? `${idx + 1}. .........` : `        ${idx + 1}. .........`}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 

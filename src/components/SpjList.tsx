@@ -14,7 +14,7 @@ import {
   requestNewKodeRekening,
   getPackageTemplatesList,
 } from "../services/api";
-import { formatDateDDMMYYYY } from "../utils/date";
+import { formatDateDDMMYYYY, toDateInputValue } from "../utils/date";
 import {
   Plus,
   FileText,
@@ -28,6 +28,7 @@ import {
   Archive,
   Package,
   Download,
+  MoreVertical,
 } from "lucide-react";
 
 interface SpjListProps {
@@ -48,13 +49,15 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [jawatanList, setJawatanList] = useState<{ id: string; nama: string }[]>([]);
   const [packageTemplates, setPackageTemplates] = useState<PackageTemplate[]>([]);
 
-  const [selectedPackageTemplateId, setSelectedPackageTemplateId] = useState<string>("");
   const [selectedKegiatanId, setSelectedKegiatanId] = useState("");
   const [selectedRekId, setSelectedRekId] = useState("");
   const [taggingSubKegiatan, setTaggingSubKegiatan] = useState("");
   const [jumlahPeserta, setJumlahPeserta] = useState<number>(20);
-  const [tanggalSpj, setTanggalSpj] = useState(() => new Date().toISOString().split("T")[0]);
+  const [tanggalSpj, setTanggalSpj] = useState(() => toDateInputValue(new Date()));
   const [adminOverrideJawatanId, setAdminOverrideJawatanId] = useState("");
+
+  // The package checklist follows the chosen Kode Rekening automatically
+  const matchedPackage = packageTemplates.find((p) => p.kodeRekeningId === selectedRekId) || null;
 
   const [creating, setCreating] = useState(false);
   const [reopenSpjId, setReopenSpjId] = useState<string | null>(null);
@@ -62,6 +65,17 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [deleteSpjId, setDeleteSpjId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [archiveSpjId, setArchiveSpjId] = useState<string | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+
+  // Close the per-row action dropdown when clicking anywhere outside it
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-action-menu]")) setOpenActionMenuId(null);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
 
   // Request modals
   const [isRequestKegiatanOpen, setIsRequestKegiatanOpen] = useState(false);
@@ -138,7 +152,6 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     e.preventDefault();
     const k = visibleKegiatanList.find((x) => x.id === selectedKegiatanId);
     const r = rekList.find((x) => x.id === selectedRekId);
-    const pkg = packageTemplates.find((p) => p.id === selectedPackageTemplateId) || null;
 
     if (!k || !r) {
       alert("Mohon lengkapi pilihan Sub-Kegiatan dan Kode Rekening.");
@@ -167,7 +180,8 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         jumlahPeserta,
         targetJawatanId,
         targetJawatanName,
-        packageTemplate: pkg,
+        // Package checklist is resolved from the chosen Kode Rekening inside the API
+        packageTemplate: null,
       });
       setIsModalOpen(false);
       setTaggingSubKegiatan("");
@@ -388,8 +402,8 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                       {formatDateDDMMYYYY(spj.tanggal)}
                     </td>
                     <td className="p-4">
-                      <span className="inline-flex items-center max-w-[150px] truncate px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-100 dark:border-emerald-800/50" title={spj.jawatanName}>
-                        {spj.jawatanName}
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-100 dark:border-emerald-800/50 whitespace-nowrap max-w-[180px]">
+                        <span className="truncate" title={spj.jawatanName}>{spj.jawatanName}</span>
                       </span>
                     </td>
                     <td className="p-4 space-y-1 max-w-[220px]">
@@ -442,51 +456,83 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                       )}
                     </td>
                     <td className="p-4 text-right">
-                      <div className="inline-flex items-center justify-end gap-1.5 flex-wrap">
+                      <div className="relative inline-block text-left" data-action-menu>
                         <button
-                          onClick={() => onSelectSpj(spj.id, "preview")}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
+                          onClick={() => setOpenActionMenuId(openActionMenuId === spj.id ? null : spj.id)}
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                          title="Menu Aksi"
                         >
-                          <Eye className="w-3.5 h-3.5 shrink-0" />
-                          <span>Preview</span>
+                          <MoreVertical className="w-4 h-4" />
                         </button>
 
-                        {spj.status !== "FINALIZED" ? (
-                          <button
-                            onClick={() => onSelectSpj(spj.id, "edit")}
-                            className="px-3 py-1.5 text-xs font-semibold text-white bg-[#32848D] hover:bg-[#276972] rounded-lg inline-flex items-center space-x-1 shadow-sm whitespace-nowrap"
-                          >
-                            <span>Kelola</span>
-                            <ArrowRight className="w-3.5 h-3.5 shrink-0" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setArchiveSpjId(spj.id)}
-                            className="px-3 py-1.5 text-xs font-medium text-[#32848D] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
-                          >
-                            <Archive className="w-3.5 h-3.5 shrink-0" />
-                            <span>Arsipkan</span>
-                          </button>
-                        )}
+                        {openActionMenuId === spj.id && (
+                          <div className="absolute right-0 mt-1.5 w-48 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-xl overflow-hidden z-30 py-1.5">
+                            <button
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                onSelectSpj(spj.id, "preview");
+                              }}
+                              className="w-full text-left px-3.5 py-2 text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/60 inline-flex items-center space-x-2"
+                            >
+                              <Eye className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                              <span>Preview</span>
+                            </button>
 
-                        {spj.status === "FINALIZED" && user.role === "ADMIN" && (
-                          <button
-                            onClick={() => setReopenSpjId(spj.id)}
-                            className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
-                          >
-                            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-                            <span>Reopen</span>
-                          </button>
-                        )}
+                            {spj.status !== "FINALIZED" && (
+                              <button
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  onSelectSpj(spj.id, "edit");
+                                }}
+                                className="w-full text-left px-3.5 py-2 text-xs font-semibold text-[#32848D] hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 inline-flex items-center space-x-2"
+                              >
+                                <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                                <span>Kelola</span>
+                              </button>
+                            )}
 
-                        {user.role === "ADMIN" && (
-                          <button
-                            onClick={() => setDeleteSpjId(spj.id)}
-                            className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                            <span>Hapus</span>
-                          </button>
+                            {spj.status === "FINALIZED" && (
+                              <button
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  setArchiveSpjId(spj.id);
+                                }}
+                                className="w-full text-left px-3.5 py-2 text-xs font-medium text-[#32848D] hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 inline-flex items-center space-x-2"
+                              >
+                                <Archive className="w-3.5 h-3.5 shrink-0" />
+                                <span>Arsipkan</span>
+                              </button>
+                            )}
+
+                            {spj.status === "FINALIZED" && user.role === "ADMIN" && (
+                              <button
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  setReopenSpjId(spj.id);
+                                }}
+                                className="w-full text-left px-3.5 py-2 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 inline-flex items-center space-x-2"
+                              >
+                                <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                                <span>Reopen</span>
+                              </button>
+                            )}
+
+                            {user.role === "ADMIN" && (
+                              <>
+                                <div className="my-1 border-t border-gray-100 dark:border-slate-700"></div>
+                                <button
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    setDeleteSpjId(spj.id);
+                                  }}
+                                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 inline-flex items-center space-x-2"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                                  <span>Hapus</span>
+                                </button>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
                     </td>
@@ -535,43 +581,27 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
-                  Jenis Paket SPJ {user.role === "ADMIN" ? "(Dibuat Admin)" : ""}
-                </label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300">Kode Rekening</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsRequestRekOpen(true)}
+                    className="text-[11px] text-[#32848D] font-semibold hover:underline"
+                  >
+                    + Ajukan Rekening Baru
+                  </button>
+                </div>
                 <select
-                  value={selectedPackageTemplateId}
-                  onChange={(e) => setSelectedPackageTemplateId(e.target.value)}
+                  value={selectedRekId}
+                  onChange={(e) => setSelectedRekId(e.target.value)}
                   className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                 >
-                  <option value="">— Paket Standar (mengikuti Kode Rekening) —</option>
-                  {packageTemplates.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nama} ({p.documents?.length || 0} dokumen)
+                  {rekList.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      [{r.kode}] {r.nama}
                     </option>
                   ))}
                 </select>
-                {selectedPackageTemplateId && (
-                  <div className="mt-2 p-2.5 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-lg">
-                    <p className="text-[11px] font-semibold text-violet-900 dark:text-violet-200 mb-1">
-                      Dokumen wajib paket ini:
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {packageTemplates
-                        .find((p) => p.id === selectedPackageTemplateId)
-                        ?.documents?.slice()
-                        .sort((a, b) => a.order - b.order)
-                        .map((d) => (
-                          <span
-                            key={d.documentTypeId}
-                            className="px-2 py-0.5 bg-white dark:bg-slate-700 text-violet-700 dark:text-violet-300 rounded text-[10px] font-medium border border-violet-200 dark:border-violet-700"
-                          >
-                            {d.documentTypeId.replace("doctype-", "").replace(/_/g, " ").toUpperCase()}
-                            {d.required ? "" : " (opsional)"}
-                          </span>
-                        ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div>
@@ -601,29 +631,27 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 </select>
               </div>
 
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300">Kode Rekening</label>
-                  <button
-                    type="button"
-                    onClick={() => setIsRequestRekOpen(true)}
-                    className="text-[11px] text-[#32848D] font-semibold hover:underline"
-                  >
-                    + Ajukan Rekening Baru
-                  </button>
+              {/* Package checklist preview — resolved automatically from the chosen Kode Rekening */}
+              {matchedPackage && (
+                <div className="p-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl">
+                  <p className="text-[11px] font-semibold text-violet-900 dark:text-violet-200 mb-1.5">
+                    Paket SPJ untuk kode rekening ini — dokumen yang harus dilengkapi:
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {[...(matchedPackage.documents || [])]
+                      .sort((a, b) => a.order - b.order)
+                      .map((d) => (
+                        <span
+                          key={d.documentTypeId}
+                          className="px-2 py-0.5 bg-white dark:bg-slate-700 text-violet-700 dark:text-violet-300 rounded text-[10px] font-medium border border-violet-200 dark:border-violet-700"
+                        >
+                          {d.documentTypeId.replace("doctype-", "").replace(/_/g, " ").toUpperCase()}
+                          {d.required ? "" : " (opsional)"}
+                        </span>
+                      ))}
+                  </div>
                 </div>
-                <select
-                  value={selectedRekId}
-                  onChange={(e) => setSelectedRekId(e.target.value)}
-                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
-                >
-                  {rekList.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      [{r.kode}] {r.nama}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              )}
 
               {/* Grid 12: Tagging Sub-Kegiatan (span 9), Jumlah Peserta (span 3) */}
               <div className="grid grid-cols-12 gap-3">
@@ -659,7 +687,6 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                   onChange={(e) => setTanggalSpj(e.target.value)}
                   className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                 />
-                <p className="text-xs text-gray-400 mt-1">Format tersimpan: {formatDateDDMMYYYY(tanggalSpj)}</p>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 dark:border-slate-700">

@@ -11,6 +11,7 @@ import { PackageTemplates } from "./components/PackageTemplates";
 import { OfficialsSettings } from "./components/OfficialsSettings";
 import { PublicDashboard } from "./components/PublicDashboard";
 import QRAttendancePage from "./components/QRAttendancePage";
+import QrDisplayPage from "./components/QrDisplayPage";
 import { getSpjById, getSpjDocuments, purgeExpiredAttendanceSessions } from "./services/api";
 import { SpjItem, SpjDocumentItem } from "./types";
 
@@ -52,11 +53,19 @@ function MainApp() {
     setViewMode("list");
   };
 
-  // Jika di route /absen, jangan render layout utama
+  // Public routes (no app chrome): QR attendance form + full-screen QR display
   if (location.pathname.startsWith("/absen")) {
     return (
       <Routes>
         <Route path="/absen/:spjId" element={<QRAttendancePage />} />
+      </Routes>
+    );
+  }
+
+  if (location.pathname.startsWith("/qr-display")) {
+    return (
+      <Routes>
+        <Route path="/qr-display/:spjId" element={<QrDisplayPage />} />
       </Routes>
     );
   }
