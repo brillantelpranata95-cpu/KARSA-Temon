@@ -12,7 +12,10 @@ import {
   Database,
   ScrollText,
   Trophy,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import { useHideScores } from "../utils/prefs";
 
 export type AppTab = "dashboard" | "spj" | "master" | "audit" | "packages" | "officials" | "gamification";
 
@@ -33,6 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const [hideScores, setHideScoresPref] = useHideScores(user.uid);
 
   useEffect(() => {
     if (darkMode) {
@@ -145,16 +149,37 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
                   </div>
 
                   <div className="p-1.5">
-                    {/* All users: gamification + officials are per jawatan */}
+                    <button
+                      type="button"
+                      onClick={() => setHideScoresPref(!hideScores)}
+                      className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
+                    >
+                      {hideScores ? (
+                        <EyeOff className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {hideScores ? "Tampilkan skor & pencapaian" : "Sembunyikan skor & pencapaian"}
+                        </p>
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                          {hideScores
+                            ? "Kartu poin dan badge kembali muncul di dashboard"
+                            : "Sembunyikan skor capaian dan badge di dashboard"}
+                        </p>
+                      </div>
+                    </button>
+
                     <button
                       onClick={() => openTab("gamification")}
                       className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
                     >
                       <Trophy className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                       <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Pencapaian & Poin</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Papan Peringkat</p>
                         <p className="text-[11px] text-gray-500 dark:text-slate-400">
-                          Gamifikasi, lencana & papan peringkat
+                          Detail poin, lencana & ranking
                         </p>
                       </div>
                     </button>

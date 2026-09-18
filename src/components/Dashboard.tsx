@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { UserProfile } from "../types";
 import { getSpjStatistics } from "../services/api";
+import { HeroSection } from "./HeroSection";
+import { GamificationOverview } from "./GamificationOverview";
+import { useHideScores } from "../utils/prefs";
 import {
   FileText,
   CheckCircle2,
@@ -57,6 +60,7 @@ const KATEGORI_LABELS: Record<string, string> = {
 export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
   const [stats, setStats] = useState<SpjStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hideScores] = useHideScores(user.uid);
 
   const loadStats = async () => {
     setLoading(true);
@@ -100,7 +104,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
     : [];
 
   return (
-    <div className="space-y-6">
+    <div>
+      <HeroSection variant="app" name={user.displayName || user.email} />
+
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        {!hideScores && <GamificationOverview user={user} />}
+
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Ringkasan SPJ</h1>
@@ -215,6 +224,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

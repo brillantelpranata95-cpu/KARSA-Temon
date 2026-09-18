@@ -6,6 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#32848D" />
     <title>KARSA Temon</title>
+    <script>
+      (function () {
+        var h = new Date().getHours();
+        var p = h >= 5 && h < 11 ? "morning" : h >= 11 && h < 15 ? "afternoon" : "sunset";
+        var l = document.createElement("link");
+        l.rel = "preload";
+        l.as = "image";
+        l.href = "/hero/" + p + ".jpg";
+        document.head.appendChild(l);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
