@@ -11,9 +11,10 @@ import {
   UserCog,
   Database,
   ScrollText,
+  Trophy,
 } from "lucide-react";
 
-export type AppTab = "dashboard" | "spj" | "master" | "audit" | "packages" | "officials";
+export type AppTab = "dashboard" | "spj" | "master" | "audit" | "packages" | "officials" | "gamification";
 
 interface NavbarProps {
   user: UserProfile;
@@ -144,7 +145,20 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
                   </div>
 
                   <div className="p-1.5">
-                    {/* All users: officials are managed per jawatan */}
+                    {/* All users: gamification + officials are per jawatan */}
+                    <button
+                      onClick={() => openTab("gamification")}
+                      className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
+                    >
+                      <Trophy className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Pencapaian & Poin</p>
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                          Gamifikasi, lencana & papan peringkat
+                        </p>
+                      </div>
+                    </button>
+
                     <button
                       onClick={() => openTab("officials")}
                       className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"

@@ -188,7 +188,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
         payload = { ...formData, peserta: merged };
         setFormData(payload);
       }
-      await saveSpjDocumentData(selectedDocId, payload, status, externalUrl);
+      await saveSpjDocumentData(selectedDocId, payload, status, externalUrl, user);
       setSaveMessage("Tersimpan!");
       setTimeout(() => setSaveMessage(null), 2000);
       await loadSpjData();

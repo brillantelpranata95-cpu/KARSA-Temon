@@ -14,6 +14,15 @@ import {
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { normalizeDateToDDMMYYYY, todayDDMMYYYY, getYearFromDate, parseAnyDate } from "../utils/date";
+import { cachedFetch, invalidateCache } from "../utils/cache";
+import {
+  GamificationAction,
+  UserGamificationProfile,
+  ACTION_POINTS,
+  emptyCounts,
+  getEarnedBadges,
+  badgeStatsFromProfile,
+} from "../utils/gamification";
 import {
   UserProfile,
   Jawatan,
@@ -296,30 +305,49 @@ export const adminCreateUser = async (data: {
 };
 
 // ------------------- MASTER DATA FETCHERS & MANAGERS -------------------
+// Master data is cached in-memory (15-min TTL) — see utils/cache.ts.
+// Invalidation happens automatically on every write below.
 export const getJawatanList = async (): Promise<Jawatan[]> => {
-  const snap = await getDocs(collection(db, "jawatan"));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Jawatan));
+  return cachedFetch("jawatan:all", async () => {
+    const snap = await getDocs(collection(db, "jawatan"));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Jawatan));
+  });
 };
 
 export const getKegiatanList = async (jawatanId?: string, includePending = false): Promise<Kegiatan[]> => {
-  const snap = await getDocs(collection(db, "kegiatan"));
-  let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Kegiatan));
-  if (jawatanId) {
-    list = list.filter(k => k.jawatanId === jawatanId);
-  }
-  if (!includePending) {
-    list = list.filter(k => k.status === "ACTIVE" || !k.status);
-  }
-  return list;
+  const key = `kegiatan:${jawatanId || "all"}:${includePending ? "pending" : "active"}`;
+  return cachedFetch(key, async () => {
+    const snap = await getDocs(collection(db, "kegiatan"));
+    let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Kegiatan));
+    if (jawatanId) {
+      list = list.filter(k => k.jawatanId === jawatanId);
+    }
+    if (!includePending) {
+      list = list.filter(k => k.status === "ACTIVE" || !k.status);
+    }
+    return list;
+  });
 };
 
 export const getKodeRekeningList = async (includePending = false): Promise<KodeRekening[]> => {
-  const snap = await getDocs(collection(db, "kodeRekening"));
-  let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as KodeRekening));
-  if (!includePending) {
-    list = list.filter(r => r.status === "ACTIVE" || r.isActive !== false);
-  }
-  return list;
+  const key = `kodeRekening:${includePending ? "pending" : "active"}`;
+  return cachedFetch(key, async () => {
+    const snap = await getDocs(collection(db, "kodeRekening"));
+    let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as KodeRekening));
+    if (!includePending) {
+      list = list.filter(r => r.status === "ACTIVE" || r.isActive !== false);
+    }
+    return list;
+  });
+};
+
+/** Invalidate master-data caches after any write. */
+export const invalidateMasterCache = (): void => {
+  invalidateCache("kegiatan:");
+  invalidateCache("kodeRekening:");
+  invalidateCache("jawatan:");
+  invalidateCache("packageTemplates:");
+  invalidateCache("documentTypes:");
 };
 
 // User Request New Kode Kegiatan
@@ -340,6 +368,7 @@ export const requestNewKegiatan = async (data: {
     requestedBy: user.email
   };
   await setDoc(kegRef, sanitizeData({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+  invalidateMasterCache();
   return id;
 };
 
@@ -363,6 +392,7 @@ export const requestNewKodeRekening = async (data: {
     requestedBy: user.email
   };
   await setDoc(rekRef, sanitizeData({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+  invalidateMasterCache();
   return id;
 };
 
@@ -370,6 +400,7 @@ export const requestNewKodeRekening = async (data: {
 export const adminApproveKegiatan = async (kegiatanId: string, actor: UserProfile) => {
   const kegRef = doc(db, "kegiatan", kegiatanId);
   await updateDoc(kegRef, sanitizeData({ status: "ACTIVE", updatedAt: serverTimestamp() }));
+  invalidateMasterCache();
   await logAudit({
     actorUid: actor.uid,
     actorEmail: actor.email,
@@ -382,6 +413,7 @@ export const adminApproveKegiatan = async (kegiatanId: string, actor: UserProfil
 
 export const adminRejectKegiatan = async (kegiatanId: string, actor: UserProfile) => {
   await deleteDoc(doc(db, "kegiatan", kegiatanId));
+  invalidateMasterCache();
   await logAudit({
     actorUid: actor.uid,
     actorEmail: actor.email,
@@ -396,6 +428,7 @@ export const adminRejectKegiatan = async (kegiatanId: string, actor: UserProfile
 export const adminApproveKodeRekening = async (rekId: string, actor: UserProfile) => {
   const rekRef = doc(db, "kodeRekening", rekId);
   await updateDoc(rekRef, sanitizeData({ isActive: true, status: "ACTIVE", updatedAt: serverTimestamp() }));
+  invalidateMasterCache();
   await logAudit({
     actorUid: actor.uid,
     actorEmail: actor.email,
@@ -408,6 +441,7 @@ export const adminApproveKodeRekening = async (rekId: string, actor: UserProfile
 
 export const adminRejectKodeRekening = async (rekId: string, actor: UserProfile) => {
   await deleteDoc(doc(db, "kodeRekening", rekId));
+  invalidateMasterCache();
   await logAudit({
     actorUid: actor.uid,
     actorEmail: actor.email,
@@ -568,8 +602,10 @@ export const getJenisBelanjaList = async (): Promise<JenisBelanja[]> => {
 };
 
 export const getDocumentTypesList = async (): Promise<DocumentTypeItem[]> => {
-  const snap = await getDocs(collection(db, "documentTypes"));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as DocumentTypeItem));
+  return cachedFetch("documentTypes:all", async () => {
+    const snap = await getDocs(collection(db, "documentTypes"));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as DocumentTypeItem));
+  });
 };
 
 // ------------------- OFFICIALS (PENANDATANGAN) — CROSS-JAWATAN -------------------
@@ -766,10 +802,13 @@ export const saveNotulisOption = async (data: {
 // Rekening. When a user picks that Kode Rekening while creating an SPJ, the
 // checklist is applied automatically — no separate package picker needed.
 export const getPackageTemplatesList = async (includeInactive = false): Promise<PackageTemplate[]> => {
-  const snap = await getDocs(collection(db, "packageTemplates"));
-  let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as PackageTemplate));
-  if (!includeInactive) list = list.filter(p => p.isActive !== false);
-  return list;
+  const key = `packageTemplates:${includeInactive ? "all" : "active"}`;
+  return cachedFetch(key, async () => {
+    const snap = await getDocs(collection(db, "packageTemplates"));
+    let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as PackageTemplate));
+    if (!includeInactive) list = list.filter(p => p.isActive !== false);
+    return list;
+  });
 };
 
 /** Find the active package template bound to a Kode Rekening (or null). */
@@ -805,6 +844,7 @@ export const adminCreatePackageTemplate = async (data: {
     isActive: true,
   };
   await setDoc(ref, sanitizeData({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+  invalidateMasterCache();
   await logAudit({
     actorUid: actor.uid,
     actorEmail: actor.email,
@@ -833,6 +873,7 @@ export const adminUpdatePackageTemplate = async (id: string, data: {
   if (data.documents !== undefined) patch.documents = data.documents;
   if (data.isActive !== undefined) patch.isActive = data.isActive;
   await updateDoc(ref, sanitizeData(patch));
+  invalidateMasterCache();
   await logAudit({
     actorUid: actor.uid,
     actorEmail: actor.email,
@@ -845,6 +886,7 @@ export const adminUpdatePackageTemplate = async (id: string, data: {
 
 export const adminDeletePackageTemplate = async (id: string, actor: UserProfile) => {
   await deleteDoc(doc(db, "packageTemplates", id));
+  invalidateMasterCache();
   await logAudit({
     actorUid: actor.uid,
     actorEmail: actor.email,
@@ -1103,6 +1145,11 @@ export const createSpjPackage = async (params: {
     newValue: { nomorSpj }
   });
 
+  // Gamifikasi: poin membuat paket SPJ (fire-and-forget, tidak blokir alur)
+  awardGamificationPoints(user, "CREATE_SPJ").catch((e) =>
+    console.warn("Gamification skip (CREATE_SPJ):", e)
+  );
+
   return spjRef.id;
 };
 
@@ -1142,13 +1189,15 @@ export const saveSpjDocumentData = async (
   documentId: string,
   docData: Record<string, any>,
   status: "DRAFT" | "IN_PROGRESS" | "COMPLETED",
-  externalUrl?: string | null
+  externalUrl?: string | null,
+  actor?: UserProfile
 ) => {
   const docRef = doc(db, "spjDocuments", documentId);
   const docSnap = await getDoc(docRef);
   if (!docSnap.exists()) return;
 
   const currentDoc = docSnap.data() as SpjDocumentItem;
+  const wasAlreadyCompleted = currentDoc.status === "COMPLETED" && currentDoc.validation?.isValid;
   
   // Basic validation calculation
   const errors: Array<{ field: string; message: string }> = [];
@@ -1177,6 +1226,13 @@ export const saveSpjDocumentData = async (
 
   // Recalculate SPJ progress & status
   await recalculateSpjStatus(currentDoc.spjId);
+
+  // Gamifikasi: poin saat dokumen PERTAMA KALI selesai (bukan setiap edit)
+  if (isValid && !wasAlreadyCompleted && actor) {
+    awardGamificationPoints(actor, "COMPLETE_DOCUMENT").catch((e) =>
+      console.warn("Gamification skip (COMPLETE_DOCUMENT):", e)
+    );
+  }
 };
 
 // Recalculate SPJ Progress & Status
@@ -1240,6 +1296,11 @@ export const finalizeSpj = async (spjId: string, user: UserProfile) => {
     oldValue: { status: "COMPLETE" },
     newValue: { status: "FINALIZED" }
   });
+
+  // Gamifikasi: poin menyelesaikan paket SPJ
+  awardGamificationPoints(user, "FINALIZE_SPJ").catch((e) =>
+    console.warn("Gamification skip (FINALIZE_SPJ):", e)
+  );
 };
 
 // Reopen SPJ (Admin Only)
@@ -1336,6 +1397,7 @@ export const createJawatan = async (jawatan: Omit<Jawatan, "createdAt" | "update
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   }));
+  invalidateMasterCache();
   
   await logAudit({
     actorUid: user.uid,
@@ -1352,6 +1414,7 @@ export const createJawatan = async (jawatan: Omit<Jawatan, "createdAt" | "update
 export const updateJawatan = async (jawatanId: string, patchData: Partial<Jawatan>, user: UserProfile) => {
   const ref = doc(db, "jawatan", jawatanId);
   await updateDoc(ref, sanitizeData({ ...patchData, updatedAt: serverTimestamp() }));
+  invalidateMasterCache();
   
   await logAudit({
     actorUid: user.uid,
@@ -1365,6 +1428,7 @@ export const updateJawatan = async (jawatanId: string, patchData: Partial<Jawata
 
 export const deleteJawatan = async (jawatanId: string, user: UserProfile) => {
   await deleteDoc(doc(db, "jawatan", jawatanId));
+  invalidateMasterCache();
   
   await logAudit({
     actorUid: user.uid,
@@ -1457,4 +1521,90 @@ export const updateUserAccess = async (targetUid: string, patchData: { role?: "A
     entityId: targetUid,
     newValue: patchData
   });
+};
+
+// ------------------- GAMIFIKASI (POIN, LEVEL, LENCANA) -------------------
+// Every user (admin and staff alike) earns points from real actions stored in
+// Firestore so progress survives refresh and follows the account everywhere.
+
+export const getUserGamification = async (uid: string): Promise<UserGamificationProfile | null> => {
+  const snap = await getDoc(doc(db, "userPoints", uid));
+  if (!snap.exists()) return null;
+  return snap.data() as UserGamificationProfile;
+};
+
+/** Award points for one action, keeping counters, streak, and badges in sync. */
+export const awardGamificationPoints = async (
+  user: UserProfile,
+  action: GamificationAction
+): Promise<UserGamificationProfile> => {
+  const ref = doc(db, "userPoints", user.uid);
+  const snap = await getDoc(ref);
+  const today = todayDDMMYYYY();
+
+  let profile: UserGamificationProfile;
+  if (snap.exists()) {
+    profile = snap.data() as UserGamificationProfile;
+  } else {
+    profile = {
+      uid: user.uid,
+      displayName: user.displayName || user.email,
+      jawatanName: user.jawatanName,
+      totalPoints: 0,
+      counts: emptyCounts(),
+      streakDays: 0,
+      badges: [],
+    };
+  }
+
+  // Streak: consecutive calendar days with at least one recorded action.
+  const yesterday = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    return `${dd}-${mm}-${d.getFullYear()}`;
+  })();
+
+  if (profile.lastActiveDate !== today) {
+    profile.streakDays = profile.lastActiveDate === yesterday ? (profile.streakDays || 0) + 1 : 1;
+    profile.lastActiveDate = today;
+  }
+
+  profile.counts = { ...emptyCounts(), ...(profile.counts || {}) };
+  profile.counts[action] = (profile.counts[action] || 0) + 1;
+  profile.totalPoints = (profile.totalPoints || 0) + ACTION_POINTS[action];
+  profile.displayName = user.displayName || user.email;
+  profile.jawatanName = user.jawatanName;
+
+  // Recompute earned badges from the updated stats.
+  const stats = badgeStatsFromProfile(profile);
+  profile.badges = getEarnedBadges(stats).map((b) => b.id);
+
+  await setDoc(ref, sanitizeData({ ...profile, updatedAt: serverTimestamp() }));
+  return profile;
+};
+
+/** Leaderboard across every user — highest total points first. */
+export const getGamificationLeaderboard = async (): Promise<UserGamificationProfile[]> => {
+  const snap = await getDocs(collection(db, "userPoints"));
+  return snap.docs
+    .map((d) => d.data() as UserGamificationProfile)
+    .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+};
+
+/** Record a daily-login point once per calendar day (idempotent per day). */
+export const recordDailyActivity = async (user: UserProfile): Promise<UserGamificationProfile | null> => {
+  try {
+    const existing = await getUserGamification(user.uid);
+    const today = todayDDMMYYYY();
+    if (existing && existing.lastActiveDate === today && (existing.counts?.DAILY_LOGIN || 0) > 0) {
+      // Already recorded today — just refresh streak continuity without adding points.
+      return existing;
+    }
+    return await awardGamificationPoints(user, "DAILY_LOGIN");
+  } catch (err) {
+    console.warn("Gamification daily activity skipped:", err);
+    return null;
+  }
 };

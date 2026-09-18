@@ -13,8 +13,10 @@ import {
   requestNewKegiatan,
   requestNewKodeRekening,
   getPackageTemplatesList,
+  getSpjDocuments,
 } from "../services/api";
 import { formatDateDDMMYYYY, toDateInputValue } from "../utils/date";
+import { exportSpjRecapPdf } from "../utils/exportRecap";
 import {
   Plus,
   FileText,
@@ -28,6 +30,9 @@ import {
   Archive,
   Package,
   Download,
+  ChevronLeft,
+  ChevronRight,
+  FileDown,
 } from "lucide-react";
 
 interface SpjListProps {
@@ -65,6 +70,16 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [deleting, setDeleting] = useState(false);
   const [archiveSpjId, setArchiveSpjId] = useState<string | null>(null);
 
+  // Pagination (Rekomendasi 4): tampilkan bertahap agar ringan saat data besar
+  const PAGE_SIZE = 15;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(spjs.length / PAGE_SIZE));
+  const pagedSpjs = spjs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Ekspor rekap PDF — sedang proses & nominal cache per SPJ
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [nominalBySpjId, setNominalBySpjId] = useState<Record<string, number>>({});
+
   // Request modals
   const [isRequestKegiatanOpen, setIsRequestKegiatanOpen] = useState(false);
   const [isRequestRekOpen, setIsRequestRekOpen] = useState(false);
@@ -81,6 +96,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const loadData = async () => {
     setLoading(true);
     setLoadError(null);
+    setPage(1);
     // Use allSettled so one failed query never blanks the whole page
     const results = await Promise.allSettled([
       getSpjList(user),
@@ -223,6 +239,48 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     alert("Fitur download PDF akan segera tersedia. Untuk saat ini, gunakan fitur Print dari halaman Preview.");
   };
 
+  // Ekspor Rekapitulasi PDF — mengambil nominal Bend 26 tiap SPJ lalu menyusun laporan
+  const handleExportRecap = async () => {
+    if (spjs.length === 0) {
+      alert("Belum ada data SPJ untuk diekspor.");
+      return;
+    }
+    setExportingPdf(true);
+    try {
+      // Ambil nominal dari dokumen Bend 26 (hanya SPJ yang belum ter-cache)
+      const nominalMap: Record<string, number> = { ...nominalBySpjId };
+      const pending = spjs.filter((s) => nominalMap[s.id] === undefined);
+
+      // Batasi konkurensi agar tidak membanjiri Firestore
+      const CHUNK = 5;
+      for (let i = 0; i < pending.length; i += CHUNK) {
+        const chunk = pending.slice(i, i + CHUNK);
+        const results = await Promise.allSettled(
+          chunk.map(async (s) => {
+            const docs = await getSpjDocuments(s.id);
+            const bend26 = docs.find((d) => d.documentTypeCode === "BEND_26");
+            return { id: s.id, nominal: Number(bend26?.data?.nominal || 0) };
+          })
+        );
+        results.forEach((r) => {
+          if (r.status === "fulfilled") nominalMap[r.value.id] = r.value.nominal;
+        });
+      }
+      setNominalBySpjId(nominalMap);
+
+      exportSpjRecapPdf({
+        spjs,
+        user,
+        periodLabel: showArchive ? "Arsip SPJ" : "Semua Periode",
+        nominalBySpjId: nominalMap,
+      });
+    } catch (err: any) {
+      alert("Gagal mengekspor rekap PDF: " + err.message);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   const handleRequestKegiatanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reqKegKode || !reqKegNama) return;
@@ -277,6 +335,15 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportRecap}
+            disabled={exportingPdf || spjs.length === 0}
+            className="px-4 py-2.5 rounded-2xl font-semibold text-sm flex items-center space-x-2 transition bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Unduh rekapitulasi seluruh SPJ dalam format PDF"
+          >
+            <FileDown className="w-4 h-4" />
+            <span>{exportingPdf ? "Menyusun..." : "Ekspor Rekap PDF"}</span>
+          </button>
           <button
             onClick={() => setShowArchive(!showArchive)}
             className={`px-4 py-2.5 rounded-2xl font-semibold text-sm flex items-center space-x-2 transition ${
@@ -384,7 +451,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-slate-700 text-xs">
-                {spjs.map((spj) => (
+                {pagedSpjs.map((spj) => (
                   <tr key={spj.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition align-top">
                     <td className="p-4 font-mono font-medium text-gray-700 dark:text-slate-300 whitespace-nowrap">
                       {formatDateDDMMYYYY(spj.tanggal)}
@@ -499,6 +566,36 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
           </div>
         )}
       </div>
+
+      {/* PAGINATION (Rekomendasi 4) — tampil bila lebih dari satu halaman */}
+      {!loading && totalPages > 1 && (
+        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-gray-500 dark:text-slate-400">
+            Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, spjs.length)} dari {spjs.length} SPJ
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Sebelumnya</span>
+            </button>
+            <span className="text-xs font-bold text-gray-700 dark:text-slate-300 px-2">
+              {page} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
+            >
+              <span>Berikutnya</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MODAL CREATE SPJ */}
       {isModalOpen && (
