@@ -158,31 +158,6 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               </span>
             </div>
 
-            {/* Rincian Pajak — kembali di bagian bawah Bend 26 */}
-            <div className="border border-black">
-              <div className="bg-gray-100 px-3 py-1 text-xs font-bold uppercase border-b border-black">
-                Rincian Pajak
-              </div>
-              <div className="grid grid-cols-4 text-xs divide-x divide-black">
-                <div className="p-2">
-                  <p className="font-semibold">PPh 21 / PHR</p>
-                  <p className="font-mono mt-1">Rp. {Number(data.phr || 0).toLocaleString("id-ID")},-</p>
-                </div>
-                <div className="p-2">
-                  <p className="font-semibold">PPh</p>
-                  <p className="font-mono mt-1">Rp. {Number(data.pph || 0).toLocaleString("id-ID")},-</p>
-                </div>
-                <div className="p-2">
-                  <p className="font-semibold">PPN</p>
-                  <p className="font-mono mt-1">Rp. {Number(data.ppn || 0).toLocaleString("id-ID")},-</p>
-                </div>
-                <div className="p-2 bg-gray-50">
-                  <p className="font-semibold">Total Pajak</p>
-                  <p className="font-mono font-bold mt-1">Rp. {totalPajak.toLocaleString("id-ID")},-</p>
-                </div>
-              </div>
-            </div>
-
             {/* Signature Area */}
             <div className="grid grid-cols-3 text-center py-6 text-xs gap-4">
               <div>
@@ -190,34 +165,79 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <p className="font-semibold">Pengguna Anggaran / KPA</p>
                 <div className="h-16"></div>
                 <p className="font-bold underline">{spj.sharedData?.paNama || "…………………"}</p>
-                <p>NIP. {spj.sharedData?.paNip || "…………………"}</p>
+                {spj.sharedData?.paNip ? <p>NIP. {spj.sharedData.paNip}</p> : null}
               </div>
               <div>
                 <p className="font-semibold">Bendahara Pengeluaran</p>
                 <div className="h-20"></div>
                 <p className="font-bold underline">{spj.sharedData?.bendaharaNama || "…………………"}</p>
-                <p>NIP. {spj.sharedData?.bendaharaNip || "…………………"}</p>
+                {spj.sharedData?.bendaharaNip ? <p>NIP. {spj.sharedData.bendaharaNip}</p> : null}
               </div>
               <div>
                 <p className="font-semibold">Penerima</p>
                 <div className="h-20"></div>
                 <p className="font-bold underline">{data.penerima || "…………………………"}</p>
-                <p>NIP. {data.penerimaNip || "…………………………"}</p>
+                {data.penerimaNip ? <p>NIP. {data.penerimaNip}</p> : null}
               </div>
             </div>
 
-            {/* Bottom Verification */}
-            <div className="border-t border-black pt-2 grid grid-cols-3 text-[11px] space-y-1">
-              <div>
-                <p>Barang tersebut telah diterima dengan cukup dan baik.</p>
-                <div className="h-6"></div>
-                <p>(…………………………)</p>
+            {/* Bottom 3-Column Verification Box (Sesuai Master & Foto) */}
+            <div className="border border-black grid grid-cols-3 text-[11px] divide-x divide-black mt-4">
+              {/* Kolom 1: Penerimaan Barang/Jasa */}
+              <div className="p-2 flex flex-col justify-between">
+                <div>
+                  <p>Barang tersebut telah diterima</p>
+                  <p>dengan cukup dan baik</p>
+                </div>
+                <div className="mt-10 text-center">
+                  <p>( ......................................... )</p>
+                </div>
               </div>
-              <div></div>
-              <div>
-                <p>Telah dibukukan BK. Tgl: ……………</p>
-                <p className="font-mono">Kode Rek: {spj.masterSnapshot.kegiatan.kode} {spj.masterSnapshot.kodeRekening.kode}</p>
-                <p>Tahun Anggaran: {getYearFromDate(spj.tanggal) || spj.tahunAnggaran}</p>
+
+              {/* Kolom 2: Telah Dipungut (Rincian Pajak Vertikal) */}
+              <div className="p-2 flex flex-col justify-between">
+                <div>
+                  <p className="font-semibold mb-1">Telah dipungut</p>
+                  <table className="w-full text-[10px]">
+                    <tbody>
+                      <tr>
+                        <td className="py-0.5 font-medium">PHR</td>
+                        <td className="py-0.5 text-right font-mono">Rp. {Number(data.phr || 0).toLocaleString("id-ID")}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-0.5 font-medium">PPh</td>
+                        <td className="py-0.5 text-right font-mono">Rp. {Number(data.pph || 0).toLocaleString("id-ID")}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-0.5 font-medium">PPN</td>
+                        <td className="py-0.5 text-right font-mono">Rp. {Number(data.ppn || 0).toLocaleString("id-ID")}</td>
+                      </tr>
+                      <tr className="border-t border-black font-bold">
+                        <td className="py-0.5">Total Pajak</td>
+                        <td className="py-0.5 text-right font-mono">Rp. {totalPajak.toLocaleString("id-ID")}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-4 text-center">
+                  <p>( ......................................... )</p>
+                </div>
+              </div>
+
+              {/* Kolom 3: Pembukuan */}
+              <div className="p-2 flex flex-col justify-between">
+                <div className="space-y-0.5">
+                  <p className="font-semibold">Telah dibukukan</p>
+                  <p>BK. Tgl .................... No. ....................</p>
+                  <p className="font-mono text-[10px] break-all">
+                    Kode Rek. {spj.masterSnapshot.kegiatan.kode} {spj.masterSnapshot.kodeRekening.kode}
+                  </p>
+                  <p>Tahun Anggaran : {getYearFromDate(spj.tanggal) || spj.tahunAnggaran || "2026"}</p>
+                  <p className="mt-1">Paraf</p>
+                </div>
+                <div className="mt-4 text-center">
+                  <p>( ......................................... )</p>
+                </div>
               </div>
             </div>
           </div>
@@ -238,7 +258,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
             </div>
 
             <div className="text-center font-bold text-xl uppercase tracking-widest border-b border-black pb-2">
-              NOTULEN RAPAT
+              NOTULEN
             </div>
 
             <table className="w-full text-sm border-collapse">
@@ -246,10 +266,10 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold w-1/4">Rapat</td>
                   <td className="py-2 w-10 text-center">:</td>
-                  <td className="py-2">{spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</td>
+                  <td className="py-2 font-bold uppercase">{spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</td>
                 </tr>
                 <tr className="border-b border-gray-300">
-                  <td className="py-2 font-semibold">Hari / Tanggal</td>
+                  <td className="py-2 font-semibold">Hari/ tanggal</td>
                   <td className="py-2 text-center">:</td>
                   <td className="py-2">{`${getNamaHariCapitalized(spj.tanggal)}, ${formatDateDDMMYYYY(spj.tanggal)}`}</td>
                 </tr>
@@ -263,12 +283,29 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                   </td>
                 </tr>
                 <tr className="border-b border-gray-300">
-                  <td className="py-2 font-semibold">Tempat Rapat</td>
+                  <td className="py-2 font-semibold">Tempat rapat</td>
                   <td className="py-2 text-center">:</td>
-                  <td className="py-2">{data.tempat || "Pendopo Kapanewon Temon"}</td>
+                  <td className="py-2 font-semibold uppercase">{spj.sharedData?.tempat || data.tempat || "PENDOPO KAPANEWON TEMON"}</td>
+                </tr>
+                <tr className="border-b border-gray-300">
+                  <td className="py-2 font-semibold align-top">Acara</td>
+                  <td className="py-2 text-center align-top">:</td>
+                  <td className="py-2">
+                    <ol className="list-decimal list-inside space-y-0.5">
+                      <li>Pembukaan</li>
+                      <li>Paparan</li>
+                      <li>Diskusi</li>
+                      <li>Penutup</li>
+                    </ol>
+                  </td>
                 </tr>
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold">Pemimpin Rapat</td>
+                  <td className="py-2 text-center">:</td>
+                  <td className="py-2">{data.pemimpinRapat || spj.sharedData?.pemimpinRapat || "…………………………"}</td>
+                </tr>
+                <tr className="border-b border-gray-300">
+                  <td className="py-2 font-semibold">Ketua</td>
                   <td className="py-2 text-center">:</td>
                   <td className="py-2">{data.pemimpinRapat || spj.sharedData?.pemimpinRapat || "…………………………"}</td>
                 </tr>
@@ -298,7 +335,9 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <div className="h-20"></div>
                 <p className="font-bold underline">{data.pemimpinRapat || spj.sharedData?.pemimpinRapat || "…………………………"}</p>
                 <p className="text-xs">{data.pemimpinRapatPangkat || spj.sharedData?.pemimpinRapatJabatan || ""}</p>
-                <p className="text-xs">NIP. {data.pemimpinRapatNip || spj.sharedData?.pemimpinRapatNip || "…………………………"}</p>
+                {(data.pemimpinRapatNip || spj.sharedData?.pemimpinRapatNip) ? (
+                  <p className="text-xs">NIP. {data.pemimpinRapatNip || spj.sharedData?.pemimpinRapatNip}</p>
+                ) : null}
               </div>
             </div>
           </div>
@@ -321,45 +360,56 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               DAFTAR HADIR
             </div>
 
-            <div className="text-left text-xs py-2 space-y-1 font-mono">
+            <div className="text-left text-xs py-2 space-y-1 font-mono uppercase">
               <p><span className="font-semibold inline-block w-24">HARI</span>: {getNamaHari(spj.tanggal)}</p>
               <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {formatDateDDMMYYYY(spj.tanggal)}</p>
-              <p><span className="font-semibold inline-block w-24">PUKUL</span>: {data.jam || "09.00 WIB s.d. 11.00 WIB"}</p>
-              <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {data.tempat || "PENDOPO KAPANEWON TEMON"}</p>
+              <p><span className="font-semibold inline-block w-24">PUKUL</span>: {data.jam || "09.00 WIB S.D. 11.00 WIB"}</p>
+              <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {spj.sharedData?.tempat || data.tempat || "PENDOPO KAPANEWON TEMON"}</p>
               <p><span className="font-semibold inline-block w-24">ACARA</span>: {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
             </div>
 
             <table className="w-full border border-black text-xs text-center border-collapse">
               <thead>
                 <tr className="bg-gray-100 print:bg-transparent border-b border-black">
-                  <th className="border-r border-black p-2 w-12">NO</th>
-                  <th className="border-r border-black p-2 text-left">NAMA</th>
-                  <th className="border-r border-black p-2 text-left">JABATAN / ALAMAT</th>
-                  <th className="p-2 w-40">TANDA TANGAN</th>
+                  <th className="border border-black p-2 w-12 text-center">NO</th>
+                  <th className="border border-black p-2 text-left">NAMA</th>
+                  <th className="border border-black p-2 text-left">JABATAN / ALAMAT</th>
+                  <th className="border border-black p-2 text-left" colSpan={2}>TANDA TANGAN</th>
                 </tr>
               </thead>
               <tbody>
                 {Array.from({ length: Math.max(Number(spj.sharedData?.jumlahPeserta || 15), mergedPeserta.length) }).map((_, idx) => {
+                  const rowNo = idx + 1;
+                  const isOdd = rowNo % 2 !== 0;
                   const row = mergedPeserta[idx];
                   return (
                     <tr key={idx} className="border-b border-black h-8">
-                      <td className="border-r border-black">{idx + 1}</td>
-                      <td className="border-r border-black text-left px-2">
-                        {row?.nama || ""}
+                      <td className="border border-black text-center">{rowNo}</td>
+                      <td className="border border-black text-left px-2">{row?.nama || ""}</td>
+                      <td className="border border-black text-left px-2">{row?.jabatan || ""}</td>
+                      <td className="border border-black text-left px-2 w-32">
+                        {isOdd ? (
+                          row?.ttdImage ? (
+                            <div className="flex items-center gap-1">
+                              <span className="font-mono text-[10px] shrink-0">{rowNo}.</span>
+                              <img src={row.ttdImage} alt="ttd" className="h-7 object-contain" />
+                            </div>
+                          ) : (
+                            <span className="font-mono text-[10px]">{rowNo}. .........</span>
+                          )
+                        ) : null}
                       </td>
-                      <td className="border-r border-black text-left px-2">
-                        {row?.jabatan || ""}
-                      </td>
-                      <td className="text-left px-2">
-                        {row?.ttdImage ? (
-                          <img
-                            src={row.ttdImage}
-                            alt="ttd"
-                            className="h-8 object-contain mx-auto"
-                          />
-                        ) : (
-                          <span className="font-mono text-[10px]">{idx % 2 === 0 ? `${idx + 1}. .........` : `        ${idx + 1}. .........`}</span>
-                        )}
+                      <td className="border border-black text-left px-2 w-32">
+                        {!isOdd ? (
+                          row?.ttdImage ? (
+                            <div className="flex items-center gap-1">
+                              <span className="font-mono text-[10px] shrink-0">{rowNo}.</span>
+                              <img src={row.ttdImage} alt="ttd" className="h-7 object-contain" />
+                            </div>
+                          ) : (
+                            <span className="font-mono text-[10px]">{rowNo}. .........</span>
+                          )
+                        ) : null}
                       </td>
                     </tr>
                   );
@@ -370,10 +420,10 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
             <div className="flex justify-end pt-4">
               <div className="text-center w-64 text-xs">
                 <p>Temon, {formatDateDDMMYYYY(spj.tanggal)}</p>
-                <p className="font-semibold">PPTK</p>
+                <p className="font-semibold">Pejabat Pelaksana Teknis Kegiatan</p>
                 <div className="h-16"></div>
                 <p className="font-bold underline">{spj.sharedData?.pptkNama || "…………………………"}</p>
-                <p>NIP. {spj.sharedData?.pptkNip || "…………………………"}</p>
+                {spj.sharedData?.pptkNip ? <p>NIP. {spj.sharedData.pptkNip}</p> : null}
               </div>
             </div>
           </div>

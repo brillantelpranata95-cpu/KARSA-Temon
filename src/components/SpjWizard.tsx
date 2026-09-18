@@ -372,7 +372,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                     <p className="text-xs font-bold text-gray-700 dark:text-slate-300 mb-2 uppercase tracking-wide">Rincian Pajak (Opsional)</p>
                     <div className="grid grid-cols-3 gap-4">
                       {[
-                        { key: "phr", label: "PPh 21 / PHR" },
+                        { key: "phr", label: "PHR" },
                         { key: "pph", label: "PPh" },
                         { key: "ppn", label: "PPN" },
                       ].map(({ key, label }) => (
@@ -836,7 +836,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                             <th className="p-2 w-10 text-center border-r">NO</th>
                             <th className="p-2 border-r">NAMA PESERTA</th>
                             <th className="p-2 border-r">JABATAN / ALAMAT</th>
-                            <th className="p-2 w-32 text-center">TANDA TANGAN</th>
+                            <th className="p-2 text-left border-r" colSpan={2}>TANDA TANGAN</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
@@ -858,13 +858,15 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                             );
 
                             return Array.from({ length: totalRows }).map((_, idx) => {
+                              const rowNo = idx + 1;
+                              const isOdd = rowNo % 2 !== 0;
                               const current = merged[idx];
 
                               // Row filled by QR attendance — show name + signature image
                               if (current && current.ttdImage) {
                                 return (
                                   <tr key={`qr-${idx}`} className="bg-emerald-50/60 dark:bg-emerald-900/20">
-                                    <td className="p-2 text-center border-r font-bold text-emerald-700">{idx + 1}</td>
+                                    <td className="p-2 text-center border-r font-bold text-emerald-700">{rowNo}</td>
                                     <td className="p-2 border-r font-semibold text-gray-900 dark:text-white">
                                       {current.nama}
                                       <span className="ml-1.5 text-[9px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/50 px-1.5 py-0.5 rounded-full">
@@ -872,8 +874,11 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                                       </span>
                                     </td>
                                     <td className="p-2 border-r text-gray-500">{current.jabatan || "—"}</td>
-                                    <td className="p-1 text-center">
-                                      <img src={current.ttdImage} alt="ttd" className="h-9 mx-auto object-contain" />
+                                    <td className="p-1 border-r w-24">
+                                      {isOdd ? <img src={current.ttdImage} alt="ttd" className="h-7 object-contain" /> : null}
+                                    </td>
+                                    <td className="p-1 w-24">
+                                      {!isOdd ? <img src={current.ttdImage} alt="ttd" className="h-7 object-contain" /> : null}
                                     </td>
                                   </tr>
                                 );
@@ -882,7 +887,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                               // Manual row — editable inputs
                               return (
                                 <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700/40">
-                                  <td className="p-2 text-center border-r font-bold text-gray-500">{idx + 1}</td>
+                                  <td className="p-2 text-center border-r font-bold text-gray-500">{rowNo}</td>
                                   <td className="p-1 border-r">
                                     <input
                                       type="text"
@@ -893,7 +898,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                                         updated[idx] = { ...updated[idx], nama: e.target.value };
                                         handleFormChange("peserta", updated);
                                       }}
-                                      placeholder={`Nama Peserta #${idx + 1}`}
+                                      placeholder={`Nama Peserta #${rowNo}`}
                                       className="w-full bg-transparent p-1 rounded border border-gray-200 dark:border-slate-600 text-xs text-gray-900 dark:text-white"
                                     />
                                   </td>
@@ -911,8 +916,11 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                                       className="w-full bg-transparent p-1 rounded border border-gray-200 dark:border-slate-600 text-xs text-gray-900 dark:text-white"
                                     />
                                   </td>
-                                  <td className="p-2 text-xs font-mono text-gray-400">
-                                    {idx % 2 === 0 ? `${idx + 1}. ........` : `   ${idx + 1}. ........`}
+                                  <td className="p-2 text-xs font-mono text-gray-400 border-r w-24">
+                                    {isOdd ? `${rowNo}. ........` : null}
+                                  </td>
+                                  <td className="p-2 text-xs font-mono text-gray-400 w-24">
+                                    {!isOdd ? `${rowNo}. ........` : null}
                                   </td>
                                 </tr>
                               );

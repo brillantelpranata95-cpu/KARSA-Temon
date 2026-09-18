@@ -56,6 +56,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [selectedKegiatanId, setSelectedKegiatanId] = useState("");
   const [selectedRekId, setSelectedRekId] = useState("");
   const [taggingSubKegiatan, setTaggingSubKegiatan] = useState("");
+  const [tempatLokasi, setTempatLokasi] = useState("PENDOPO KAPANEWON TEMON");
   const [jumlahPeserta, setJumlahPeserta] = useState<number>(20);
   const [tanggalSpj, setTanggalSpj] = useState(() => toDateInputValue(new Date()));
   const [adminOverrideJawatanId, setAdminOverrideJawatanId] = useState("");
@@ -180,8 +181,9 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         kegiatan: k,
         kodeRekening: r,
         tanggal: tanggalSpj,
-        judulAktivitas: taggingSubKegiatan,
+        judulAktivitas: taggingSubKegiatan.trim().toUpperCase(),
         jumlahPeserta,
+        tempat: tempatLokasi.trim().toUpperCase(),
         targetJawatanId,
         targetJawatanName,
         // Package checklist is resolved from the chosen Kode Rekening inside the API
@@ -189,6 +191,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       });
       setIsModalOpen(false);
       setTaggingSubKegiatan("");
+      setTempatLokasi("PENDOPO KAPANEWON TEMON");
       setJumlahPeserta(20);
       loadData();
     } catch (err: any) {
@@ -709,14 +712,16 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
               {/* Grid 12: Tagging Sub-Kegiatan (span 9), Jumlah Peserta (span 3) */}
               <div className="grid grid-cols-12 gap-3">
                 <div className="col-span-12 sm:col-span-9">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Tagging Sub-Kegiatan</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                    Tagging Sub-Kegiatan (Otomatis Kapital)
+                  </label>
                   <input
                     type="text"
                     value={taggingSubKegiatan}
-                    onChange={(e) => setTaggingSubKegiatan(e.target.value)}
-                    placeholder="Contoh: Rapat Koordinasi Jathilan"
+                    onChange={(e) => setTaggingSubKegiatan(e.target.value.toUpperCase())}
+                    placeholder="CONTOH: RAPAT KOORDINASI PENTAS SENI"
                     required
-                    className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                    className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 uppercase font-medium text-gray-900 dark:text-white"
                   />
                 </div>
                 <div className="col-span-12 sm:col-span-3">
@@ -730,6 +735,24 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                     className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                   />
                 </div>
+              </div>
+
+              {/* Tempat / Lokasi — basis data otomatis untuk Daftar Hadir & Notulensi */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                  Tempat / Lokasi (Otomatis Kapital)
+                </label>
+                <input
+                  type="text"
+                  value={tempatLokasi}
+                  onChange={(e) => setTempatLokasi(e.target.value.toUpperCase())}
+                  placeholder="CONTOH: PENDOPO KAPANEWON TEMON"
+                  required
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 uppercase font-medium text-gray-900 dark:text-white"
+                />
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Ditarik otomatis untuk kolom Tempat di Daftar Hadir dan Tempat Rapat di Notulensi.
+                </p>
               </div>
 
               <div>

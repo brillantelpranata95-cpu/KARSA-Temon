@@ -978,6 +978,7 @@ export const createSpjPackage = async (params: {
   tanggal: string;
   judulAktivitas: string;
   jumlahPeserta: number;
+  tempat?: string;
   targetJawatanId?: string;
   targetJawatanName?: string;
   packageTemplate?: PackageTemplate | null;
@@ -1087,7 +1088,8 @@ export const createSpjPackage = async (params: {
       kodeKegiatan: kegiatan.kodeKegiatan,
       kodeRekening: kodeRekening.kode,
       namaRekening: kodeRekening.nama,
-      judulAktivitas: judulAktivitas.trim(),
+      judulAktivitas: judulAktivitas.trim().toUpperCase(),
+      tempat: (params.tempat || "PENDOPO KAPANEWON TEMON").trim().toUpperCase(),
       jumlahPeserta: Math.max(1, Math.floor(jumlahPeserta)),
       paNama: officials?.pa?.nama || officials?.panewu?.nama || "",
       paNip: officials?.pa?.nip || officials?.panewu?.nip || "",
