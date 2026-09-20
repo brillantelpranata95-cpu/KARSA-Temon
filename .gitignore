@@ -25,3 +25,7 @@ dist-ssr
 
 # Firebase CLI cache
 .firebase
+
+# Local scratch (Firestore backup & PDF extraction temp)
+tmp_backup/
+tmp_pdf/

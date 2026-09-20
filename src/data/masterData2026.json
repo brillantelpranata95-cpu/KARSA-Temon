@@ -1,0 +1,1656 @@
+{
+  "sumber": "BUKU BANTU TAHUN 2026 - SEPTEMBER (1).pdf",
+  "kapanewon": "Kapanewon Temon, Kabupaten Kulon Progo",
+  "tahunAnggaran": 2026,
+  "diekstrak": "2026-09-20",
+  "jumlahSubKegiatan": 21,
+  "jumlahKodeRekening": 56,
+  "kodeSubKegiatan": [
+    {
+      "kode": "4.01.4.5.06.1",
+      "nama": "Penyusunan Rencana Program dan Kegiatan Keistimewaan",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "04.01.04",
+        "nama": "PROGRAM PENYELENGGARAAN KEISTIMEWAAN YOGYAKARTA URUSAN KELEMBAGAAN DAN KETATALAKSANAAN"
+      },
+      "kegiatan": {
+        "kode": "4.01.4.5.06",
+        "nama": "Perencanaan dan Pengendalian Pelaksanaan Kegiatan Keistimewaan"
+      },
+      "jumlahKodeRekening": 6
+    },
+    {
+      "kode": "7.01.1.2.01.1",
+      "nama": "Penyusunan Dokumen Perencanaan Perangkat Daerah",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.01",
+        "nama": "Perencanaan, Penganggaran, dan Evaluasi Kinerja Perangkat"
+      },
+      "jumlahKodeRekening": 4
+    },
+    {
+      "kode": "7.01.1.2.01.7",
+      "nama": "Evaluasi Kinerja Perangkat Daerah",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.01",
+        "nama": "Perencanaan, Penganggaran, dan Evaluasi Kinerja Perangkat"
+      },
+      "jumlahKodeRekening": 4
+    },
+    {
+      "kode": "7.01.1.2.02.1",
+      "nama": "Penyediaan Gaji dan Tunjangan ASN",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.02",
+        "nama": "Administrasi Keuangan Perangkat Daerah"
+      },
+      "jumlahKodeRekening": 9
+    },
+    {
+      "kode": "7.01.1.2.02.2",
+      "nama": "Penyediaan Administrasi Pelaksanaan Tugas ASN",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.02",
+        "nama": "Administrasi Keuangan Perangkat Daerah"
+      },
+      "jumlahKodeRekening": 2
+    },
+    {
+      "kode": "7.01.1.2.02.7",
+      "nama": "Koordinasi dan Penyusunan Laporan Keuangan Bulanan/ Triwulanan/ Semesteran SKPD",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.02",
+        "nama": "Administrasi Keuangan Perangkat Daerah"
+      },
+      "jumlahKodeRekening": 4
+    },
+    {
+      "kode": "7.01.1.2.06.2",
+      "nama": "Penyediaan Peralatan dan Perlengkapan Kantor",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.06",
+        "nama": "Administrasi Umum Perangkat Daerah"
+      },
+      "jumlahKodeRekening": 4
+    },
+    {
+      "kode": "7.01.1.2.06.9",
+      "nama": "Penyelenggaraan Rapat Koordinasi dan Konsultasi SKPD",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.06",
+        "nama": "Administrasi Umum Perangkat Daerah"
+      },
+      "jumlahKodeRekening": 2
+    },
+    {
+      "kode": "7.01.1.2.07.10",
+      "nama": "Pengadaan Sarana dan Prasarana Gedung Kantor atau Bangunan Lainnya",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.07",
+        "nama": "Pengadaan Barang Milik Daerah Penunjang Urusan Pemerintah Daerah"
+      },
+      "jumlahKodeRekening": 3
+    },
+    {
+      "kode": "7.01.1.2.08.2",
+      "nama": "Penyediaan Jasa Komunikasi, Sumber Daya Air dan Listrik",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.08",
+        "nama": "Penyediaan Jasa Penunjang Urusan Pemerintahan Daerah"
+      },
+      "jumlahKodeRekening": 3
+    },
+    {
+      "kode": "7.01.1.2.08.4",
+      "nama": "Penyediaan Jasa Pelayanan Umum Kantor",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.08",
+        "nama": "Penyediaan Jasa Penunjang Urusan Pemerintahan Daerah"
+      },
+      "jumlahKodeRekening": 8
+    },
+    {
+      "kode": "7.01.1.2.09.2",
+      "nama": "Penyediaan Jasa Pemeliharaan, Biaya Pemeliharaan, Pajak dan Perizinan Kendaraan Dinas Operasional atau Lapangan",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.09",
+        "nama": "Pemeliharaan Barang Milik Daerah Penunjang Urusan Pemerintahan Daerah"
+      },
+      "jumlahKodeRekening": 4
+    },
+    {
+      "kode": "7.01.1.2.09.9",
+      "nama": "Pemeliharaan/Rehabilitasi Gedung Kantor dan Bangunan Lainnya",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.09",
+        "nama": "Pemeliharaan Barang Milik Daerah Penunjang Urusan Pemerintahan Daerah"
+      },
+      "jumlahKodeRekening": 4
+    },
+    {
+      "kode": "7.01.1.2.09.10",
+      "nama": "Pemeliharaan/Rehabilitasi Sarana dan Prasarana Gedung Kantor atau Bangunan Lainnya",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.1",
+        "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA"
+      },
+      "kegiatan": {
+        "kode": "7.01.1.2.09",
+        "nama": "Pemeliharaan Barang Milik Daerah Penunjang Urusan Pemerintahan Daerah"
+      },
+      "jumlahKodeRekening": 6
+    },
+    {
+      "kode": "7.01.2.2.01.1",
+      "nama": "Koordinasi/Sinergi Perencanaan dan Pelaksanaan Kegiatan Pemerintahan dengan Perangkat Daerah dan Instansi Vertikal Terkait",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.2",
+        "nama": "PROGRAM PENYELENGGARAAN PEMERINTAHAN DAN PELAYANAN PUBLIK"
+      },
+      "kegiatan": {
+        "kode": "7.01.2.2.01",
+        "nama": "Koordinasi Penyelenggaraan Kegiatan Pemerintahan di Tingkat Kecamatan"
+      },
+      "jumlahKodeRekening": 12
+    },
+    {
+      "kode": "7.01.2.2.01.2",
+      "nama": "Peningkatan Efektifitas Kegiatan Pemerintahan di Tingkat Kecamatan",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.2",
+        "nama": "PROGRAM PENYELENGGARAAN PEMERINTAHAN DAN PELAYANAN PUBLIK"
+      },
+      "kegiatan": {
+        "kode": "7.01.2.2.01",
+        "nama": "Koordinasi Penyelenggaraan Kegiatan Pemerintahan di Tingkat Kecamatan"
+      },
+      "jumlahKodeRekening": 7
+    },
+    {
+      "kode": "7.01.2.2.04.1",
+      "nama": "Pelaksanaan Urusan Pemerintahan yang Terkait dengan Pelayanan Perizinan Non Usaha",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.2",
+        "nama": "PROGRAM PENYELENGGARAAN PEMERINTAHAN DAN PELAYANAN PUBLIK"
+      },
+      "kegiatan": {
+        "kode": "7.01.2.2.04",
+        "nama": "Pelaksanaan Urusan Pemerintahan yang Dilimpahkan kepada Camat"
+      },
+      "jumlahKodeRekening": 5
+    },
+    {
+      "kode": "7.01.3.2.01.3",
+      "nama": "Peningkatan Efektifitas Kegiatan Pemberdayaan Masyarakat di Wilayah Kecamatan",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.3",
+        "nama": "PROGRAM PEMBERDAYAAN MASYARAKAT DESA DAN KELURAHAN"
+      },
+      "kegiatan": {
+        "kode": "7.01.3.2.01",
+        "nama": "Koordinasi Kegiatan Pemberdayaan Desa"
+      },
+      "jumlahKodeRekening": 6
+    },
+    {
+      "kode": "7.01.5.2.01.2",
+      "nama": "Fasilitasi, Koordinasi dan Pembinaan (Bimtek, Sosialisasi, Konsultasi) Wawasan Kebangsaan dan Ketahanan Nasional",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.5",
+        "nama": "PROGRAM PENYELENGGARAAN URUSAN PEMERINTAHAN UMUM"
+      },
+      "kegiatan": {
+        "kode": "7.01.5.2.01",
+        "nama": "Penyelenggaraan Urusan Pemerintahan Umum Sesuai Penugasan Kepala Daerah"
+      },
+      "jumlahKodeRekening": 7
+    },
+    {
+      "kode": "7.01.5.2.01.5",
+      "nama": "Penanganan Konflik Sosial Sesuai Ketentuan Peraturan Perundang-Undangan",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.5",
+        "nama": "PROGRAM PENYELENGGARAAN URUSAN PEMERINTAHAN UMUM"
+      },
+      "kegiatan": {
+        "kode": "7.01.5.2.01",
+        "nama": "Penyelenggaraan Urusan Pemerintahan Umum Sesuai Penugasan Kepala Daerah"
+      },
+      "jumlahKodeRekening": 6
+    },
+    {
+      "kode": "7.01.6.2.01.17",
+      "nama": "Koordinasi Pendampingan Desa di Wilayahnya",
+      "tahunAnggaran": 2026,
+      "program": {
+        "kode": "7.01.6",
+        "nama": "PROGRAM PEMBINAAN DAN PENGAWASAN PEMERINTAHAN DESA"
+      },
+      "kegiatan": {
+        "kode": "7.01.6.2.01",
+        "nama": "Fasilitasi, Rekomendasi dan Koordinasi Pembinaan dan Pengawasan Pemerintahan Desa"
+      },
+      "jumlahKodeRekening": 5
+    }
+  ],
+  "kodeRekening": [
+    {
+      "kode": "5.1.01.01.001.00001",
+      "nama": "Belanja Gaji Pokok PNS",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.02.1"
+      ]
+    },
+    {
+      "kode": "5.1.01.01.002.00001",
+      "nama": "Belanja Tunjangan Keluarga PNS",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.02.1"
+      ]
+    },
+    {
+      "kode": "5.1.01.01.003.00001",
+      "nama": "Belanja Tunjangan Jabatan PNS",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.02.1"
+      ]
+    },
+    {
+      "kode": "5.1.01.01.005.00001",
+      "nama": "Belanja Tunjangan Fungsional Umum PNS",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.02.1"
+      ]
+    },
+    {
+      "kode": "5.1.01.01.006.00001",
+      "nama": "Belanja Tunjangan Beras PNS",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.02.1"
+      ]
+    },
+    {
+      "kode": "5.1.01.01.007.00001",
+      "nama": "Belanja Tunjangan PPh/Tunjangan Khusus PNS",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.02.1"
+      ]
+    },
+    {
+      "kode": "5.1.01.01.008.00001",
+      "nama": "Belanja Pembulatan Gaji PNS",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.02.1"
+      ]
+    },
+    {
+      "kode": "5.1.01.01.010.00001",
+      "nama": "Belanja Iuran Jaminan Kecelakaan Kerja PNS",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.02.1"
+      ]
+    },
+    {
+      "kode": "5.1.01.01.011.00001",
+      "nama": "Belanja Iuran Jaminan Kematian PNS",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.02.1"
+      ]
+    },
+    {
+      "kode": "5.1.02.01.001.00001",
+      "nama": "Belanja Bahan-Bahan Bangunan dan Konstruksi",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.09.9"
+      ]
+    },
+    {
+      "kode": "5.1.02.01.001.00004",
+      "nama": "Belanja Bahan-Bahan Bakar dan Pelumas",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.09.2"
+      ]
+    },
+    {
+      "kode": "5.1.02.01.001.00024",
+      "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "ATK",
+      "subKegiatan": [
+        "4.01.4.5.06.1",
+        "7.01.1.2.01.1",
+        "7.01.1.2.01.7",
+        "7.01.1.2.02.7",
+        "7.01.1.2.06.2",
+        "7.01.2.2.01.1",
+        "7.01.2.2.01.2",
+        "7.01.2.2.04.1",
+        "7.01.3.2.01.3",
+        "7.01.5.2.01.2",
+        "7.01.5.2.01.5",
+        "7.01.6.2.01.17"
+      ]
+    },
+    {
+      "kode": "5.1.02.01.001.00025",
+      "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "ATK",
+      "subKegiatan": [
+        "4.01.4.5.06.1",
+        "7.01.1.2.01.1",
+        "7.01.1.2.01.7",
+        "7.01.1.2.02.7",
+        "7.01.1.2.06.2",
+        "7.01.2.2.01.1",
+        "7.01.2.2.01.2",
+        "7.01.2.2.04.1",
+        "7.01.3.2.01.3",
+        "7.01.5.2.01.2",
+        "7.01.5.2.01.5",
+        "7.01.6.2.01.17"
+      ]
+    },
+    {
+      "kode": "5.1.02.01.001.00026",
+      "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Cetak",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "ATK",
+      "subKegiatan": [
+        "7.01.2.2.01.1"
+      ]
+    },
+    {
+      "kode": "5.1.02.01.001.00029",
+      "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "ATK",
+      "subKegiatan": [
+        "4.01.4.5.06.1",
+        "7.01.1.2.01.1",
+        "7.01.1.2.01.7",
+        "7.01.1.2.02.7",
+        "7.01.1.2.06.2",
+        "7.01.2.2.01.1",
+        "7.01.2.2.01.2",
+        "7.01.2.2.04.1",
+        "7.01.3.2.01.3",
+        "7.01.5.2.01.2",
+        "7.01.5.2.01.5",
+        "7.01.6.2.01.17"
+      ]
+    },
+    {
+      "kode": "5.1.02.01.001.00030",
+      "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Perabot Kantor",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.06.2",
+        "7.01.1.2.09.10",
+        "7.01.1.2.09.9"
+      ]
+    },
+    {
+      "kode": "5.1.02.01.001.00031",
+      "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Listrik",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "ATK",
+      "subKegiatan": [
+        "7.01.1.2.09.10"
+      ]
+    },
+    {
+      "kode": "5.1.02.01.001.00043",
+      "nama": "Belanja Natura dan Pakan-Natura",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.06.9"
+      ]
+    },
+    {
+      "kode": "5.1.02.01.001.00052",
+      "nama": "Belanja Makanan dan Minuman Rapat",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "MAKAN_MINUM",
+      "subKegiatan": [
+        "4.01.4.5.06.1",
+        "7.01.1.2.01.1",
+        "7.01.1.2.01.7",
+        "7.01.1.2.02.7",
+        "7.01.1.2.06.9",
+        "7.01.2.2.01.1",
+        "7.01.2.2.01.2",
+        "7.01.2.2.04.1",
+        "7.01.3.2.01.3",
+        "7.01.5.2.01.2",
+        "7.01.5.2.01.5",
+        "7.01.6.2.01.17"
+      ]
+    },
+    {
+      "kode": "5.1.02.01.001.00058",
+      "nama": "Belanja Makanan dan Minuman Aktivitas Lapangan",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "MAKAN_MINUM",
+      "subKegiatan": [
+        "4.01.4.5.06.1",
+        "7.01.2.2.01.1",
+        "7.01.2.2.01.2",
+        "7.01.2.2.04.1",
+        "7.01.5.2.01.2",
+        "7.01.5.2.01.5",
+        "7.01.6.2.01.17"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00001",
+      "nama": "Belanja Jasa Pengelolaan BMD yang Tidak Menghasilkan Pendapatan",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "HONOR",
+      "subKegiatan": [
+        "7.01.1.2.02.2"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00003",
+      "nama": "Honorarium Narasumber atau Pembahas, Moderator, Pembawa Acara, dan Panitia",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "HONOR",
+      "subKegiatan": [
+        "7.01.5.2.01.2"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00004",
+      "nama": "Honorarium Tim Pelaksana Kegiatan dan Sekretariat Tim Pelaksana Kegiatan",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "HONOR",
+      "subKegiatan": [
+        "7.01.5.2.01.5"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00016",
+      "nama": "Belanja Jasa Tenaga Penanganan Prasarana dan Sarana Umum",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "HONOR",
+      "subKegiatan": [
+        "7.01.1.2.09.9"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00030",
+      "nama": "Belanja Jasa Tenaga Kebersihan",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "HONOR",
+      "subKegiatan": [
+        "7.01.2.2.01.1"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00047",
+      "nama": "Belanja Jasa Penyelenggaraan Acara",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "HONOR",
+      "subKegiatan": [
+        "7.01.3.2.01.3"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00059",
+      "nama": "Belanja Tagihan Telepon",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.08.2"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00060",
+      "nama": "Belanja Tagihan Air",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.08.2"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00061",
+      "nama": "Belanja Tagihan Listrik",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.08.2"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00067",
+      "nama": "Belanja Pembayaran Pajak, Bea, dan Perizinan",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.09.2"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00080",
+      "nama": "Belanja Honorarium Penanggungjawaban Pengelola Keuangan",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "HONOR",
+      "subKegiatan": [
+        "7.01.1.2.02.2"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00087",
+      "nama": "Belanja Jasa Pegawai Pemerintah dengan Perjanjian Kerja (PPPK) Paruh Waktu pada Jabatan Pengelola Umum Operasional",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "HONOR",
+      "subKegiatan": [
+        "7.01.1.2.08.4"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.001.00088",
+      "nama": "Belanja jasa Pegawai Pemerintah dengan Perjanjian Kerja (PPPK) Paruh Waktu pada jabatan operator",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "HONOR",
+      "subKegiatan": [
+        "7.01.1.2.08.4"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.002.00018",
+      "nama": "Belanja Iuran Jaminan Kesehatan bagi PPPK Paruh Waktu pada Jabatan Pengelola Umum Operasional",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.08.4"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.002.00019",
+      "nama": "Belanja Iuran Jaminan Kesehatan bagi PPPK Paruh Waktu pada Jabatan Operator Layanan Operasional",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.08.4"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.002.00026",
+      "nama": "Belanja Iuran Jaminan Kecelakaan Kerja bagi PPPK Paruh Waktu pada Jabatan Pengelola Umum Operasional",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.08.4"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.002.00027",
+      "nama": "Belanja Iuran Jaminan Kecelakaan Kerja bagi PPPK Paruh Waktu pada Jabatan Operator Layanan Operasional",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.08.4"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.002.00034",
+      "nama": "Belanja Iuran Jaminan Kematian bagi PPPK Paruh Waktu pada Jabatan Pengelola Umum Operasional",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.08.4"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.002.00035",
+      "nama": "Belanja Iuran Jaminan Kematian bagi PPPK Paruh Waktu pada Jabatan Operator Layanan Operasional",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.08.4"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.004.00022",
+      "nama": "Belanja Sewa Electric Generating Set",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.2.2.01.1"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.004.00036",
+      "nama": "Belanja Sewa Kendaraan Bermotor Penumpang",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.2.2.01.2"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.004.00037",
+      "nama": "Belanja Sewa Kendaraan Bermotor Angkutan Barang",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.3.2.01.3"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.004.00117",
+      "nama": "Belanja Sewa Alat Kantor Lainnya",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.2.2.01.1"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.004.00118",
+      "nama": "Belanja Sewa Mebel",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.2.2.01.1"
+      ]
+    },
+    {
+      "kode": "5.1.02.02.004.00132",
+      "nama": "Belanja Sewa Peralatan Studio Audio",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.2.2.01.1"
+      ]
+    },
+    {
+      "kode": "5.1.02.03.002.00035",
+      "nama": "Belanja Pemeliharaan Alat Angkutan-Alat Angkutan Darat Bermotor-Kendaraan Dinas Bermotor Perorangan",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.09.2"
+      ]
+    },
+    {
+      "kode": "5.1.02.03.002.00038",
+      "nama": "Belanja Pemeliharaan Alat Angkutan-Alat Angkutan Darat Bermotor-Kendaraan Bermotor Beroda Dua",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.09.2"
+      ]
+    },
+    {
+      "kode": "5.1.02.03.002.00113",
+      "nama": "Belanja Pemeliharaan Alat Kantor dan Rumah Tangga-Alat Kantor- Mesin Ketik",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.09.10"
+      ]
+    },
+    {
+      "kode": "5.1.02.03.002.00121",
+      "nama": "Belanja Pemeliharaan Alat Kantor dan Rumah Tangga-Alat Rumah Tangga-Alat Pendingin",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.09.10"
+      ]
+    },
+    {
+      "kode": "5.1.02.03.002.00405",
+      "nama": "Belanja Pemeliharaan Komputer-Komputer Unit-Personal Computer",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.09.10"
+      ]
+    },
+    {
+      "kode": "5.1.02.03.003.00001",
+      "nama": "Belanja Pemeliharaan Bangunan Gedung- Bangunan Gedung Tempat Kerja-Bangunan Gedung Kantor",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.09.9"
+      ]
+    },
+    {
+      "kode": "5.1.02.03.004.00126",
+      "nama": "Belanja Pemeliharaan Jaringan-Jaringan Listrik-Jaringan Listrik Lainnya",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.09.10"
+      ]
+    },
+    {
+      "kode": "5.1.02.04.001.00003",
+      "nama": "Belanja Perjalanan Dinas Dalam Kota",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "TRANSPORT",
+      "subKegiatan": [
+        "4.01.4.5.06.1",
+        "7.01.2.2.01.1",
+        "7.01.2.2.01.2",
+        "7.01.5.2.01.2"
+      ]
+    },
+    {
+      "kode": "5.2.02.05.002.00001",
+      "nama": "Belanja Modal Mebel",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.07.10"
+      ]
+    },
+    {
+      "kode": "5.2.02.10.001.00002",
+      "nama": "Belanja Modal Personal Computer",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.07.10"
+      ]
+    },
+    {
+      "kode": "5.2.02.10.002.00005",
+      "nama": "Belanja Modal Peralatan Komputer Lainnya",
+      "tahunAnggaran": 2026,
+      "kategoriSaran": "LAINNYA",
+      "subKegiatan": [
+        "7.01.1.2.07.10"
+      ]
+    }
+  ],
+  "hierarki": [
+    {
+      "kode": "04.01.04",
+      "nama": "PROGRAM PENYELENGGARAAN KEISTIMEWAAN YOGYAKARTA URUSAN KELEMBAGAAN DAN KETATALAKSANAAN",
+      "kegiatan": [
+        {
+          "kode": "4.01.4.5.06",
+          "nama": "Perencanaan dan Pengendalian Pelaksanaan Kegiatan Keistimewaan",
+          "subKegiatan": [
+            {
+              "kode": "4.01.4.5.06.1",
+              "nama": "Penyusunan Rencana Program dan Kegiatan Keistimewaan",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "219.900"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "375.900"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "152.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "12.540.000"
+                },
+                {
+                  "kode": "5.1.02.01.001.00058",
+                  "nama": "Belanja Makanan dan Minuman Aktivitas Lapangan",
+                  "angkas": "8.000.000"
+                },
+                {
+                  "kode": "5.1.02.04.001.00003",
+                  "nama": "Belanja Perjalanan Dinas Dalam Kota",
+                  "angkas": "0"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kode": "7.01.1",
+      "nama": "PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA",
+      "kegiatan": [
+        {
+          "kode": "7.01.1.2.01",
+          "nama": "Perencanaan, Penganggaran, dan Evaluasi Kinerja Perangkat",
+          "subKegiatan": [
+            {
+              "kode": "7.01.1.2.01.1",
+              "nama": "Penyusunan Dokumen Perencanaan Perangkat Daerah",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "885.500"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "497.100"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "315.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "0"
+                }
+              ]
+            },
+            {
+              "kode": "7.01.1.2.01.7",
+              "nama": "Evaluasi Kinerja Perangkat Daerah",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "803.750"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "583.200"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "315.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kode": "7.01.1.2.02",
+          "nama": "Administrasi Keuangan Perangkat Daerah",
+          "subKegiatan": [
+            {
+              "kode": "7.01.1.2.02.1",
+              "nama": "Penyediaan Gaji dan Tunjangan ASN",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.01.01.001.00001",
+                  "nama": "Belanja Gaji Pokok PNS",
+                  "angkas": "880.283.450"
+                },
+                {
+                  "kode": "5.1.01.01.002.00001",
+                  "nama": "Belanja Tunjangan Keluarga PNS",
+                  "angkas": "84.474.685"
+                },
+                {
+                  "kode": "5.1.01.01.003.00001",
+                  "nama": "Belanja Tunjangan Jabatan PNS",
+                  "angkas": "66.777.600"
+                },
+                {
+                  "kode": "5.1.01.01.005.00001",
+                  "nama": "Belanja Tunjangan Fungsional Umum PNS",
+                  "angkas": "22.656.600"
+                },
+                {
+                  "kode": "5.1.01.01.006.00001",
+                  "nama": "Belanja Tunjangan Beras PNS",
+                  "angkas": "42.687.245"
+                },
+                {
+                  "kode": "5.1.01.01.007.00001",
+                  "nama": "Belanja Tunjangan PPh/Tunjangan Khusus PNS",
+                  "angkas": "10.521.312"
+                },
+                {
+                  "kode": "5.1.01.01.008.00001",
+                  "nama": "Belanja Pembulatan Gaji PNS",
+                  "angkas": "71.343"
+                },
+                {
+                  "kode": "5.1.01.01.010.00001",
+                  "nama": "Belanja Iuran Jaminan Kecelakaan Kerja PNS",
+                  "angkas": "1.761.700"
+                },
+                {
+                  "kode": "5.1.01.01.011.00001",
+                  "nama": "Belanja Iuran Jaminan Kematian PNS",
+                  "angkas": "5.285.161"
+                }
+              ]
+            },
+            {
+              "kode": "7.01.1.2.02.2",
+              "nama": "Penyediaan Administrasi Pelaksanaan Tugas ASN",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.02.001.00001",
+                  "nama": "Belanja Jasa Pengelolaan BMD yang Tidak Menghasilkan Pendapatan",
+                  "angkas": "2.625.000"
+                },
+                {
+                  "kode": "5.1.02.02.001.00080",
+                  "nama": "Belanja Honorarium Penanggungjawaban Pengelola Keuangan",
+                  "angkas": "7.625.000"
+                }
+              ]
+            },
+            {
+              "kode": "7.01.1.2.02.7",
+              "nama": "Koordinasi dan Penyusunan Laporan Keuangan Bulanan/ Triwulanan/ Semesteran SKPD",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "1.023.200"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "583.200"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "631.600"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kode": "7.01.1.2.06",
+          "nama": "Administrasi Umum Perangkat Daerah",
+          "subKegiatan": [
+            {
+              "kode": "7.01.1.2.06.2",
+              "nama": "Penyediaan Peralatan dan Perlengkapan Kantor",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "2.828.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "785.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "1.003.200"
+                },
+                {
+                  "kode": "5.1.02.01.001.00030",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Perabot Kantor",
+                  "angkas": "142.000"
+                }
+              ]
+            },
+            {
+              "kode": "7.01.1.2.06.9",
+              "nama": "Penyelenggaraan Rapat Koordinasi dan Konsultasi SKPD",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00043",
+                  "nama": "Belanja Natura dan Pakan-Natura",
+                  "angkas": "359.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "2.400.000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kode": "7.01.1.2.07",
+          "nama": "Pengadaan Barang Milik Daerah Penunjang Urusan Pemerintah Daerah",
+          "subKegiatan": [
+            {
+              "kode": "7.01.1.2.07.10",
+              "nama": "Pengadaan Sarana dan Prasarana Gedung Kantor atau Bangunan Lainnya",
+              "kodeRekening": [
+                {
+                  "kode": "5.2.02.05.002.00001",
+                  "nama": "Belanja Modal Mebel",
+                  "angkas": "0"
+                },
+                {
+                  "kode": "5.2.02.10.001.00002",
+                  "nama": "Belanja Modal Personal Computer",
+                  "angkas": "0"
+                },
+                {
+                  "kode": "5.2.02.10.002.00005",
+                  "nama": "Belanja Modal Peralatan Komputer Lainnya",
+                  "angkas": "6.007.500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kode": "7.01.1.2.08",
+          "nama": "Penyediaan Jasa Penunjang Urusan Pemerintahan Daerah",
+          "subKegiatan": [
+            {
+              "kode": "7.01.1.2.08.2",
+              "nama": "Penyediaan Jasa Komunikasi, Sumber Daya Air dan Listrik",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.02.001.00059",
+                  "nama": "Belanja Tagihan Telepon",
+                  "angkas": "300.000"
+                },
+                {
+                  "kode": "5.1.02.02.001.00060",
+                  "nama": "Belanja Tagihan Air",
+                  "angkas": "2.400.000"
+                },
+                {
+                  "kode": "5.1.02.02.001.00061",
+                  "nama": "Belanja Tagihan Listrik",
+                  "angkas": "18.920.000"
+                }
+              ]
+            },
+            {
+              "kode": "7.01.1.2.08.4",
+              "nama": "Penyediaan Jasa Pelayanan Umum Kantor",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.02.001.00087",
+                  "nama": "Belanja Jasa Pegawai Pemerintah dengan Perjanjian Kerja (PPPK) Paruh Waktu pada Jabatan Pengelola Umum Operasional",
+                  "angkas": "45.090.000"
+                },
+                {
+                  "kode": "5.1.02.02.001.00088",
+                  "nama": "Belanja jasa Pegawai Pemerintah dengan Perjanjian Kerja (PPPK) Paruh Waktu pada jabatan operator",
+                  "angkas": "22.545.000"
+                },
+                {
+                  "kode": "5.1.02.02.002.00018",
+                  "nama": "Belanja Iuran Jaminan Kesehatan bagi PPPK Paruh Waktu pada Jabatan Pengelola Umum Operasional",
+                  "angkas": "1.603.200"
+                },
+                {
+                  "kode": "5.1.02.02.002.00019",
+                  "nama": "Belanja Iuran Jaminan Kesehatan bagi PPPK Paruh Waktu pada Jabatan Operator Layanan Operasional",
+                  "angkas": "801.600"
+                },
+                {
+                  "kode": "5.1.02.02.002.00026",
+                  "nama": "Belanja Iuran Jaminan Kecelakaan Kerja bagi PPPK Paruh Waktu pada Jabatan Pengelola Umum Operasional",
+                  "angkas": "96.192"
+                },
+                {
+                  "kode": "5.1.02.02.002.00027",
+                  "nama": "Belanja Iuran Jaminan Kecelakaan Kerja bagi PPPK Paruh Waktu pada Jabatan Operator Layanan Operasional",
+                  "angkas": "48.096"
+                },
+                {
+                  "kode": "5.1.02.02.002.00034",
+                  "nama": "Belanja Iuran Jaminan Kematian bagi PPPK Paruh Waktu pada Jabatan Pengelola Umum Operasional",
+                  "angkas": "120.240"
+                },
+                {
+                  "kode": "5.1.02.02.002.00035",
+                  "nama": "Belanja Iuran Jaminan Kematian bagi PPPK Paruh Waktu pada Jabatan Operator Layanan Operasional",
+                  "angkas": "60.120"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kode": "7.01.1.2.09",
+          "nama": "Pemeliharaan Barang Milik Daerah Penunjang Urusan Pemerintahan Daerah",
+          "subKegiatan": [
+            {
+              "kode": "7.01.1.2.09.2",
+              "nama": "Penyediaan Jasa Pemeliharaan, Biaya Pemeliharaan, Pajak dan Perizinan Kendaraan Dinas Operasional atau Lapangan",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00004",
+                  "nama": "Belanja Bahan-Bahan Bakar dan Pelumas",
+                  "angkas": "24.936.200"
+                },
+                {
+                  "kode": "5.1.02.02.001.00067",
+                  "nama": "Belanja Pembayaran Pajak, Bea, dan Perizinan",
+                  "angkas": "1.700.000"
+                },
+                {
+                  "kode": "5.1.02.03.002.00035",
+                  "nama": "Belanja Pemeliharaan Alat Angkutan-Alat Angkutan Darat Bermotor-Kendaraan Dinas Bermotor Perorangan",
+                  "angkas": "4.300.000"
+                },
+                {
+                  "kode": "5.1.02.03.002.00038",
+                  "nama": "Belanja Pemeliharaan Alat Angkutan-Alat Angkutan Darat Bermotor-Kendaraan Bermotor Beroda Dua",
+                  "angkas": "2.050.000"
+                }
+              ]
+            },
+            {
+              "kode": "7.01.1.2.09.9",
+              "nama": "Pemeliharaan/Rehabilitasi Gedung Kantor dan Bangunan Lainnya",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00001",
+                  "nama": "Belanja Bahan-Bahan Bangunan dan Konstruksi",
+                  "angkas": "1.639.600"
+                },
+                {
+                  "kode": "5.1.02.01.001.00030",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Perabot Kantor",
+                  "angkas": "114.600"
+                },
+                {
+                  "kode": "5.1.02.02.001.00016",
+                  "nama": "Belanja Jasa Tenaga Penanganan Prasarana dan Sarana Umum",
+                  "angkas": "570.000"
+                },
+                {
+                  "kode": "5.1.02.03.003.00001",
+                  "nama": "Belanja Pemeliharaan Bangunan Gedung- Bangunan Gedung Tempat Kerja-Bangunan Gedung Kantor",
+                  "angkas": "0"
+                }
+              ]
+            },
+            {
+              "kode": "7.01.1.2.09.10",
+              "nama": "Pemeliharaan/Rehabilitasi Sarana dan Prasarana Gedung Kantor atau Bangunan Lainnya",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00030",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Perabot Kantor",
+                  "angkas": "846.700"
+                },
+                {
+                  "kode": "5.1.02.01.001.00031",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Listrik",
+                  "angkas": "1.348.200"
+                },
+                {
+                  "kode": "5.1.02.03.002.00113",
+                  "nama": "Belanja Pemeliharaan Alat Kantor dan Rumah Tangga-Alat Kantor- Mesin Ketik",
+                  "angkas": "0"
+                },
+                {
+                  "kode": "5.1.02.03.002.00121",
+                  "nama": "Belanja Pemeliharaan Alat Kantor dan Rumah Tangga-Alat Rumah Tangga-Alat Pendingin",
+                  "angkas": "3.932.500"
+                },
+                {
+                  "kode": "5.1.02.03.002.00405",
+                  "nama": "Belanja Pemeliharaan Komputer-Komputer Unit-Personal Computer",
+                  "angkas": "2.920.000"
+                },
+                {
+                  "kode": "5.1.02.03.004.00126",
+                  "nama": "Belanja Pemeliharaan Jaringan-Jaringan Listrik-Jaringan Listrik Lainnya",
+                  "angkas": "10.000.000"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kode": "7.01.2",
+      "nama": "PROGRAM PENYELENGGARAAN PEMERINTAHAN DAN PELAYANAN PUBLIK",
+      "kegiatan": [
+        {
+          "kode": "7.01.2.2.01",
+          "nama": "Koordinasi Penyelenggaraan Kegiatan Pemerintahan di Tingkat Kecamatan",
+          "subKegiatan": [
+            {
+              "kode": "7.01.2.2.01.1",
+              "nama": "Koordinasi/Sinergi Perencanaan dan Pelaksanaan Kegiatan Pemerintahan dengan Perangkat Daerah dan Instansi Vertikal Terkait",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "795.900"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "566.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00026",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Cetak",
+                  "angkas": "876.000"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "220.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "1.280.000"
+                },
+                {
+                  "kode": "5.1.02.01.001.00058",
+                  "nama": "Belanja Makanan dan Minuman Aktivitas Lapangan",
+                  "angkas": "1.640.000"
+                },
+                {
+                  "kode": "5.1.02.02.001.00030",
+                  "nama": "Belanja Jasa Tenaga Kebersihan",
+                  "angkas": "220.000"
+                },
+                {
+                  "kode": "5.1.02.02.004.00022",
+                  "nama": "Belanja Sewa Electric Generating Set",
+                  "angkas": "2.227.000"
+                },
+                {
+                  "kode": "5.1.02.02.004.00117",
+                  "nama": "Belanja Sewa Alat Kantor Lainnya",
+                  "angkas": "1.860.000"
+                },
+                {
+                  "kode": "5.1.02.02.004.00118",
+                  "nama": "Belanja Sewa Mebel",
+                  "angkas": "0"
+                },
+                {
+                  "kode": "5.1.02.02.004.00132",
+                  "nama": "Belanja Sewa Peralatan Studio Audio",
+                  "angkas": "1.709.000"
+                },
+                {
+                  "kode": "5.1.02.04.001.00003",
+                  "nama": "Belanja Perjalanan Dinas Dalam Kota",
+                  "angkas": "0"
+                }
+              ]
+            },
+            {
+              "kode": "7.01.2.2.01.2",
+              "nama": "Peningkatan Efektifitas Kegiatan Pemerintahan di Tingkat Kecamatan",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "440.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "347.600"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "220.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "1.968.000"
+                },
+                {
+                  "kode": "5.1.02.01.001.00058",
+                  "nama": "Belanja Makanan dan Minuman Aktivitas Lapangan",
+                  "angkas": "3.000.000"
+                },
+                {
+                  "kode": "5.1.02.02.004.00036",
+                  "nama": "Belanja Sewa Kendaraan Bermotor Penumpang",
+                  "angkas": "595.500"
+                },
+                {
+                  "kode": "5.1.02.04.001.00003",
+                  "nama": "Belanja Perjalanan Dinas Dalam Kota",
+                  "angkas": "1.900.000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kode": "7.01.2.2.04",
+          "nama": "Pelaksanaan Urusan Pemerintahan yang Dilimpahkan kepada Camat",
+          "subKegiatan": [
+            {
+              "kode": "7.01.2.2.04.1",
+              "nama": "Pelaksanaan Urusan Pemerintahan yang Terkait dengan Pelayanan Perizinan Non Usaha",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "619.000"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "710.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "369.000"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "0"
+                },
+                {
+                  "kode": "5.1.02.01.001.00058",
+                  "nama": "Belanja Makanan dan Minuman Aktivitas Lapangan",
+                  "angkas": "600.000"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kode": "7.01.3",
+      "nama": "PROGRAM PEMBERDAYAAN MASYARAKAT DESA DAN KELURAHAN",
+      "kegiatan": [
+        {
+          "kode": "7.01.3.2.01",
+          "nama": "Koordinasi Kegiatan Pemberdayaan Desa",
+          "subKegiatan": [
+            {
+              "kode": "7.01.3.2.01.3",
+              "nama": "Peningkatan Efektifitas Kegiatan Pemberdayaan Masyarakat di Wilayah Kecamatan",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "1.312.300"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "258.300"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "287.900"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "3.760.000"
+                },
+                {
+                  "kode": "5.1.02.02.001.00047",
+                  "nama": "Belanja Jasa Penyelenggaraan Acara",
+                  "angkas": "0"
+                },
+                {
+                  "kode": "5.1.02.02.004.00037",
+                  "nama": "Belanja Sewa Kendaraan Bermotor Angkutan Barang",
+                  "angkas": "0"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kode": "7.01.5",
+      "nama": "PROGRAM PENYELENGGARAAN URUSAN PEMERINTAHAN UMUM",
+      "kegiatan": [
+        {
+          "kode": "7.01.5.2.01",
+          "nama": "Penyelenggaraan Urusan Pemerintahan Umum Sesuai Penugasan Kepala Daerah",
+          "subKegiatan": [
+            {
+              "kode": "7.01.5.2.01.2",
+              "nama": "Fasilitasi, Koordinasi dan Pembinaan (Bimtek, Sosialisasi, Konsultasi) Wawasan Kebangsaan dan Ketahanan Nasional",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "300.000"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "172.200"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "152.800"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "480.000"
+                },
+                {
+                  "kode": "5.1.02.01.001.00058",
+                  "nama": "Belanja Makanan dan Minuman Aktivitas Lapangan",
+                  "angkas": "3.150.000"
+                },
+                {
+                  "kode": "5.1.02.02.001.00003",
+                  "nama": "Honorarium Narasumber atau Pembahas, Moderator, Pembawa Acara, dan Panitia",
+                  "angkas": "400.000"
+                },
+                {
+                  "kode": "5.1.02.04.001.00003",
+                  "nama": "Belanja Perjalanan Dinas Dalam Kota",
+                  "angkas": "400.000"
+                }
+              ]
+            },
+            {
+              "kode": "7.01.5.2.01.5",
+              "nama": "Penanganan Konflik Sosial Sesuai Ketentuan Peraturan Perundang-Undangan",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "280.000"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "172.200"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "55.600"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "288.000"
+                },
+                {
+                  "kode": "5.1.02.01.001.00058",
+                  "nama": "Belanja Makanan dan Minuman Aktivitas Lapangan",
+                  "angkas": "400.000"
+                },
+                {
+                  "kode": "5.1.02.02.001.00004",
+                  "nama": "Honorarium Tim Pelaksana Kegiatan dan Sekretariat Tim Pelaksana Kegiatan",
+                  "angkas": "14.800.000"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kode": "7.01.6",
+      "nama": "PROGRAM PEMBINAAN DAN PENGAWASAN PEMERINTAHAN DESA",
+      "kegiatan": [
+        {
+          "kode": "7.01.6.2.01",
+          "nama": "Fasilitasi, Rekomendasi dan Koordinasi Pembinaan dan Pengawasan Pemerintahan Desa",
+          "subKegiatan": [
+            {
+              "kode": "7.01.6.2.01.17",
+              "nama": "Koordinasi Pendampingan Desa di Wilayahnya",
+              "kodeRekening": [
+                {
+                  "kode": "5.1.02.01.001.00024",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor",
+                  "angkas": "294.400"
+                },
+                {
+                  "kode": "5.1.02.01.001.00025",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover",
+                  "angkas": "258.300"
+                },
+                {
+                  "kode": "5.1.02.01.001.00029",
+                  "nama": "Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer",
+                  "angkas": "205.600"
+                },
+                {
+                  "kode": "5.1.02.01.001.00052",
+                  "nama": "Belanja Makanan dan Minuman Rapat",
+                  "angkas": "1.024.000"
+                },
+                {
+                  "kode": "5.1.02.01.001.00058",
+                  "nama": "Belanja Makanan dan Minuman Aktivitas Lapangan",
+                  "angkas": "2.960.000"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

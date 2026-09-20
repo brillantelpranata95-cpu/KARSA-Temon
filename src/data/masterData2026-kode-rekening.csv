@@ -1,0 +1,57 @@
+﻿Kode Rekening,Nama Kode Rekening,Kategori,Dipakai pada Sub-Kegiatan
+5.1.01.01.001.00001,Belanja Gaji Pokok PNS,LAINNYA,7.01.1.2.02.1
+5.1.01.01.002.00001,Belanja Tunjangan Keluarga PNS,LAINNYA,7.01.1.2.02.1
+5.1.01.01.003.00001,Belanja Tunjangan Jabatan PNS,LAINNYA,7.01.1.2.02.1
+5.1.01.01.005.00001,Belanja Tunjangan Fungsional Umum PNS,LAINNYA,7.01.1.2.02.1
+5.1.01.01.006.00001,Belanja Tunjangan Beras PNS,LAINNYA,7.01.1.2.02.1
+5.1.01.01.007.00001,Belanja Tunjangan PPh/Tunjangan Khusus PNS,LAINNYA,7.01.1.2.02.1
+5.1.01.01.008.00001,Belanja Pembulatan Gaji PNS,LAINNYA,7.01.1.2.02.1
+5.1.01.01.010.00001,Belanja Iuran Jaminan Kecelakaan Kerja PNS,LAINNYA,7.01.1.2.02.1
+5.1.01.01.011.00001,Belanja Iuran Jaminan Kematian PNS,LAINNYA,7.01.1.2.02.1
+5.1.02.01.001.00001,Belanja Bahan-Bahan Bangunan dan Konstruksi,LAINNYA,7.01.1.2.09.9
+5.1.02.01.001.00004,Belanja Bahan-Bahan Bakar dan Pelumas,LAINNYA,7.01.1.2.09.2
+5.1.02.01.001.00024,Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Tulis Kantor,ATK,4.01.4.5.06.1; 7.01.1.2.01.1; 7.01.1.2.01.7; 7.01.1.2.02.7; 7.01.1.2.06.2; 7.01.2.2.01.1; 7.01.2.2.01.2; 7.01.2.2.04.1; 7.01.3.2.01.3; 7.01.5.2.01.2; 7.01.5.2.01.5; 7.01.6.2.01.17
+5.1.02.01.001.00025,Belanja Alat/Bahan untuk Kegiatan Kantor- Kertas dan Cover,ATK,4.01.4.5.06.1; 7.01.1.2.01.1; 7.01.1.2.01.7; 7.01.1.2.02.7; 7.01.1.2.06.2; 7.01.2.2.01.1; 7.01.2.2.01.2; 7.01.2.2.04.1; 7.01.3.2.01.3; 7.01.5.2.01.2; 7.01.5.2.01.5; 7.01.6.2.01.17
+5.1.02.01.001.00026,Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Cetak,ATK,7.01.2.2.01.1
+5.1.02.01.001.00029,Belanja Alat/Bahan untuk Kegiatan Kantor- Bahan Komputer,ATK,4.01.4.5.06.1; 7.01.1.2.01.1; 7.01.1.2.01.7; 7.01.1.2.02.7; 7.01.1.2.06.2; 7.01.2.2.01.1; 7.01.2.2.01.2; 7.01.2.2.04.1; 7.01.3.2.01.3; 7.01.5.2.01.2; 7.01.5.2.01.5; 7.01.6.2.01.17
+5.1.02.01.001.00030,Belanja Alat/Bahan untuk Kegiatan Kantor- Perabot Kantor,LAINNYA,7.01.1.2.06.2; 7.01.1.2.09.10; 7.01.1.2.09.9
+5.1.02.01.001.00031,Belanja Alat/Bahan untuk Kegiatan Kantor- Alat Listrik,ATK,7.01.1.2.09.10
+5.1.02.01.001.00043,Belanja Natura dan Pakan-Natura,LAINNYA,7.01.1.2.06.9
+5.1.02.01.001.00052,Belanja Makanan dan Minuman Rapat,MAKAN_MINUM,4.01.4.5.06.1; 7.01.1.2.01.1; 7.01.1.2.01.7; 7.01.1.2.02.7; 7.01.1.2.06.9; 7.01.2.2.01.1; 7.01.2.2.01.2; 7.01.2.2.04.1; 7.01.3.2.01.3; 7.01.5.2.01.2; 7.01.5.2.01.5; 7.01.6.2.01.17
+5.1.02.01.001.00058,Belanja Makanan dan Minuman Aktivitas Lapangan,MAKAN_MINUM,4.01.4.5.06.1; 7.01.2.2.01.1; 7.01.2.2.01.2; 7.01.2.2.04.1; 7.01.5.2.01.2; 7.01.5.2.01.5; 7.01.6.2.01.17
+5.1.02.02.001.00001,Belanja Jasa Pengelolaan BMD yang Tidak Menghasilkan Pendapatan,HONOR,7.01.1.2.02.2
+5.1.02.02.001.00003,"Honorarium Narasumber atau Pembahas, Moderator, Pembawa Acara, dan Panitia",HONOR,7.01.5.2.01.2
+5.1.02.02.001.00004,Honorarium Tim Pelaksana Kegiatan dan Sekretariat Tim Pelaksana Kegiatan,HONOR,7.01.5.2.01.5
+5.1.02.02.001.00016,Belanja Jasa Tenaga Penanganan Prasarana dan Sarana Umum,HONOR,7.01.1.2.09.9
+5.1.02.02.001.00030,Belanja Jasa Tenaga Kebersihan,HONOR,7.01.2.2.01.1
+5.1.02.02.001.00047,Belanja Jasa Penyelenggaraan Acara,HONOR,7.01.3.2.01.3
+5.1.02.02.001.00059,Belanja Tagihan Telepon,LAINNYA,7.01.1.2.08.2
+5.1.02.02.001.00060,Belanja Tagihan Air,LAINNYA,7.01.1.2.08.2
+5.1.02.02.001.00061,Belanja Tagihan Listrik,LAINNYA,7.01.1.2.08.2
+5.1.02.02.001.00067,"Belanja Pembayaran Pajak, Bea, dan Perizinan",LAINNYA,7.01.1.2.09.2
+5.1.02.02.001.00080,Belanja Honorarium Penanggungjawaban Pengelola Keuangan,HONOR,7.01.1.2.02.2
+5.1.02.02.001.00087,Belanja Jasa Pegawai Pemerintah dengan Perjanjian Kerja (PPPK) Paruh Waktu pada Jabatan Pengelola Umum Operasional,HONOR,7.01.1.2.08.4
+5.1.02.02.001.00088,Belanja jasa Pegawai Pemerintah dengan Perjanjian Kerja (PPPK) Paruh Waktu pada jabatan operator,HONOR,7.01.1.2.08.4
+5.1.02.02.002.00018,Belanja Iuran Jaminan Kesehatan bagi PPPK Paruh Waktu pada Jabatan Pengelola Umum Operasional,LAINNYA,7.01.1.2.08.4
+5.1.02.02.002.00019,Belanja Iuran Jaminan Kesehatan bagi PPPK Paruh Waktu pada Jabatan Operator Layanan Operasional,LAINNYA,7.01.1.2.08.4
+5.1.02.02.002.00026,Belanja Iuran Jaminan Kecelakaan Kerja bagi PPPK Paruh Waktu pada Jabatan Pengelola Umum Operasional,LAINNYA,7.01.1.2.08.4
+5.1.02.02.002.00027,Belanja Iuran Jaminan Kecelakaan Kerja bagi PPPK Paruh Waktu pada Jabatan Operator Layanan Operasional,LAINNYA,7.01.1.2.08.4
+5.1.02.02.002.00034,Belanja Iuran Jaminan Kematian bagi PPPK Paruh Waktu pada Jabatan Pengelola Umum Operasional,LAINNYA,7.01.1.2.08.4
+5.1.02.02.002.00035,Belanja Iuran Jaminan Kematian bagi PPPK Paruh Waktu pada Jabatan Operator Layanan Operasional,LAINNYA,7.01.1.2.08.4
+5.1.02.02.004.00022,Belanja Sewa Electric Generating Set,LAINNYA,7.01.2.2.01.1
+5.1.02.02.004.00036,Belanja Sewa Kendaraan Bermotor Penumpang,LAINNYA,7.01.2.2.01.2
+5.1.02.02.004.00037,Belanja Sewa Kendaraan Bermotor Angkutan Barang,LAINNYA,7.01.3.2.01.3
+5.1.02.02.004.00117,Belanja Sewa Alat Kantor Lainnya,LAINNYA,7.01.2.2.01.1
+5.1.02.02.004.00118,Belanja Sewa Mebel,LAINNYA,7.01.2.2.01.1
+5.1.02.02.004.00132,Belanja Sewa Peralatan Studio Audio,LAINNYA,7.01.2.2.01.1
+5.1.02.03.002.00035,Belanja Pemeliharaan Alat Angkutan-Alat Angkutan Darat Bermotor-Kendaraan Dinas Bermotor Perorangan,LAINNYA,7.01.1.2.09.2
+5.1.02.03.002.00038,Belanja Pemeliharaan Alat Angkutan-Alat Angkutan Darat Bermotor-Kendaraan Bermotor Beroda Dua,LAINNYA,7.01.1.2.09.2
+5.1.02.03.002.00113,Belanja Pemeliharaan Alat Kantor dan Rumah Tangga-Alat Kantor- Mesin Ketik,LAINNYA,7.01.1.2.09.10
+5.1.02.03.002.00121,Belanja Pemeliharaan Alat Kantor dan Rumah Tangga-Alat Rumah Tangga-Alat Pendingin,LAINNYA,7.01.1.2.09.10
+5.1.02.03.002.00405,Belanja Pemeliharaan Komputer-Komputer Unit-Personal Computer,LAINNYA,7.01.1.2.09.10
+5.1.02.03.003.00001,Belanja Pemeliharaan Bangunan Gedung- Bangunan Gedung Tempat Kerja-Bangunan Gedung Kantor,LAINNYA,7.01.1.2.09.9
+5.1.02.03.004.00126,Belanja Pemeliharaan Jaringan-Jaringan Listrik-Jaringan Listrik Lainnya,LAINNYA,7.01.1.2.09.10
+5.1.02.04.001.00003,Belanja Perjalanan Dinas Dalam Kota,TRANSPORT,4.01.4.5.06.1; 7.01.2.2.01.1; 7.01.2.2.01.2; 7.01.5.2.01.2
+5.2.02.05.002.00001,Belanja Modal Mebel,LAINNYA,7.01.1.2.07.10
+5.2.02.10.001.00002,Belanja Modal Personal Computer,LAINNYA,7.01.1.2.07.10
+5.2.02.10.002.00005,Belanja Modal Peralatan Komputer Lainnya,LAINNYA,7.01.1.2.07.10

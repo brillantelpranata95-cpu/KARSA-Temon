@@ -716,7 +716,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                           )}
                         </td>
                         <td className="p-4 text-xs text-gray-700 dark:text-slate-300">
-                          {jInfo?.nama || k.jawatanId}
+                          {jInfo?.nama || k.jawatanId || (
+                            <span className="text-amber-600 dark:text-amber-400 font-medium">Belum ditautkan</span>
+                          )}
                         </td>
                         <td className="p-4 text-center">
                           {isPending ? (
@@ -1308,6 +1310,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                   onChange={(e) => setEditKegJawatanId(e.target.value)}
                   className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white"
                 >
+                  <option value="">— Belum ditautkan —</option>
                   {jawatanList.map((j) => (
                     <option key={j.id} value={j.id}>{j.nama}</option>
                   ))}
