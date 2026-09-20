@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getCountFromServer,
   setDoc,
   updateDoc,
   addDoc,
@@ -28,7 +29,6 @@ import {
   Jawatan,
   Kegiatan,
   KodeRekening,
-  JenisBelanja,
   DocumentTypeItem,
   ChecklistConfig,
   SpjItem,
@@ -348,6 +348,7 @@ export const invalidateMasterCache = (): void => {
   invalidateCache("jawatan:");
   invalidateCache("packageTemplates:");
   invalidateCache("documentTypes:");
+  invalidateCache("officials:");
 };
 
 // User Request New Kode Kegiatan
@@ -591,16 +592,6 @@ export const adminDeleteUser = async (uid: string, actor: UserProfile) => {
   });
 };
 
-// @deprecated Jenis Belanja removed — SPJ packages follow Kode Rekening only. Kept for backward compatibility.
-export const getJenisBelanjaList = async (): Promise<JenisBelanja[]> => {
-  try {
-    const snap = await getDocs(collection(db, "jenisBelanja"));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as JenisBelanja));
-  } catch {
-    return [];
-  }
-};
-
 export const getDocumentTypesList = async (): Promise<DocumentTypeItem[]> => {
   return cachedFetch("documentTypes:all", async () => {
     const snap = await getDocs(collection(db, "documentTypes"));
@@ -612,10 +603,11 @@ export const getDocumentTypesList = async (): Promise<DocumentTypeItem[]> => {
 // Master officials are set once by admin and auto-injected into every document
 // that needs their signature (PPTK, Notulis, PA/KPA/Panewu, Bendahara).
 export const getOfficialsList = async (type?: OfficialType): Promise<OfficialPerson[]> => {
-  const snap = await getDocs(collection(db, "officials"));
-  let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as OfficialPerson));
-  if (type) list = list.filter(o => o.type === type);
-  return list;
+  const list = await cachedFetch("officials:all", async () => {
+    const snap = await getDocs(collection(db, "officials"));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as OfficialPerson));
+  });
+  return type ? list.filter(o => o.type === type) : list;
 };
 
 export const adminSaveOfficial = async (data: {
@@ -637,6 +629,7 @@ export const adminSaveOfficial = async (data: {
     jawatanId: data.jawatanId || "",
   };
   await setDoc(ref, sanitizeData({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }), { merge: true });
+  invalidateCache("officials:");
   await logAudit({
     actorUid: actor.uid,
     actorEmail: actor.email,
@@ -650,6 +643,7 @@ export const adminSaveOfficial = async (data: {
 
 export const adminDeleteOfficial = async (officialId: string, actor: UserProfile) => {
   await deleteDoc(doc(db, "officials", officialId));
+  invalidateCache("officials:");
   await logAudit({
     actorUid: actor.uid,
     actorEmail: actor.email,
@@ -701,6 +695,7 @@ export const savePemimpinRapatOption = async (data: {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }));
+  invalidateCache("officials:");
   return id;
 };
 
@@ -740,6 +735,7 @@ export const savePptkOption = async (data: {
     createdAt: mine?.createdAt || serverTimestamp(),
     updatedAt: serverTimestamp(),
   }), { merge: true });
+  invalidateCache("officials:");
   return id;
 };
 
@@ -768,6 +764,7 @@ export const saveJawatanOfficial = async (data: {
     createdAt: mine?.createdAt || serverTimestamp(),
     updatedAt: serverTimestamp(),
   }), { merge: true });
+  invalidateCache("officials:");
   return id;
 };
 
@@ -794,6 +791,7 @@ export const saveNotulisOption = async (data: {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }));
+  invalidateCache("officials:");
   return id;
 };
 
@@ -933,7 +931,11 @@ export const validateAttendanceSession = async (spjId: string): Promise<boolean>
 
 // Permanently purge expired QR sessions and their attendance payloads.
 export const purgeExpiredAttendanceSessions = async (): Promise<number> => {
-  const snap = await getDocs(collection(db, "attendanceSessions"));
+  // Hanya ambil sesi yang benar-benar sudah kedaluwarsa (filter di server),
+  // bukan seluruh koleksi — sweep ini berjalan berkala di latar belakang.
+  const snap = await getDocs(
+    query(collection(db, "attendanceSessions"), where("expiresAtMs", "<=", Date.now()))
+  );
   const now = Date.now();
   const expired = snap.docs.filter(d => Number((d.data() as any).expiresAtMs) <= now);
   let purged = 0;
@@ -961,11 +963,21 @@ export const purgeExpiredAttendanceSessions = async (): Promise<number> => {
 };
 
 // ------------------- SPJ NUMBER GENERATOR -------------------
+/** Cache nomor urut terakhir per tahun (agar nomor tidak bentrok saat dibuat berurutan). */
+const spjNumberCounters = new Map<string, { value: number; expiresAt: number }>();
+
 export const generateSpjNumber = async (tahun: number): Promise<string> => {
-  const spjRef = collection(db, "spj");
-  const q = query(spjRef, where("tahunAnggaran", "==", tahun));
-  const snap = await getDocs(q);
-  const count = snap.size + 1;
+  // Penomoran memakai nomor urut = jumlah SPJ tahun tsb + 1.
+  // Cukup hitung jumlahnya di server (1 read) alih-alih mengunduh seluruh dokumen.
+  // Hasil count di-cache singkat supaya pembuatan beruntun tidak saling menimpa.
+  const key = `spjCount:${tahun}`;
+  const cached = spjNumberCounters.get(key);
+  const count = cached && cached.expiresAt > Date.now()
+    ? cached.value + 1
+    : (await getCountFromServer(query(collection(db, "spj"), where("tahunAnggaran", "==", tahun)))).data().count + 1;
+
+  spjNumberCounters.set(key, { value: count, expiresAt: Date.now() + 15 * 60 * 1000 });
+
   const seq = count.toString().padStart(5, "0");
   return `SPJ/TMN/${tahun}/${seq}`;
 };
@@ -1152,6 +1164,7 @@ export const createSpjPackage = async (params: {
     console.warn("Gamification skip (CREATE_SPJ):", e)
   );
 
+  invalidateSpjStatsCache();
   return spjRef.id;
 };
 
@@ -1274,6 +1287,7 @@ export const recalculateSpjStatus = async (spjId: string) => {
     status: newStatus,
     updatedAt: serverTimestamp()
   });
+  invalidateSpjStatsCache();
 };
 
 // Finalize SPJ
@@ -1303,6 +1317,8 @@ export const finalizeSpj = async (spjId: string, user: UserProfile) => {
   awardGamificationPoints(user, "FINALIZE_SPJ").catch((e) =>
     console.warn("Gamification skip (FINALIZE_SPJ):", e)
   );
+
+  invalidateSpjStatsCache();
 };
 
 // Reopen SPJ (Admin Only)
@@ -1325,6 +1341,8 @@ export const reopenSpj = async (spjId: string, reason: string, user: UserProfile
     oldValue: { status: "FINALIZED" },
     newValue: { status: "IN_PROGRESS" }
   });
+
+  invalidateSpjStatsCache();
 };
 
 // Update SPJ Shared Data (e.g. PPTK Nama, NIP, Pangkat)
@@ -1356,6 +1374,8 @@ export const deleteSpj = async (spjId: string, user: UserProfile) => {
     entityId: spjId,
     reason: "SPJ dihapus oleh administrator"
   });
+
+  invalidateSpjStatsCache();
 };
 
 // Archive SPJ (move to archive box)
@@ -1379,6 +1399,8 @@ export const archiveSpj = async (spjId: string, user: UserProfile) => {
     entityId: spjId,
     newValue: { status: "ARCHIVED" }
   });
+
+  invalidateSpjStatsCache();
 };
 
 // Get archived SPJs (no orderBy — avoids composite index requirement)
@@ -1451,26 +1473,52 @@ export const getSpjStatistics = async (user: UserProfile): Promise<{
   totalNominal: number;
   byKategori: Record<string, { count: number; totalNominal: number; percentage: number }>;
 }> => {
+  // Hasil di-cache sebentar agar berpindah-pindah halaman tidak membaca ulang.
+  const key = `stats:spj:${user.role}:${user.role === "ADMIN" ? "all" : user.jawatanId}`;
+  return cachedFetch(key, () => computeSpjStatistics(user), SPJ_STATS_TTL_MS);
+};
+
+/** Lama data statistik dianggap segar (30 detik). */
+export const SPJ_STATS_TTL_MS = 30 * 1000;
+
+/** Buang cache statistik — dipanggil setiap kali ada perubahan data SPJ. */
+export const invalidateSpjStatsCache = (): void => {
+  invalidateCache("stats:");
+};
+
+const computeSpjStatistics = async (user: UserProfile): Promise<{
+  totalSpj: number;
+  finalizedSpj: number;
+  inProgressSpj: number;
+  draftSpj: number;
+  totalNominal: number;
+  byKategori: Record<string, { count: number; totalNominal: number; percentage: number }>;
+}> => {
   const spjCol = collection(db, "spj");
   const q = user.role !== "ADMIN"
     ? query(spjCol, where("jawatanId", "==", user.jawatanId))
     : spjCol;
   const snap = await getDocs(q);
   const spjList = snap.docs.map(d => ({ id: d.id, ...d.data() } as SpjItem));
-  
-  // Fetch documents to get nominal data
-  const allDocSnap = await getDocs(collection(db, "spjDocuments"));
-  const allDocs = allDocSnap.docs.map(d => ({ id: d.id, ...d.data() } as SpjDocumentItem));
-  
+
+  // Hanya dokumen Bend 26 yang dibutuhkan untuk nominal — jauh lebih hemat
+  // dibanding membaca seluruh koleksi spjDocuments (yang terus bertambah).
+  const bendSnap = await getDocs(
+    query(collection(db, "spjDocuments"), where("documentTypeCode", "==", "BEND_26"))
+  );
+  const nominalBySpjId = new Map<string, number>();
+  bendSnap.docs.forEach((d) => {
+    const row = d.data() as SpjDocumentItem;
+    if (row.spjId) nominalBySpjId.set(row.spjId, Number(row.data?.nominal || 0));
+  });
+
   let totalNominal = 0;
   const byKategori: Record<string, { count: number; totalNominal: number }> = {};
-  
+
   for (const spj of spjList) {
-    const spjDocs = allDocs.filter(d => d.spjId === spj.id);
-    const bend26Doc = spjDocs.find(d => d.documentTypeCode === "BEND_26");
-    const nominal = Number(bend26Doc?.data?.nominal || 0);
+    const nominal = nominalBySpjId.get(spj.id) || 0;
     totalNominal += nominal;
-    
+
     // Classify by kode rekening nama for AI analysis
     const rekNama = spj.masterSnapshot.kodeRekening?.nama || "LAINNYA";
     const kategori = rekNama.toUpperCase().includes("RAPAT") ? "MAKAN_MINUM_RAPAT"
@@ -1479,7 +1527,7 @@ export const getSpjStatistics = async (user: UserProfile): Promise<{
       : rekNama.toUpperCase().includes("ATK") ? "ATK"
       : rekNama.toUpperCase().includes("TRANSPORT") ? "TRANSPORT"
       : "LAINNYA";
-      
+
     if (!byKategori[kategori]) {
       byKategori[kategori] = { count: 0, totalNominal: 0 };
     }

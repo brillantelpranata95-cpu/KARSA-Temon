@@ -8,7 +8,7 @@ import {
   getDocumentTypesList,
   getKodeRekeningList,
 } from "../services/api";
-import { FileStack, Plus, Edit, Trash2, Save, RefreshCw, Info, X, CheckCircle2, Package } from "lucide-react";
+import { FileStack, Plus, Edit, Trash2, Save, RefreshCw, Info, X, Package } from "lucide-react";
 
 interface PackageTemplatesProps {
   user: UserProfile;

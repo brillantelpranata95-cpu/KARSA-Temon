@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { Navbar, AppTab } from "./components/Navbar";
 import { getSpjById, getSpjDocuments, purgeExpiredAttendanceSessions, recordDailyActivity } from "./services/api";
@@ -34,7 +34,6 @@ function PageLoader() {
 
 function MainApp() {
   const { user, loading, signInWithGoogle, logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<AppTab>("dashboard");
 

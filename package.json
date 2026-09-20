@@ -14,6 +14,7 @@
     "@types/signature_pad": "^2.3.6",
     "clsx": "^2.1.1",
     "firebase": "^12.19.0",
+    "html2canvas-pro": "^2.4.4",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.46.0",

@@ -11,16 +11,14 @@ import {
   saveNotulisOption,
   getOfficialsList,
   savePemimpinRapatOption,
-  createAttendanceSession,
   getActiveAttendanceSession,
 } from "../services/api";
 import { terbilangRupiah } from "../utils/format";
-import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari, toDateInputValue, sortDates } from "../utils/date";
+import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari } from "../utils/date";
 import {
   ArrowLeft,
   CheckCircle2,
   FileCheck,
-  Save,
   Link as LinkIcon,
   Printer,
   ShieldCheck,

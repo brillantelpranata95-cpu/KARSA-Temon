@@ -22,7 +22,7 @@ import {
   adminUpdateKegiatan,
   adminUpdateKodeRekening,
 } from "../services/api";
-import { formatDateDDMMYYYY, getCurrentYear } from "../utils/date";
+import { getCurrentYear } from "../utils/date";
 import {
   RefreshCw,
   Users,
@@ -34,8 +34,6 @@ import {
   Save,
   Building2,
   UserCheck,
-  Layers,
-  Database,
   UserPlus,
   Check,
   X,

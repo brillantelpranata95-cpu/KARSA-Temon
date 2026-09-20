@@ -44,9 +44,3 @@ export const invalidateCache = (prefix?: string): void => {
     if (key.startsWith(prefix)) store.delete(key);
   }
 };
-
-/** Cache statistics — useful for the gamification/insight panels. */
-export const cacheStats = (): { entries: number; keys: string[] } => ({
-  entries: store.size,
-  keys: Array.from(store.keys()),
-});

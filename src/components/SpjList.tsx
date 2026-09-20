@@ -14,9 +14,11 @@ import {
   requestNewKodeRekening,
   getPackageTemplatesList,
   getSpjDocuments,
+  getSpjById,
 } from "../services/api";
 import { formatDateDDMMYYYY, toDateInputValue } from "../utils/date";
 import { exportSpjRecapPdf } from "../utils/exportRecap";
+import { exportSpjPdf } from "../utils/exportSpjPdf";
 import {
   Plus,
   FileText,
@@ -79,6 +81,8 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
 
   // Ekspor rekap PDF — sedang proses & nominal cache per SPJ
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [downloadingSpjId, setDownloadingSpjId] = useState<string | null>(null);
+  const [downloadLabel, setDownloadLabel] = useState("");
   const [nominalBySpjId, setNominalBySpjId] = useState<Record<string, number>>({});
 
   // Request modals
@@ -238,8 +242,33 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     }
   };
 
-  const handleDownloadPdf = async (_spjId: string) => {
-    alert("Fitur download PDF akan segera tersedia. Untuk saat ini, gunakan fitur Print dari halaman Preview.");
+  /**
+   * Unduh satu paket SPJ sebagai berkas PDF (seluruh dokumennya, berurutan).
+   * Data diambil langsung dari Firestore saat tombol diklik agar PDF selalu
+   * berisi isian terbaru — bukan salinan dari daftar yang sedang tampil.
+   */
+  const handleDownloadPdf = async (spjId: string) => {
+    if (downloadingSpjId) return;
+    setDownloadingSpjId(spjId);
+    try {
+      const [freshSpj, docs] = await Promise.all([getSpjById(spjId), getSpjDocuments(spjId)]);
+      if (!freshSpj) {
+        alert("Paket SPJ tidak ditemukan.");
+        return;
+      }
+      const result = await exportSpjPdf(freshSpj, docs, (label) => setDownloadLabel(label));
+      if (result.skipped.length > 0) {
+        alert(
+          `PDF berhasil dibuat (${result.rendered} dokumen).\n\n` +
+            `Dokumen berikut dilewati karena isinya berupa tautan Google Drive: ${result.skipped.join(", ")}.`
+        );
+      }
+    } catch (err: any) {
+      alert("Gagal membuat PDF: " + (err?.message || String(err)));
+    } finally {
+      setDownloadingSpjId(null);
+      setDownloadLabel("");
+    }
   };
 
   // Ekspor Rekapitulasi PDF — mengambil nominal Bend 26 tiap SPJ lalu menyusun laporan
@@ -326,6 +355,22 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
 
   return (
     <div className="space-y-6">
+      {/* OVERLAY PROSES PDF — menampilkan dokumen yang sedang dirender */}
+      {downloadingSpjId && (
+        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl px-8 py-7 shadow-2xl max-w-sm w-full text-center space-y-3">
+            <RefreshCw className="w-8 h-8 mx-auto text-[#32848D] animate-spin" />
+            <p className="font-bold text-gray-900 dark:text-white">Menyusun berkas PDF...</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400 min-h-[2.5rem]">
+              {downloadLabel || "Menyiapkan dokumen"}
+            </p>
+            <p className="text-[11px] text-gray-400 dark:text-slate-500">
+              Mohon jangan menutup halaman ini sampai berkas selesai diunduh.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
         <div>
@@ -410,10 +455,20 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => handleDownloadPdf(spj.id)}
-                      className="px-3 py-1.5 text-xs font-semibold text-[#32848D] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1"
+                      disabled={downloadingSpjId !== null}
+                      className="px-3 py-1.5 text-xs font-semibold text-[#32848D] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Download PDF</span>
+                      {downloadingSpjId === spj.id ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Menyusun...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download PDF</span>
+                        </>
+                      )}
                     </button>
                     <button
                       onClick={() => onSelectSpj(spj.id, "preview")}
@@ -522,6 +577,25 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                           <Eye className="w-3.5 h-3.5 shrink-0" />
                           <span>Preview</span>
                         </button>
+
+                    <button
+                      onClick={() => handleDownloadPdf(spj.id)}
+                      disabled={downloadingSpjId !== null}
+                      className="px-3 py-1.5 text-xs font-medium text-[#32848D] dark:text-[#7Fc1c9] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Unduh seluruh dokumen paket ini sebagai satu berkas PDF"
+                    >
+                      {downloadingSpjId === spj.id ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 shrink-0 animate-spin" />
+                          <span>Menyusun...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-3.5 h-3.5 shrink-0" />
+                          <span>PDF</span>
+                        </>
+                      )}
+                    </button>
 
                         {spj.status !== "FINALIZED" ? (
                           <button

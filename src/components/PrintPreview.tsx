@@ -4,12 +4,19 @@ import { terbilangRupiah } from "../utils/format";
 import { formatDateDDMMYYYY, getNamaHari, getNamaHariCapitalized, getYearFromDate } from "../utils/date";
 import { ArrowLeft, ExternalLink, Printer } from "lucide-react";
 import { db } from "../config/firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, getDocs } from "firebase/firestore";
 
 interface PrintPreviewProps {
   spj: SpjItem;
   documents: SpjDocumentItem[];
   onBack: () => void;
+  /** Dokumen yang ditampilkan lebih dulu (dipakai saat mengekspor PDF). */
+  initialDocCode?: string;
+  /**
+   * Saat false, daftar hadir dibaca sekali saja (tanpa listener realtime).
+   * Dipakai saat mengekspor PDF agar tidak menambah reads Firestore.
+   */
+  liveAttendance?: boolean;
 }
 
 /** Format a list of ISO dates as "01-02-2026 s.d. 03-02-2026" or comma-joined. */
@@ -20,13 +27,29 @@ const formatDateList = (dates?: string[], fallback?: string): string => {
   return sorted.map((d) => formatDateDDMMYYYY(d)).join(", ");
 };
 
-export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack }) => {
-  const [selectedDocCode, setSelectedDocCode] = React.useState<string>("BEND_26");
+export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack, initialDocCode, liveAttendance = true }) => {
+  const [selectedDocCode, setSelectedDocCode] = React.useState<string>(initialDocCode || "BEND_26");
   // Live QR attendance rows so the printed daftar hadir matches what was submitted
   const [qrAttendance, setQrAttendance] = React.useState<Array<{ id: string; nama: string; jabatan: string; ttdImage?: string }>>([]);
 
   React.useEffect(() => {
     if (!spj?.id) return;
+
+    // Mode ekspor PDF: cukup baca sekali (tanpa langganan realtime).
+    if (!liveAttendance) {
+      getDocs(collection(db, "spj", spj.id, "attendance"))
+        .then((snap) => {
+          setQrAttendance(
+            snap.docs.map((d) => {
+              const row = d.data() as any;
+              return { id: d.id, nama: row.nama || "", jabatan: row.jabatan || "", ttdImage: row.ttdImage || "" };
+            })
+          );
+        })
+        .catch(() => {});
+      return;
+    }
+
     const unsub = onSnapshot(collection(db, "spj", spj.id, "attendance"), (snap) => {
       setQrAttendance(
         snap.docs.map((d) => {
@@ -36,7 +59,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
       );
     });
     return () => unsub();
-  }, [spj?.id]);
+  }, [spj?.id, liveAttendance]);
 
   const activeDoc = documents.find(d => d.documentTypeCode === selectedDocCode);
   const data = activeDoc?.data || {};
