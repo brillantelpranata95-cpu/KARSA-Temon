@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut, User as FirebaseUser } from "firebase/auth";
 import { auth, googleProvider } from "../config/firebase";
 import { UserProfile } from "../types";
@@ -24,14 +24,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  // Seeding menulis ke Firestore, sehingga hanya boleh dijalankan setelah
+  // pengguna terautentikasi (aturan keamanan mensyaratkan request.auth != null).
+  const seedDoneRef = useRef(false);
 
   useEffect(() => {
-    // Attempt seeding in background without blocking Auth state
-    seedMasterDataIfEmpty().catch(err => console.warn("Background seed attempt warning:", err));
-
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
+        // Sinkronkan master data sekali per sesi, setelah login terkonfirmasi,
+        // supaya tipe dokumen baru (mis. Lampiran Foto) pasti terdaftar.
+        if (!seedDoneRef.current) {
+          seedDoneRef.current = true;
+          seedMasterDataIfEmpty().catch(err => console.warn("Background seed attempt warning:", err));
+        }
         try {
           const profile = await getOrCreateUserProfile(fbUser);
           setUser(profile);
@@ -40,6 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
         }
       } else {
+        // Logout: izinkan sinkronisasi ulang pada sesi berikutnya.
+        seedDoneRef.current = false;
         setUser(null);
       }
       setLoading(false);
