@@ -26,4 +26,14 @@ export const terbilangRupiah = (value: number) => {
   return `${cleaned || "nol"} rupiah`;
 };
 
+/**
+ * Kapitalkan setiap awal kata, sisanya huruf kecil.
+ * Dipakai khusus untuk Tagging Sub-Kegiatan pada dokumen Bend 26 — dokumen
+ * lain tetap memakai huruf kapital penuh agar formatnya tidak berubah.
+ */
+export const toTitleCase = (value?: string | null): string =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/(^|[\s\-/])(\S)/g, (_m, sep: string, ch: string) => sep + ch.toUpperCase());
+
 // Self-check: terbilangRupiah(123456) === "seratus dua puluh tiga ribu empat ratus lima puluh enam rupiah"

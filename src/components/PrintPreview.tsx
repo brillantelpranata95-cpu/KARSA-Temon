@@ -1,21 +1,23 @@
 import React from "react";
 import { SpjItem, SpjDocumentItem } from "../types";
-import { terbilangRupiah } from "../utils/format";
+import { terbilangRupiah, toTitleCase } from "../utils/format";
 import { formatDateDDMMYYYY, getNamaHari, getNamaHariCapitalized, getYearFromDate } from "../utils/date";
 import { drivePhotoUrl, collectDocPhotos, inspectDriveLink } from "../utils/drive";
+import { DriveImage } from "./DriveImage";
 import { ArrowLeft, ExternalLink, Printer } from "lucide-react";
 import { db } from "../config/firebase";
 import { collection, onSnapshot, getDocs } from "firebase/firestore";
 
 /**
- * Ukuran kertas Bend 26: setengah folio (folio 21,5 × 33 cm) dalam posisi
- * vertikal → 16,5 × 21,5 cm. Dipakai untuk mencetak dan untuk pratinjau.
- * `marginMm` adalah sisa tepi kertas agar isi tidak menempel pada batas cetak.
+ * Ukuran kertas Bend 26: setengah lembar folio dalam posisi horizontal
+ * (folio 21,5 × 33 cm dipotong melintang) → 33 × 16,5 cm.
+ * Lebar memenuhi panjang kertas folio, tingginya setengah halaman folio,
+ * dengan margin kiri/kanan/atas/bawah normal.
  */
 export const BEND26_PAGE = {
-  widthMm: 165,
-  heightMm: 215,
-  marginMm: 6,
+  widthMm: 330,
+  heightMm: 165,
+  marginMm: 12,
 };
 
 interface PrintPreviewProps {
@@ -79,10 +81,10 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
   // Lampiran foto: kumpulkan seluruh tautan Google Drive yang ditautkan
   const lampiranPhotos = React.useMemo(() => collectDocPhotos(activeDoc?.data), [activeDoc?.data]);
 
-  // Bend 26 dicetak pada kertas setengah folio vertikal (16,5 × 21,5 cm).
-  // Margin @page dibuat 0 dan tepi kertas diwakili padding dalam lembar
-  // dokumen, sehingga hasil cetak persis sama dengan yang terlihat di layar
-  // (WYSIWYG) dan tidak terpotong oleh margin bawaan browser.
+  // Bend 26 dicetak pada setengah folio horizontal (33 × 16,5 cm).
+  // Margin @page dibuat 0 agar browser tidak menyisipkan header/footer cetak
+  // (tanggal, judul halaman, alamat URL); tepi kertas diwakili padding di
+  // dalam lembar sehingga hasil cetak tetap memiliki margin normal.
   React.useEffect(() => {
     if (selectedDocCode !== "BEND_26") return;
     const style = document.createElement("style");
@@ -171,7 +173,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
         {/* ==================== BEND 26 TEMPLATE ==================== */}
         {selectedDocCode === "BEND_26" && (
           <div
-            className="bend26-sheet border border-black space-y-4 font-serif text-sm text-black"
+            className="bend26-sheet border border-black space-y-1.5 font-serif text-sm text-black"
             style={{
               width: `${BEND26_PAGE.widthMm}mm`,
               minHeight: `${BEND26_PAGE.heightMm}mm`,
@@ -185,11 +187,11 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               <p>Model : Bend. 26. a</p>
             </div>
 
-            <div className="text-center py-2">
-              <h1 className="text-xl font-bold uppercase tracking-wide underline">BUKTI KAS PENGELUARAN</h1>
+            <div className="text-center py-1">
+              <h1 className="text-lg font-bold uppercase tracking-wide underline">BUKTI KAS PENGELUARAN</h1>
             </div>
 
-            <div className="space-y-2 text-sm">
+            <div className="space-y-1 text-sm">
               <div className="grid grid-cols-12">
                 <span className="col-span-3 font-semibold">Terima dari</span>
                 <span className="col-span-1">:</span>
@@ -204,19 +206,19 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <span className="col-span-3 font-semibold">Untuk membayar</span>
                 <span className="col-span-1">:</span>
                 <span className="col-span-8 whitespace-pre-line">
-                  {`${spj.masterSnapshot.kodeRekening.nama}\n${spj.sharedData?.judulAktivitas || "Aktivitas belum diisi"} sebanyak ${spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal ${formatDateDDMMYYYY(spj.tanggal)}\n${spj.masterSnapshot.kegiatan.nama.toUpperCase()}`}
+                  {`${spj.masterSnapshot.kodeRekening.nama}\n${toTitleCase(spj.sharedData?.judulAktivitas) || "Aktivitas belum diisi"} sebanyak ${spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal ${formatDateDDMMYYYY(spj.tanggal)}\n${spj.masterSnapshot.kegiatan.nama.toUpperCase()}`}
                 </span>
               </div>
             </div>
 
             {/* Terbilang — angka rupiah memakai margin kiri yang sama dengan
                 baris "Terima dari / Uang sebesar / Untuk membayar" di atasnya. */}
-            <div className="border-t border-b border-black py-3">
+            <div className="border-t border-b border-black py-1.5">
               <div className="grid grid-cols-12 items-center font-sans">
                 <span className="col-span-3 font-bold text-base">Terbilang</span>
                 <span className="col-span-1">:</span>
                 <span className="col-span-8">
-                  <span className="inline-block text-lg font-extrabold bg-gray-100 px-4 py-1 rounded border border-black font-mono">
+                  <span className="inline-block text-base font-extrabold bg-gray-100 px-3 py-0.5 rounded border border-black font-mono">
                     Rp. {Number(data.nominal || 0).toLocaleString("id-ID")},-
                   </span>
                 </span>
@@ -224,83 +226,83 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
             </div>
 
             {/* Signature Area */}
-            <div className="grid grid-cols-3 text-center py-6 text-xs gap-4">
+            <div className="grid grid-cols-3 text-center py-1 text-xs gap-4">
               <div>
                 <p className="font-semibold">Mengetahui dan menyetujui</p>
                 <p className="font-semibold">Pengguna Anggaran / KPA</p>
-                <div className="h-16"></div>
+                <div className="h-10"></div>
                 <p className="font-bold underline">{spj.sharedData?.paNama || "…………………"}</p>
                 {spj.sharedData?.paNip ? <p>NIP. {spj.sharedData.paNip}</p> : null}
               </div>
               <div>
                 <p className="font-semibold">Bendahara Pengeluaran</p>
-                <div className="h-20"></div>
+                <div className="h-12"></div>
                 <p className="font-bold underline">{spj.sharedData?.bendaharaNama || "…………………"}</p>
                 {spj.sharedData?.bendaharaNip ? <p>NIP. {spj.sharedData.bendaharaNip}</p> : null}
               </div>
               <div>
                 <p className="font-semibold">Penerima</p>
-                <div className="h-20"></div>
+                <div className="h-12"></div>
                 <p className="font-bold underline">{data.penerima || "…………………………"}</p>
                 {data.penerimaNip ? <p>NIP. {data.penerimaNip}</p> : null}
               </div>
             </div>
 
             {/* Bottom 3-Column Verification Box (Sesuai Master & Foto) */}
-            <div className="border border-black grid grid-cols-3 text-[11px] divide-x divide-black mt-4">
+            <div className="border border-black grid grid-cols-3 text-[11px] divide-x divide-black">
               {/* Kolom 1: Penerimaan Barang/Jasa */}
-              <div className="p-2 flex flex-col justify-between">
+              <div className="p-1.5 flex flex-col justify-between">
                 <div>
                   <p>Barang tersebut telah diterima</p>
                   <p>dengan cukup dan baik</p>
                 </div>
-                <div className="mt-10 text-center">
+                <div className="mt-3 text-center">
                   <p>( ......................................... )</p>
                 </div>
               </div>
 
               {/* Kolom 2: Telah Dipungut (Rincian Pajak Vertikal) */}
-              <div className="p-2 flex flex-col justify-between">
+              <div className="p-1.5 flex flex-col justify-between">
                 <div>
-                  <p className="font-semibold mb-1">Telah dipungut</p>
+                  <p className="font-semibold mb-0.5">Telah dipungut</p>
                   <table className="w-full text-[10px]">
                     <tbody>
                       <tr>
-                        <td className="py-0.5 font-medium">PHR</td>
-                        <td className="py-0.5 text-right font-mono">Rp. {Number(data.phr || 0).toLocaleString("id-ID")}</td>
+                        <td className="py-0 font-medium">PHR</td>
+                        <td className="py-0 text-right font-mono">Rp. {Number(data.phr || 0).toLocaleString("id-ID")}</td>
                       </tr>
                       <tr>
-                        <td className="py-0.5 font-medium">PPh</td>
-                        <td className="py-0.5 text-right font-mono">Rp. {Number(data.pph || 0).toLocaleString("id-ID")}</td>
+                        <td className="py-0 font-medium">PPh</td>
+                        <td className="py-0 text-right font-mono">Rp. {Number(data.pph || 0).toLocaleString("id-ID")}</td>
                       </tr>
                       <tr>
-                        <td className="py-0.5 font-medium">PPN</td>
-                        <td className="py-0.5 text-right font-mono">Rp. {Number(data.ppn || 0).toLocaleString("id-ID")}</td>
+                        <td className="py-0 font-medium">PPN</td>
+                        <td className="py-0 text-right font-mono">Rp. {Number(data.ppn || 0).toLocaleString("id-ID")}</td>
                       </tr>
                       <tr className="border-t border-black font-bold">
-                        <td className="py-0.5">Total Pajak</td>
-                        <td className="py-0.5 text-right font-mono">Rp. {totalPajak.toLocaleString("id-ID")}</td>
+                        <td className="py-0">Total Pajak</td>
+                        <td className="py-0 text-right font-mono">Rp. {totalPajak.toLocaleString("id-ID")}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-4 text-center">
+                <div className="mt-2 text-center">
                   <p>( ......................................... )</p>
                 </div>
               </div>
 
               {/* Kolom 3: Pembukuan */}
-              <div className="p-2 flex flex-col justify-between">
-                <div className="space-y-0.5">
+              <div className="p-1.5 flex flex-col justify-between">
+                <div className="space-y-0">
                   <p className="font-semibold">Telah dibukukan</p>
                   <p>BK. Tgl .................... No. ....................</p>
                   <p className="font-mono text-[10px] break-all">
                     Kode Rek. {spj.masterSnapshot.kegiatan.kode} {spj.masterSnapshot.kodeRekening.kode}
                   </p>
                   <p>Tahun Anggaran : {getYearFromDate(spj.tanggal) || spj.tahunAnggaran || "2026"}</p>
-                  <p className="mt-1">Paraf</p>
+                  <p>Paraf</p>
                 </div>
-                <div className="mt-4 text-center">
+                <div className="mt-2 text-center">
                   <p>( ......................................... )</p>
                 </div>
               </div>
@@ -532,10 +534,11 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                     <div key={`${info?.fileId || idx}`} className="space-y-1.5">
                       <div className="border border-black p-1">
                         {src ? (
-                          <img
-                            src={src}
+                          <DriveImage
+                            link={link}
                             alt={`Lampiran foto ${idx + 1}`}
-                            className="w-full max-h-[110mm] object-contain"
+                            imgClassName="w-full max-h-[110mm] object-contain"
+                            fallbackClassName="p-6 text-center text-xs text-gray-500"
                             crossOrigin="anonymous"
                           />
                         ) : (

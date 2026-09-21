@@ -10,7 +10,8 @@
 
 /* ============================================================
    PRINT ISOLATION — only the official document is printed.
-   All KARSA app chrome (navbar, headers, buttons) is excluded.
+   All KARSA app chrome (navbar, headers, buttons) is excluded,
+   so the printed sheet is purely the SPJ document itself.
    ============================================================ */
 @media print {
   body * {
@@ -35,16 +36,24 @@
     display: none !important;
   }
 
-  /* Bend 26 — kertas setengah folio vertikal (16,5 × 21,5 cm).
-     Margin @page = 0, sehingga ukuran lembar dokumen tepat seukuran kertas.
-     Padding 6mm di dalam lembar berperan sebagai sisa tepi kertas agar isi
-     tidak menempel pada batas cetak. */
+  /* Margin kertas diwakili padding di dalam lembar dokumen.
+     @page margin 0 menonaktifkan header/footer cetak bawaan browser
+     (tanggal, judul halaman, alamat URL); padding ini mengembalikan margin
+     normal sehingga isi tidak menempel pada tepi kertas. */
+  .print-doc > * {
+    padding: 12mm !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Bend 26 — setengah folio horizontal (33 × 16,5 cm).
+     Lebarnya memenuhi panjang kertas folio, tingginya setengah halaman
+     folio. Ukuran lembar dibuat tetap agar tepat seukuran kertas. */
   .bend26-sheet {
-    width: 165mm !important;
-    height: 215mm !important;
-    min-height: 215mm !important;
-    max-height: 215mm !important;
-    padding: 6mm !important;
+    width: 330mm !important;
+    height: 165mm !important;
+    min-height: 165mm !important;
+    max-height: 165mm !important;
+    padding: 12mm !important;
     box-sizing: border-box !important;
     overflow: hidden !important;
     page-break-after: avoid;
@@ -52,7 +61,10 @@
   }
 }
 
+/* Ukuran kertas bawaan untuk dokumen selain Bend 26.
+   margin: 0 menonaktifkan header/footer cetak browser; margin cetak yang
+   sesungguhnya diberikan oleh padding di dalam lembar dokumen. */
 @page {
   size: A4;
-  margin: 12mm;
+  margin: 0;
 }

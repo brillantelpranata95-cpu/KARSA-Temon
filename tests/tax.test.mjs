@@ -5,6 +5,9 @@ import { loadTsModule } from "./_loadTs.mjs";
 const loadTax = () =>
   loadTsModule("../src/utils/tax.ts", [
     "calculateBend26Tax",
+    "calculatePhr",
+    "calculatePph",
+    "calculatePpn",
     "PHR_RATE",
     "PPH_RATE",
     "PPN_RATE",
@@ -57,4 +60,21 @@ test("pajak Bend 26: total adalah jumlah ketiga komponen", async () => {
 
   const r = calculateBend26Tax(2_500_000);
   assert.equal(r.total, r.phr + r.pph + r.ppn);
+});
+
+test("pajak Bend 26: tiap jenis pajak dapat dihitung sendiri-sendiri", async () => {
+  const { calculatePhr, calculatePph, calculatePpn, calculateBend26Tax } = await loadTax();
+
+  // Tombol terpisah harus menghasilkan angka yang sama dengan perhitungan gabungan.
+  const combined = calculateBend26Tax(1_000_000);
+  assert.equal(calculatePhr(1_000_000), combined.phr);
+  assert.equal(calculatePph(1_000_000), combined.pph);
+  assert.equal(calculatePpn(1_000_000), combined.ppn);
+
+  // Nilai tidak valid tetap aman (0, bukan NaN).
+  for (const fn of [calculatePhr, calculatePph, calculatePpn]) {
+    assert.equal(fn(""), 0);
+    assert.equal(fn(null), 0);
+    assert.equal(fn(NaN), 0);
+  }
 });

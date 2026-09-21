@@ -800,7 +800,6 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                           className="px-2 py-0.5 bg-white dark:bg-slate-700 text-violet-700 dark:text-violet-300 rounded text-[10px] font-medium border border-violet-200 dark:border-violet-700"
                         >
                           {d.documentTypeId.replace("doctype-", "").replace(/_/g, " ").toUpperCase()}
-                          {d.required ? "" : " (opsional)"}
                         </span>
                       ))}
                   </div>
@@ -811,7 +810,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
               <div className="grid grid-cols-12 gap-3">
                 <div className="col-span-12 sm:col-span-9">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
-                    Tagging Sub-Kegiatan (Otomatis Kapital)
+                    Tagging Sub-Kegiatan
                   </label>
                   <input
                     type="text"
@@ -838,7 +837,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
               {/* Tempat / Lokasi — basis data otomatis untuk Daftar Hadir & Notulensi */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
-                  Tempat / Lokasi (Otomatis Kapital)
+                  Tempat / Lokasi
                 </label>
                 <input
                   type="text"

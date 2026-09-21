@@ -86,28 +86,72 @@ test("lampiran foto: dokumen tanpa foto menghasilkan daftar kosong", async () =>
   assert.deepEqual(collectDocPhotos(null), []);
 });
 
-test("Bend 26: ukuran kertas setengah folio vertikal 16,5 × 21,5 cm", async () => {
+test("Bend 26: ukuran kertas setengah folio horizontal 33 × 16,5 cm", async () => {
   const source = await (await import("node:fs/promises")).readFile(
     new URL("../src/components/PrintPreview.tsx", import.meta.url),
     "utf8"
   );
 
-  // Setengah folio (21,5 × 33 cm) dipotong melintang → 16,5 × 21,5 cm.
-  assert.match(source, /widthMm:\s*165/, "lebar harus 165mm");
-  assert.match(source, /heightMm:\s*215/, "tinggi harus 215mm");
+  // Panjang memenuhi panjang kertas folio (33 cm), tingginya setengah halaman
+  // folio (16,5 cm) — posisi horizontal/memanjang.
+  assert.match(source, /widthMm:\s*330/, "lebar harus 330mm (panjang folio)");
+  assert.match(source, /heightMm:\s*165/, "tinggi harus 165mm (setengah halaman folio)");
+  // Margin normal di tepi kertas.
+  assert.match(source, /marginMm:\s*12/, "margin kertas harus normal (12mm)");
   // Aturan @page untuk kertas setengah folio harus disuntikkan saat Bend 26 dipilih.
   assert.match(source, /@page \{ size: \$\{BEND26_PAGE\.widthMm\}mm \$\{BEND26_PAGE\.heightMm\}mm/);
 });
 
-test("Bend 26: rincian pajak PHR/PPh/PPN tersedia di editor", async () => {
+test("Bend 26: tombol hitung pajak terpisah untuk PHR, PPh, dan PPN", async () => {
   const source = await (await import("node:fs/promises")).readFile(
     new URL("../src/components/SpjWizard.tsx", import.meta.url),
     "utf8"
   );
 
-  assert.match(source, /Hitung Pajak Otomatis/);
-  assert.match(source, /handleAutoTax/);
-  assert.match(source, /calculateBend26Tax/);
+  // Satu tombol per jenis pajak — tidak semua pajak dipakai bersamaan.
+  assert.match(source, /handleCalcTax/);
+  assert.match(source, /Hitung \{label\}/);
+  assert.match(source, /calculatePhr/);
+  assert.match(source, /calculatePph/);
+  assert.match(source, /calculatePpn/);
+  // Tombol tunggal "Hitung Pajak Otomatis" sudah tidak dipakai lagi.
+  assert.doesNotMatch(source, /handleAutoTax/);
+});
+
+test("kesimpulan SPJ Lapangan: Enter otomatis membuat penomoran baru", async () => {
+  const source = await (await import("node:fs/promises")).readFile(
+    new URL("../src/components/SpjWizard.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(source, /handleNumberedEnter/);
+  assert.match(source, /onKeyDown=\{\(e\) => handleNumberedEnter\(e, "kesimpulanHasil"\)\}/);
+});
+
+test("autocomplete: nama penerima & pembuat laporan memakai riwayat tersimpan", async () => {
+  const source = await (await import("node:fs/promises")).readFile(
+    new URL("../src/components/SpjWizard.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(source, /SuggestionInput/);
+  assert.match(source, /storageKey="bend26\.penerima"/);
+  assert.match(source, /storageKey="lapangan\.pembuatLaporan"/);
+});
+
+test("dokumen cetak bersih: tidak ada teks dalam kurung non-substantif", async () => {
+  const fs = await import("node:fs/promises");
+  for (const file of [
+    "../src/components/SpjList.tsx",
+    "../src/components/SpjWizard.tsx",
+    "../src/components/PackageTemplates.tsx",
+  ]) {
+    const source = await fs.readFile(new URL(file, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /Otomatis Kapital/, `${file}: label "Otomatis Kapital" harus dihapus`);
+    assert.doesNotMatch(source, /\(Otomatis\)/, `${file}: label "(Otomatis)" harus dihapus`);
+    assert.doesNotMatch(source, /\(opsional\)/, `${file}: label "(opsional)" harus dihapus`);
+    assert.doesNotMatch(source, /LINK DRIVE/, `${file}: badge "LINK DRIVE" harus dihapus`);
+  }
 });
 
 test("daftar hadir: kolom tanda tangan tanpa titik-titik", async () => {

@@ -39,3 +39,19 @@ export const calculateBend26Tax = (nominal: unknown): TaxBreakdown => {
   const ppn = Math.round(base * PPN_RATE);
   return { nominal: base, phr, pph, ppn, total: phr + pph + ppn };
 };
+
+/**
+ * Perhitungan per jenis pajak — dipakai tombol terpisah di editor Bend 26.
+ * Tidak semua pajak dipakai bersamaan, sehingga tiap kolom punya tombolnya
+ * sendiri dan hanya mengisi kolom itu saja.
+ */
+export const calculatePhr = (nominal: unknown): number =>
+  Math.round(toPositiveNumber(nominal) * PHR_RATE);
+
+export const calculatePph = (nominal: unknown): number => {
+  const base = toPositiveNumber(nominal);
+  return Math.round((base - calculatePhr(base)) * PPH_RATE);
+};
+
+export const calculatePpn = (nominal: unknown): number =>
+  Math.round(toPositiveNumber(nominal) * PPN_RATE);

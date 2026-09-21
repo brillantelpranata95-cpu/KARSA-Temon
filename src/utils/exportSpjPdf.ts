@@ -41,17 +41,38 @@ const waitForAssets = async (host: HTMLElement) => {
 };
 
 /**
- * Ukuran kertas per jenis dokumen. Satu halaman PDF = satu lembar dokumen.
- * Bend 26 memakai kertas setengah folio vertikal (16,5 × 21,5 cm), dokumen
- * lain tetap A4 (lebar 210mm) agar cetakan tidak terpotong atau menyisakan
- * bidang kosong.
+ * Ukuran & orientasi kertas per jenis dokumen. Satu halaman PDF = satu lembar
+ * dokumen. Bend 26 memakai setengah folio HORIZONTAL (33 × 16,5 cm) sehingga
+ * panjangnya memenuhi panjang kertas folio; dokumen lain tetap A4.
+ *
+ * Catatan jsPDF: `format` dianggap sebagai [tinggi, lebar] untuk orientasi
+ * landscape, jadi Bend 26 memakai [165, 330] + orientation "landscape" agar
+ * halaman yang dihasilkan benar-benar 330mm × 165mm.
  */
-const PAGE_FORMAT: Record<string, [number, number]> = {
-  BEND_26: [165, 215],
+interface PageFormat {
+  format: [number, number];
+  orientation: "portrait" | "landscape";
+}
+
+const PAGE_FORMAT: Record<string, PageFormat> = {
+  BEND_26: { format: [165, 330], orientation: "landscape" },
 };
 
 /** Ukuran A4 dalam mm — dipakai sebagai ukuran bawaan halaman PDF. */
 const A4_FORMAT: [number, number] = [210, 297];
+
+const A4_PAGE: PageFormat = { format: A4_FORMAT, orientation: "portrait" };
+
+/** Lebar host render (px) per dokumen agar tata letak sama dengan hasil cetak. */
+const HOST_WIDTH: Record<string, number> = {
+  // Bend 26 = 330mm ≈ 1247px pada 96dpi; beri sedikit ruang agar tidak membungkus.
+  BEND_26: 1250,
+};
+
+const DEFAULT_HOST_WIDTH = 1000;
+
+const isA4 = (page: PageFormat) =>
+  page.orientation === "portrait" && page.format[0] === A4_FORMAT[0] && page.format[1] === A4_FORMAT[1];
 
 export const exportSpjPdf = async (
   spj: SpjItem,
@@ -85,7 +106,7 @@ export const exportSpjPdf = async (
     import("../components/PrintPreview"),
   ]);
 
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: A4_FORMAT });
+  const pdf = new jsPDF({ orientation: A4_PAGE.orientation, unit: "mm", format: A4_FORMAT });
   let firstPage = true;
 
   for (let i = 0; i < renderable.length; i++) {
@@ -93,27 +114,28 @@ export const exportSpjPdf = async (
     const label = docItem.documentTypeCode.replace(/_/g, " ");
     onProgress?.(`Dokumen ${i + 1}/${renderable.length}: ${label}`);
 
-    // Bend 26 dicetak pada setengah folio vertikal; dokumen lain tetap A4.
-    const pageFormat = PAGE_FORMAT[docItem.documentTypeCode] || A4_FORMAT;
+    // Bend 26 dicetak pada setengah folio horizontal; dokumen lain tetap A4.
+    const page = PAGE_FORMAT[docItem.documentTypeCode] || A4_PAGE;
 
     if (firstPage) {
       // jsPDF selalu membuat satu halaman A4 saat dibuat; ganti ukurannya bila
       // dokumen pertama bukan A4 agar tidak ada halaman kosong di depan.
-      if (pageFormat !== A4_FORMAT) {
+      if (!isA4(page)) {
         pdf.deletePage(1);
-        pdf.addPage(pageFormat, "portrait");
+        pdf.addPage(page.format, page.orientation);
       }
       firstPage = false;
     } else {
-      pdf.addPage(pageFormat, "portrait");
+      pdf.addPage(page.format, page.orientation);
     }
 
-    const [pageW, pageH] = pageFormat;
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
 
     const host = document.createElement("div");
     // Lebar host disesuaikan dengan lebar kertas dokumen agar tata letak saat
-    // dirender identik dengan hasil cetak (Bend 26 = 165mm ≈ 624px).
-    const hostWidth = docItem.documentTypeCode === "BEND_26" ? 700 : 1000;
+    // dirender identik dengan hasil cetak.
+    const hostWidth = HOST_WIDTH[docItem.documentTypeCode] || DEFAULT_HOST_WIDTH;
     host.style.cssText = `position:fixed;left:-10000px;top:0;width:${hostWidth}px;background:#ffffff;`;
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -154,8 +176,9 @@ export const exportSpjPdf = async (
 
       for (let p = 0; p < pageCount; p++) {
         if (p > 0) {
-          // Halaman lanjutan memakai format dokumen yang sama agar tidak terpotong.
-          pdf.addPage(pageFormat, "portrait");
+          // Halaman lanjutan memakai format & orientasi dokumen yang sama agar
+          // tidak terpotong.
+          pdf.addPage(page.format, page.orientation);
         }
         pdf.addImage(imgData, "JPEG", 0, -p * pageH, pageW, imgH);
       }

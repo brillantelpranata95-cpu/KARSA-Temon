@@ -597,14 +597,14 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                           type="text"
                           value={newRow.nip}
                           onChange={(e) => setNewRows((p) => ({ ...p, [field.type]: { ...newRow, nip: e.target.value } }))}
-                          placeholder="NIP (opsional)"
+                          placeholder="NIP"
                           className="border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg p-2 text-xs text-gray-900 dark:text-white"
                         />
                         <input
                           type="text"
                           value={newRow.pangkat}
                           onChange={(e) => setNewRows((p) => ({ ...p, [field.type]: { ...newRow, pangkat: e.target.value } }))}
-                          placeholder="Pangkat (opsional)"
+                          placeholder="Pangkat"
                           className="border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg p-2 text-xs text-gray-900 dark:text-white"
                         />
                       </div>

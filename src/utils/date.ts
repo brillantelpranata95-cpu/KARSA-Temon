@@ -23,7 +23,7 @@ const NAMA_BULAN_UPPER = [
   "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"
 ];
 
-const NAMA_HARI_CAP = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const NAMA_HARI_CAP = ["MINGGU", "SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"];
 const NAMA_HARI_UPPER = ["MINGGU", "SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"];
 
 /** Parse any supported date representation into a local Date (or null). */
@@ -104,9 +104,13 @@ export const getNamaHari = (dateInput?: string | Date | null): string => {
   return NAMA_HARI_UPPER[d.getDay()];
 };
 
+/**
+ * Nama hari selalu ditulis KAPITAL di dalam tanggal, baik pada dokumen cetak
+ * maupun pada pratinjau di editor, agar penulisannya seragam di seluruh berkas.
+ */
 export const getNamaHariCapitalized = (dateInput?: string | Date | null): string => {
   const d = parseAnyDate(dateInput);
-  if (!d) return "Rabu";
+  if (!d) return "RABU";
   return NAMA_HARI_CAP[d.getDay()];
 };
 
