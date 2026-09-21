@@ -23,6 +23,7 @@ import {
   PPN_RATE,
 } from "../utils/tax";
 import { inspectDriveLink, parseDriveFileId } from "../utils/drive";
+import { applyNumberedEnter } from "../utils/numbering";
 import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari } from "../utils/date";
 import { SuggestionInput } from "./SuggestionInput";
 import { DriveImage } from "./DriveImage";
@@ -203,47 +204,28 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
   };
 
   /**
-   * Kesimpulan SPJ Aktivitas Lapangan selalu memakai penomoran. Menekan Enter
-   * otomatis melanjutkan nomor berikutnya, dan baris kosong di akhir tidak
-   * menambah nomor baru.
+   * Kesimpulan SPJ Aktivitas Lapangan memakai penomoran otomatis yang hanya
+   * melanjutkan baris yang sudah bernomor:
+   *   - Kolom masih kosong → Enter membuat baris baru biasa, tanpa "1. ".
+   *   - Baris bernomor berisi teks → Enter melanjutkan nomor berikutnya.
+   *   - Baris hanya berisi nomor (mis. "2. ") → Enter keluar dari daftar
+   *     dengan membuang nomor menggantung, agar tidak ada nomor tanpa isi
+   *     yang ikut tercetak.
+   * Logikanya ada di utils/numbering.ts agar dapat diuji terpisah.
    */
   const handleNumberedEnter = (
     e: React.KeyboardEvent<HTMLTextAreaElement>,
     key: string
   ) => {
     if (e.key !== "Enter" || e.shiftKey) return;
-    e.preventDefault();
     const el = e.currentTarget;
-    const text = el.value;
-    const caret = el.selectionStart ?? text.length;
-    const before = text.slice(0, caret);
-    const after = text.slice(caret);
+    const result = applyNumberedEnter(el.value, el.selectionStart);
+    // Baris belum bernomor: biarkan Enter berperilaku bawaan.
+    if (!result.handled) return;
 
-    // Nomor baris terakhir yang sudah ada sebelum kursor.
-    const lines = before.split("\n");
-    const lastLine = lines[lines.length - 1] ?? "";
-    const current = lastLine.match(/^(\s*)(\d+)\.\s*(.*)$/);
-
-    let insert: string;
-    if (current) {
-      // Baris kosong (hanya nomor) — jangan tambah nomor baru.
-      if (!current[3].trim()) {
-        return;
-      }
-      insert = `\n${current[1]}${Number(current[2]) + 1}. `;
-    } else if (!lastLine.trim()) {
-      // Baris kosong tanpa nomor: mulai dari 1.
-      insert = "1. ";
-    } else {
-      // Melanjutkan teks biasa: hitung nomor berikutnya dari seluruh isi.
-      const numbers = text.match(/(?:^|\n)\s*(\d+)\.\s/g) || [];
-      const next = numbers.length + 1;
-      insert = `\n${next}. `;
-    }
-
-    const nextValue = before + insert + after;
-    handleFormChange(key, nextValue);
-    const pos = caret + insert.length;
+    e.preventDefault();
+    handleFormChange(key, result.value);
+    const pos = result.caret;
     requestAnimationFrame(() => {
       el.selectionStart = el.selectionEnd = pos;
     });
