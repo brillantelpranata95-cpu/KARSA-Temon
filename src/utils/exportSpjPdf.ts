@@ -148,6 +148,9 @@ export const exportSpjPdf = async (
           onBack: () => {},
           initialDocCode: docItem.documentTypeCode,
           liveAttendance: false,
+          // Jangan pakai skala pratinjau layar: gambar harus diambil pada
+          // ukuran asli 330mm agar rasio halaman tetap 330 × 165 mm.
+          screenFit: false,
         })
       );
 

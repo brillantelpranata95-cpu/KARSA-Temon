@@ -20,6 +20,19 @@ export const BEND26_PAGE = {
   marginMm: 12,
 };
 
+/**
+ * Lebar lembar Bend 26 dalam px CSS (1mm = 96/25.4px) — acuan perhitungan
+ * skala pratinjau layar.
+ */
+const BEND26_NATURAL_WIDTH_PX = (BEND26_PAGE.widthMm * 96) / 25.4;
+
+/**
+ * Batas bawah pengecilan pratinjau layar. Di bawah nilai ini teks tidak lagi
+ * terbaca, sehingga lembar dibiarkan dapat digeser mendatar di dalam kartu
+ * pratinjau (halaman tetap tidak ikut bergeser).
+ */
+const BEND26_MIN_ZOOM = 0.5;
+
 interface PrintPreviewProps {
   spj: SpjItem;
   documents: SpjDocumentItem[];
@@ -31,6 +44,12 @@ interface PrintPreviewProps {
    * Dipakai saat mengekspor PDF agar tidak menambah reads Firestore.
    */
   liveAttendance?: boolean;
+  /**
+   * Saat false, lembar Bend 26 tidak diperkecil pada pratinjau layar sehingga
+   * dirender tepat 330mm. Dipakai saat mengekspor PDF agar gambar yang
+   * diambil beresolusi penuh dan rasio halaman tetap 330 × 165 mm.
+   */
+  screenFit?: boolean;
 }
 
 /** Format a list of ISO dates as "01-02-2026 s.d. 03-02-2026" or comma-joined. */
@@ -41,10 +60,15 @@ const formatDateList = (dates?: string[], fallback?: string): string => {
   return sorted.map((d) => formatDateDDMMYYYY(d)).join(", ");
 };
 
-export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack, initialDocCode, liveAttendance = true }) => {
+export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack, initialDocCode, liveAttendance = true, screenFit = true }) => {
   const [selectedDocCode, setSelectedDocCode] = React.useState<string>(initialDocCode || "BEND_26");
   // Live QR attendance rows so the printed daftar hadir matches what was submitted
   const [qrAttendance, setQrAttendance] = React.useState<Array<{ id: string; nama: string; jabatan: string; ttdImage?: string }>>([]);
+  // Lembar Bend 26 (330mm) lebih lebar daripada kartu pratinjau, jadi pada layar
+  // diskalakan agar tidak menimbulkan geser mendatar. Saat mencetak, skala
+  // dikembalikan ke 1 lewat .bend26-fit-inner pada aturan @media print.
+  const [screenZoom, setScreenZoom] = React.useState(1);
+  const sheetBoxRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     if (!spj?.id) return;
@@ -93,6 +117,36 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
     document.head.appendChild(style);
     return () => style.remove();
   }, [selectedDocCode]);
+
+  // Skala pratinjau layar: lembar 330mm dikecilkan agar pas di kartu pratinjau,
+  // sehingga tidak ada geser mendatar di halaman. Perhitungan diulang saat
+  // ukuran kartu berubah (jendela di-resize / sidebar dibuka).
+  React.useEffect(() => {
+    if (!screenFit || selectedDocCode !== "BEND_26") {
+      setScreenZoom(1);
+      return;
+    }
+    const box = sheetBoxRef.current;
+    if (!box) return;
+
+    const recompute = () => {
+      const available = box.clientWidth;
+      if (!available) return;
+      const zoom = Math.min(1, available / BEND26_NATURAL_WIDTH_PX);
+      // Jangan mengecilkan sampai teks tak terbaca; sisanya digeser mendatar
+      // di dalam kartu (bukan di halaman).
+      setScreenZoom(Math.max(BEND26_MIN_ZOOM, Math.floor(zoom * 1000) / 1000));
+    };
+
+    recompute();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", recompute);
+      return () => window.removeEventListener("resize", recompute);
+    }
+    const observer = new ResizeObserver(recompute);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [screenFit, selectedDocCode]);
 
   /** Merge QR attendance (real-time) with manually typed peserta rows, QR first. */
   const mergedPeserta = React.useMemo(() => {
@@ -172,15 +226,17 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
         
         {/* ==================== BEND 26 TEMPLATE ==================== */}
         {selectedDocCode === "BEND_26" && (
-          <div
-            className="bend26-sheet border border-black space-y-1.5 font-serif text-sm text-black"
-            style={{
-              width: `${BEND26_PAGE.widthMm}mm`,
-              minHeight: `${BEND26_PAGE.heightMm}mm`,
-              padding: `${BEND26_PAGE.marginMm}mm`,
-              boxSizing: "border-box",
-            }}
-          >
+          <div className={screenFit ? "bend26-fit" : undefined} ref={sheetBoxRef}>
+            <div className="bend26-fit-inner" style={{ zoom: screenZoom }}>
+              <div
+                className="bend26-sheet border border-black space-y-1.5 font-serif text-sm text-black"
+                style={{
+                  width: `${BEND26_PAGE.widthMm}mm`,
+                  minHeight: `${BEND26_PAGE.heightMm}mm`,
+                  padding: `${BEND26_PAGE.marginMm}mm`,
+                  boxSizing: "border-box",
+                }}
+              >
             {/* Baris lembar/model — "Model : Bend. 26. a" diletakkan di pojok kanan atas */}
             <div className="flex justify-between items-start text-xs border-b border-black pb-2">
               <p>Lembar : I / II / III / IV / V</p>
@@ -305,6 +361,8 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <div className="mt-2 text-center">
                   <p>( ......................................... )</p>
                 </div>
+              </div>
+            </div>
               </div>
             </div>
           </div>

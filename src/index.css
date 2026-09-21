@@ -9,6 +9,19 @@
 }
 
 /* ============================================================
+   PRATINJAU LAYAR BEND 26
+   Lembar Bend 26 berukuran 330mm (≈1247px) — lebih lebar daripada kartu
+   pratinjau — sehingga tanpa penanganan khusus isinya mendorong lebar
+   halaman dan muncul geser mendatar. Skalanya diatur lewat inline style
+   (zoom) oleh PrintPreview; pembungkus ini hanya menahan sisa geseran di
+   dalam kartu agar halaman tidak ikut bergeser.
+   ============================================================ */
+.bend26-fit {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* ============================================================
    PRINT ISOLATION — only the official document is printed.
    All KARSA app chrome (navbar, headers, buttons) is excluded,
    so the printed sheet is purely the SPJ document itself.
@@ -58,6 +71,17 @@
     overflow: hidden !important;
     page-break-after: avoid;
     break-after: avoid;
+  }
+
+  /* Pembungkus pratinjau layar tidak boleh ikut tercetak: skala layar
+     dikembalikan ke 1 dan tepi kertas diwakili padding lembar itu sendiri,
+     bukan padding pembungkus. */
+  .bend26-fit {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .bend26-fit-inner {
+    zoom: 1 !important;
   }
 }
 

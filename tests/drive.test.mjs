@@ -188,3 +188,33 @@ test("lampiran foto terdaftar sebagai tipe dokumen & punya template cetak", asyn
   assert.match(api, /syncDocumentTypes/);
   assert.match(preview, /LAMPIRAN_FOTO/);
 });
+
+test("Bend 26: lembar 330mm diperkecil pada layar agar halaman tidak bergeser", async () => {
+  const fs = await import("node:fs/promises");
+  const preview = await fs.readFile(new URL("../src/components/PrintPreview.tsx", import.meta.url), "utf8");
+  const css = await fs.readFile(new URL("../src/index.css", import.meta.url), "utf8");
+
+  // Skala dihitung dari lebar kartu pratinjau, bukan dipatok angka tetap.
+  assert.match(preview, /BEND26_NATURAL_WIDTH_PX/, "acuan lebar asli lembar harus ada");
+  assert.match(preview, /ResizeObserver/, "skala harus dihitung ulang saat lebar kartu berubah");
+  assert.match(preview, /BEND26_MIN_ZOOM/, "harus ada batas bawah pengecilan");
+  // Pembungkus penahan geser + elemen berskala.
+  assert.match(preview, /bend26-fit/);
+  assert.match(preview, /bend26-fit-inner/);
+  assert.match(css, /\.bend26-fit\s*\{[^}]*overflow-x:\s*auto/s, "sisa geseran harus tertahan di kartu");
+});
+
+test("Bend 26: cetak tetap 1:1 (330 × 165 mm), skala layar dinetralkan", async () => {
+  const fs = await import("node:fs/promises");
+  const css = await fs.readFile(new URL("../src/index.css", import.meta.url), "utf8");
+  const preview = await fs.readFile(new URL("../src/components/PrintPreview.tsx", import.meta.url), "utf8");
+  const exportPdf = await fs.readFile(new URL("../src/utils/exportSpjPdf.ts", import.meta.url), "utf8");
+
+  // Aturan cetak harus mengembalikan zoom ke 1 dan membuang pembungkus layar,
+  // supaya hasil cetak/PDF tetap seukuran kertas.
+  assert.match(css, /\.bend26-fit-inner\s*\{\s*zoom:\s*1\s*!important/, "zoom cetak harus 1");
+  assert.match(css, /\.bend26-fit\s*\{[^}]*overflow:\s*visible\s*!important/s, "pembungkus layar tidak boleh memotong cetakan");
+  // Ekspor PDF merender pada ukuran asli (tanpa skala layar).
+  assert.match(exportPdf, /screenFit:\s*false/, "ekspor PDF harus memakai ukuran asli");
+  assert.match(preview, /screenFit = true/, "pratinjau layar memakai skala secara bawaan");
+});
