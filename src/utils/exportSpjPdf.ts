@@ -18,6 +18,7 @@ const DOC_ORDER = [
   "DAFTAR_HADIR",
   "NOTULENSI_RAPAT",
   "SPJ_AKTIVITAS_LAPANGAN",
+  "LAMPIRAN_FOTO",
   "SURAT_PERINTAH",
   "SURAT_UNDANGAN",
 ];
@@ -38,6 +39,19 @@ const waitForAssets = async (host: HTMLElement) => {
   const imgs = Array.from(host.querySelectorAll("img"));
   await Promise.all(imgs.map((img) => img.decode().catch(() => {})));
 };
+
+/**
+ * Ukuran kertas per jenis dokumen. Satu halaman PDF = satu lembar dokumen.
+ * Bend 26 memakai kertas setengah folio vertikal (16,5 × 21,5 cm), dokumen
+ * lain tetap A4 (lebar 210mm) agar cetakan tidak terpotong atau menyisakan
+ * bidang kosong.
+ */
+const PAGE_FORMAT: Record<string, [number, number]> = {
+  BEND_26: [165, 215],
+};
+
+/** Ukuran A4 dalam mm — dipakai sebagai ukuran bawaan halaman PDF. */
+const A4_FORMAT: [number, number] = [210, 297];
 
 export const exportSpjPdf = async (
   spj: SpjItem,
@@ -71,9 +85,7 @@ export const exportSpjPdf = async (
     import("../components/PrintPreview"),
   ]);
 
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pageW = pdf.internal.pageSize.getWidth();
-  const pageH = pdf.internal.pageSize.getHeight();
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: A4_FORMAT });
   let firstPage = true;
 
   for (let i = 0; i < renderable.length; i++) {
@@ -81,8 +93,28 @@ export const exportSpjPdf = async (
     const label = docItem.documentTypeCode.replace(/_/g, " ");
     onProgress?.(`Dokumen ${i + 1}/${renderable.length}: ${label}`);
 
+    // Bend 26 dicetak pada setengah folio vertikal; dokumen lain tetap A4.
+    const pageFormat = PAGE_FORMAT[docItem.documentTypeCode] || A4_FORMAT;
+
+    if (firstPage) {
+      // jsPDF selalu membuat satu halaman A4 saat dibuat; ganti ukurannya bila
+      // dokumen pertama bukan A4 agar tidak ada halaman kosong di depan.
+      if (pageFormat !== A4_FORMAT) {
+        pdf.deletePage(1);
+        pdf.addPage(pageFormat, "portrait");
+      }
+      firstPage = false;
+    } else {
+      pdf.addPage(pageFormat, "portrait");
+    }
+
+    const [pageW, pageH] = pageFormat;
+
     const host = document.createElement("div");
-    host.style.cssText = "position:fixed;left:-10000px;top:0;width:1000px;background:#ffffff;";
+    // Lebar host disesuaikan dengan lebar kertas dokumen agar tata letak saat
+    // dirender identik dengan hasil cetak (Bend 26 = 165mm ≈ 624px).
+    const hostWidth = docItem.documentTypeCode === "BEND_26" ? 700 : 1000;
+    host.style.cssText = `position:fixed;left:-10000px;top:0;width:${hostWidth}px;background:#ffffff;`;
     document.body.appendChild(host);
     const root = createRoot(host);
 
@@ -105,7 +137,11 @@ export const exportSpjPdf = async (
       const target = host.querySelector<HTMLElement>(".print-doc");
       if (!target) throw new Error("Template dokumen tidak ditemukan.");
 
-      const canvas = await html2canvas(target, {
+      // Ambil elemen dokumennya saja (tanpa bingkai/padding layar) supaya
+      // rasio gambar sama dengan rasio kertas.
+      const docElement = (target.firstElementChild as HTMLElement) || target;
+
+      const canvas = await html2canvas(docElement, {
         scale: 2,
         backgroundColor: "#ffffff",
         useCORS: true,
@@ -117,9 +153,11 @@ export const exportSpjPdf = async (
       const pageCount = Math.max(1, Math.ceil(imgH / pageH));
 
       for (let p = 0; p < pageCount; p++) {
-        if (!firstPage) pdf.addPage();
+        if (p > 0) {
+          // Halaman lanjutan memakai format dokumen yang sama agar tidak terpotong.
+          pdf.addPage(pageFormat, "portrait");
+        }
         pdf.addImage(imgData, "JPEG", 0, -p * pageH, pageW, imgH);
-        firstPage = false;
       }
     } finally {
       root.unmount();

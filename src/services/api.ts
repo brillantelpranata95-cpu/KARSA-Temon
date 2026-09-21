@@ -57,7 +57,42 @@ export const sanitizeData = <T extends Record<string, any>>(obj: T): T => {
 };
 
 // ------------------- SEED MASTER DATA -------------------
+/**
+ * Sinkronisasi tipe dokumen: memastikan seluruh tipe dokumen bawaan (termasuk
+ * yang baru ditambahkan, mis. Lampiran Foto) tersedia di deployment yang sudah
+ * berjalan. Dibuat idempoten dengan ID tetap sehingga aman dipanggil berulang
+ * dan tidak menimpa perubahan admin (hanya field yang kosong yang diisi).
+ */
+export const syncDocumentTypes = async (): Promise<void> => {
+  try {
+    const DEFAULT_DOC_TYPES: DocumentTypeItem[] = [
+      { id: "doctype-bend26", code: "BEND_26", name: "Bend 26 (Bukti Kas Pengeluaran)", description: "Kuitansi Bukti Kas Pengeluaran Keuangan", category: "FINANCIAL", isActive: true },
+      { id: "doctype-undangan", code: "SURAT_UNDANGAN", name: "Surat Undangan", description: "Surat Undangan Rapat / URL Google Drive", category: "ADMINISTRATIVE", isActive: true },
+      { id: "doctype-daftarhadir", code: "DAFTAR_HADIR", name: "Daftar Hadir", description: "Daftar Hadir Peserta Rapat / Acara", category: "ADMINISTRATIVE", isActive: true },
+      { id: "doctype-notulen", code: "NOTULENSI_RAPAT", name: "Notulen Rapat", description: "Notulensi Rapat Koordinasi", category: "REPORT", isActive: true },
+      { id: "doctype-lap-lapangan", code: "SPJ_AKTIVITAS_LAPANGAN", name: "Laporan Aktivitas Lapangan", description: "Laporan Hasil Pelaksanaan Tugas Lapangan", category: "REPORT", isActive: true },
+      { id: "doctype-lampiran-foto", code: "LAMPIRAN_FOTO", name: "Lampiran Foto", description: "Dokumentasi Foto Kegiatan — tautkan tautan Google Drive", category: "REPORT", isActive: true },
+      { id: "doctype-suratperintah", code: "SURAT_PERINTAH", name: "Surat Perintah", description: "Surat Perintah Tugas / URL Google Drive", category: "ADMINISTRATIVE", isActive: true }
+    ];
+
+    for (const dt of DEFAULT_DOC_TYPES) {
+      const ref = doc(db, "documentTypes", dt.id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, sanitizeData({ ...dt, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+        invalidateCache("documentTypes:");
+      }
+    }
+  } catch (e) {
+    console.warn("Document type sync skipped:", e);
+  }
+};
+
 export const seedMasterDataIfEmpty = async () => {
+  // Tipe dokumen bawaan selalu disinkronkan, bahkan pada data yang sudah ada,
+  // supaya tipe baru (Lampiran Foto) langsung tersedia tanpa migrasi manual.
+  await syncDocumentTypes();
+
   try {
     const jawatanSnap = await getDocs(collection(db, "jawatan"));
     if (jawatanSnap.empty) {
@@ -146,6 +181,7 @@ export const seedMasterDataIfEmpty = async () => {
         { id: "doctype-daftarhadir", code: "DAFTAR_HADIR", name: "Daftar Hadir", description: "Daftar Hadir Peserta Rapat / Acara", category: "ADMINISTRATIVE", isActive: true },
         { id: "doctype-notulen", code: "NOTULENSI_RAPAT", name: "Notulen Rapat", description: "Notulensi Rapat Koordinasi", category: "REPORT", isActive: true },
         { id: "doctype-lap-lapangan", code: "SPJ_AKTIVITAS_LAPANGAN", name: "Laporan Aktivitas Lapangan", description: "Laporan Hasil Pelaksanaan Tugas Lapangan", category: "REPORT", isActive: true },
+        { id: "doctype-lampiran-foto", code: "LAMPIRAN_FOTO", name: "Lampiran Foto", description: "Dokumentasi Foto Kegiatan — tautkan tautan Google Drive", category: "REPORT", isActive: true },
         { id: "doctype-suratperintah", code: "SURAT_PERINTAH", name: "Surat Perintah", description: "Surat Perintah Tugas / URL Google Drive", category: "ADMINISTRATIVE", isActive: true }
       ];
 

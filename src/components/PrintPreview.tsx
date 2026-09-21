@@ -2,9 +2,21 @@ import React from "react";
 import { SpjItem, SpjDocumentItem } from "../types";
 import { terbilangRupiah } from "../utils/format";
 import { formatDateDDMMYYYY, getNamaHari, getNamaHariCapitalized, getYearFromDate } from "../utils/date";
+import { drivePhotoUrl, collectDocPhotos, inspectDriveLink } from "../utils/drive";
 import { ArrowLeft, ExternalLink, Printer } from "lucide-react";
 import { db } from "../config/firebase";
 import { collection, onSnapshot, getDocs } from "firebase/firestore";
+
+/**
+ * Ukuran kertas Bend 26: setengah folio (folio 21,5 × 33 cm) dalam posisi
+ * vertikal → 16,5 × 21,5 cm. Dipakai untuk mencetak dan untuk pratinjau.
+ * `marginMm` adalah sisa tepi kertas agar isi tidak menempel pada batas cetak.
+ */
+export const BEND26_PAGE = {
+  widthMm: 165,
+  heightMm: 215,
+  marginMm: 6,
+};
 
 interface PrintPreviewProps {
   spj: SpjItem;
@@ -63,6 +75,22 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
 
   const activeDoc = documents.find(d => d.documentTypeCode === selectedDocCode);
   const data = activeDoc?.data || {};
+
+  // Lampiran foto: kumpulkan seluruh tautan Google Drive yang ditautkan
+  const lampiranPhotos = React.useMemo(() => collectDocPhotos(activeDoc?.data), [activeDoc?.data]);
+
+  // Bend 26 dicetak pada kertas setengah folio vertikal (16,5 × 21,5 cm).
+  // Margin @page dibuat 0 dan tepi kertas diwakili padding dalam lembar
+  // dokumen, sehingga hasil cetak persis sama dengan yang terlihat di layar
+  // (WYSIWYG) dan tidak terpotong oleh margin bawaan browser.
+  React.useEffect(() => {
+    if (selectedDocCode !== "BEND_26") return;
+    const style = document.createElement("style");
+    style.setAttribute("data-karsa", "bend26-page");
+    style.textContent = `@page { size: ${BEND26_PAGE.widthMm}mm ${BEND26_PAGE.heightMm}mm; margin: 0; }`;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, [selectedDocCode]);
 
   /** Merge QR attendance (real-time) with manually typed peserta rows, QR first. */
   const mergedPeserta = React.useMemo(() => {
@@ -142,12 +170,19 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
         
         {/* ==================== BEND 26 TEMPLATE ==================== */}
         {selectedDocCode === "BEND_26" && (
-          <div className="border border-black p-6 space-y-4 font-serif text-sm text-black">
+          <div
+            className="bend26-sheet border border-black space-y-4 font-serif text-sm text-black"
+            style={{
+              width: `${BEND26_PAGE.widthMm}mm`,
+              minHeight: `${BEND26_PAGE.heightMm}mm`,
+              padding: `${BEND26_PAGE.marginMm}mm`,
+              boxSizing: "border-box",
+            }}
+          >
+            {/* Baris lembar/model — "Model : Bend. 26. a" diletakkan di pojok kanan atas */}
             <div className="flex justify-between items-start text-xs border-b border-black pb-2">
-              <div>
-                <p>Lembar : I / II / III / IV / V</p>
-                <p>Model : Bend. 26. a</p>
-              </div>
+              <p>Lembar : I / II / III / IV / V</p>
+              <p>Model : Bend. 26. a</p>
             </div>
 
             <div className="text-center py-2">
@@ -169,16 +204,23 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <span className="col-span-3 font-semibold">Untuk membayar</span>
                 <span className="col-span-1">:</span>
                 <span className="col-span-8 whitespace-pre-line">
-                  {`${spj.sharedData?.judulAktivitas || "Aktivitas belum diisi"} sebanyak ${spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal ${formatDateDDMMYYYY(spj.tanggal)}\n${spj.masterSnapshot.kodeRekening.nama}\n${spj.masterSnapshot.kegiatan.nama.toUpperCase()}`}
+                  {`${spj.masterSnapshot.kodeRekening.nama}\n${spj.sharedData?.judulAktivitas || "Aktivitas belum diisi"} sebanyak ${spj.sharedData?.jumlahPeserta || 0} peserta pada tanggal ${formatDateDDMMYYYY(spj.tanggal)}\n${spj.masterSnapshot.kegiatan.nama.toUpperCase()}`}
                 </span>
               </div>
             </div>
 
-            <div className="border-t border-b border-black py-3 flex justify-between items-center font-sans">
-              <span className="font-bold text-base">Terbilang</span>
-              <span className="text-lg font-extrabold bg-gray-100 px-4 py-1 rounded border border-black font-mono">
-                Rp. {Number(data.nominal || 0).toLocaleString("id-ID")},-
-              </span>
+            {/* Terbilang — angka rupiah memakai margin kiri yang sama dengan
+                baris "Terima dari / Uang sebesar / Untuk membayar" di atasnya. */}
+            <div className="border-t border-b border-black py-3">
+              <div className="grid grid-cols-12 items-center font-sans">
+                <span className="col-span-3 font-bold text-base">Terbilang</span>
+                <span className="col-span-1">:</span>
+                <span className="col-span-8">
+                  <span className="inline-block text-lg font-extrabold bg-gray-100 px-4 py-1 rounded border border-black font-mono">
+                    Rp. {Number(data.nominal || 0).toLocaleString("id-ID")},-
+                  </span>
+                </span>
+              </div>
             </div>
 
             {/* Signature Area */}
@@ -418,7 +460,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                               <img src={row.ttdImage} alt="ttd" className="h-7 object-contain" />
                             </div>
                           ) : (
-                            <span className="font-mono text-[10px]">{rowNo}. .........</span>
+                            <span className="font-mono text-[10px]">{rowNo}.</span>
                           )
                         ) : null}
                       </td>
@@ -430,7 +472,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                               <img src={row.ttdImage} alt="ttd" className="h-7 object-contain" />
                             </div>
                           ) : (
-                            <span className="font-mono text-[10px]">{rowNo}. .........</span>
+                            <span className="font-mono text-[10px]">{rowNo}.</span>
                           )
                         ) : null}
                       </td>
@@ -439,6 +481,77 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 })}
               </tbody>
             </table>
+
+            <div className="flex justify-end pt-4">
+              <div className="text-center w-64 text-xs">
+                <p>Temon, {formatDateDDMMYYYY(spj.tanggal)}</p>
+                <p className="font-semibold">Pejabat Pelaksana Teknis Kegiatan</p>
+                <div className="h-16"></div>
+                <p className="font-bold underline">{spj.sharedData?.pptkNama || "…………………………"}</p>
+                {spj.sharedData?.pptkNip ? <p>NIP. {spj.sharedData.pptkNip}</p> : null}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== LAMPIRAN FOTO TEMPLATE ==================== */}
+        {selectedDocCode === "LAMPIRAN_FOTO" && (
+          <div className="space-y-6 font-sans text-black text-sm">
+            <div className="flex items-center space-x-4 border-b-2 border-black pb-3">
+              <img src="/kulonprogo-logo.png" alt="Logo Pemkab Kulon Progo" className="w-16 h-16 object-contain shrink-0" />
+              <div className="text-center flex-1 space-y-0.5">
+                <p className="font-bold text-sm uppercase tracking-wide">PEMERINTAH KABUPATEN KULON PROGO</p>
+                <p className="font-extrabold text-lg uppercase tracking-wider">KAPANEWON TEMON</p>
+                <p className="text-[11px]">Alamat : Jalan Raya Wates-Purworejo Km 10,4 Temon Kulon Progo Telp. (0274) 6472581</p>
+                <p className="text-[11px]">Email: temon@kulonprogokab.go.id Web: temon.kulonprogokab.go.id</p>
+              </div>
+            </div>
+
+            <div className="text-center py-2 font-bold text-lg underline uppercase">
+              LAMPIRAN FOTO DOKUMENTASI
+            </div>
+
+            <div className="text-left text-xs py-1 space-y-1 font-mono uppercase">
+              <p><span className="font-semibold inline-block w-24">HARI</span>: {getNamaHari(spj.tanggal)}</p>
+              <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {formatDateDDMMYYYY(spj.tanggal)}</p>
+              <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {spj.sharedData?.tempat || "PENDOPO KAPANEWON TEMON"}</p>
+              <p><span className="font-semibold inline-block w-24">ACARA</span>: {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
+            </div>
+
+            {lampiranPhotos.length === 0 ? (
+              <div className="text-center p-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl print:hidden">
+                <p>Belum ada foto Google Drive yang ditautkan untuk dokumen ini.</p>
+                <p className="text-xs mt-2">Silakan isi tautan foto di editor SPJ terlebih dahulu.</p>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {lampiranPhotos.map((link, idx) => {
+                  const info = inspectDriveLink(link);
+                  const src = drivePhotoUrl(link);
+                  return (
+                    <div key={`${info?.fileId || idx}`} className="space-y-1.5">
+                      <div className="border border-black p-1">
+                        {src ? (
+                          <img
+                            src={src}
+                            alt={`Lampiran foto ${idx + 1}`}
+                            className="w-full max-h-[110mm] object-contain"
+                            crossOrigin="anonymous"
+                          />
+                        ) : (
+                          <div className="p-6 text-center text-xs text-gray-500">
+                            Tautan tidak dapat dibaca: {link}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-600 print:text-black">
+                        Foto {idx + 1} — {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="flex justify-end pt-4">
               <div className="text-center w-64 text-xs">

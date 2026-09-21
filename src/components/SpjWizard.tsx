@@ -14,6 +14,8 @@ import {
   getActiveAttendanceSession,
 } from "../services/api";
 import { terbilangRupiah } from "../utils/format";
+import { calculateBend26Tax, PHR_RATE, PPH_RATE, PPN_RATE } from "../utils/tax";
+import { inspectDriveLink, drivePhotoUrl, parseDriveFileId } from "../utils/drive";
 import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari } from "../utils/date";
 import {
   ArrowLeft,
@@ -26,6 +28,9 @@ import {
   ExternalLink,
   Plus,
   X,
+  Calculator,
+  Image as ImageIcon,
+  Trash2,
 } from "lucide-react";
 
 interface SpjWizardProps {
@@ -161,6 +166,26 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
   const handleFormChange = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  /**
+   * Hitung pajak otomatis Bend 26 (PHR 8%, PPh 2% dari nominal setelah PHR,
+   * PPN 11%) lalu isikan ke ketiga kolom pajak.
+   */
+  const handleAutoTax = () => {
+    const nominal = Number(formData.nominal || 0);
+    if (!nominal) {
+      alert("Isi Nominal terlebih dahulu, lalu klik Hitung Pajak Otomatis.");
+      return;
+    }
+    const tax = calculateBend26Tax(nominal);
+    setFormData(prev => ({ ...prev, phr: tax.phr, pph: tax.pph, ppn: tax.ppn }));
+    setSaveMessage(`Pajak dihitung dari ${terbilangRupiah(nominal)}`);
+    setTimeout(() => setSaveMessage(null), 2500);
+  };
+
+  const handleClearTax = () => {
+    setFormData(prev => ({ ...prev, phr: "", pph: "", ppn: "" }));
   };
 
   const handleSaveDoc = async (status: "DRAFT" | "IN_PROGRESS" | "COMPLETED") => {
@@ -367,15 +392,39 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                   </div>
 
                   <div className="border-t border-gray-200 dark:border-slate-700 pt-4">
-                    <p className="text-xs font-bold text-gray-700 dark:text-slate-300 mb-2 uppercase tracking-wide">Rincian Pajak (Opsional)</p>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <p className="text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wide">Rincian Pajak</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleClearTax}
+                          className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+                        >
+                          Kosongkan
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAutoTax}
+                          className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#32848D] hover:bg-[#276972] text-white inline-flex items-center space-x-1.5 shadow-sm"
+                          title="Hitung PHR 8%, PPh 2% (dari nominal setelah PHR), dan PPN 11% secara otomatis"
+                        >
+                          <Calculator className="w-3.5 h-3.5" />
+                          <span>Hitung Pajak Otomatis</span>
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mb-2 leading-relaxed">
+                      Rumus: PHR = {PHR_RATE * 100}% × angka terbilang · PPh = {PPH_RATE * 100}% × (angka terbilang − PHR) · PPN = {PPN_RATE * 100}% × angka terbilang.
+                      Nilai masih dapat diubah manual setelah dihitung.
+                    </p>
                     <div className="grid grid-cols-3 gap-4">
                       {[
-                        { key: "phr", label: "PHR" },
-                        { key: "pph", label: "PPh" },
-                        { key: "ppn", label: "PPN" },
-                      ].map(({ key, label }) => (
+                        { key: "phr", label: "PHR", rate: PHR_RATE },
+                        { key: "pph", label: "PPh", rate: PPH_RATE },
+                        { key: "ppn", label: "PPN", rate: PPN_RATE },
+                      ].map(({ key, label, rate }) => (
                         <label key={key} className="block text-xs font-semibold text-gray-700 dark:text-slate-300">
-                          {label}
+                          {label} <span className="font-normal text-gray-400">({rate * 100}%)</span>
                           <input
                             type="number"
                             min="0"
@@ -389,6 +438,12 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                           />
                         </label>
                       ))}
+                    </div>
+                    <div className="mt-2 flex items-center justify-between rounded-xl bg-[#F6FAF5] dark:bg-slate-700/50 border border-[#32848D]/15 px-3 py-2">
+                      <span className="text-[11px] font-bold text-gray-700 dark:text-slate-300">Total Pajak</span>
+                      <span className="text-xs font-mono font-extrabold text-[#32848D]">
+                        Rp. {(Number(formData.phr || 0) + Number(formData.pph || 0) + Number(formData.ppn || 0)).toLocaleString("id-ID")}
+                      </span>
                     </div>
                   </div>
 
@@ -915,10 +970,10 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                                     />
                                   </td>
                                   <td className="p-2 text-xs font-mono text-gray-400 border-r w-24">
-                                    {isOdd ? `${rowNo}. ........` : null}
+                                    {isOdd ? `${rowNo}.` : null}
                                   </td>
                                   <td className="p-2 text-xs font-mono text-gray-400 w-24">
-                                    {!isOdd ? `${rowNo}. ........` : null}
+                                    {!isOdd ? `${rowNo}.` : null}
                                   </td>
                                 </tr>
                               );
@@ -1149,6 +1204,139 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
                     />
                   </div>
+                </div>
+              )}
+
+              {/* ================= FORM EDITOR LAMPIRAN FOTO ================= */}
+              {activeDoc.documentTypeCode === "LAMPIRAN_FOTO" && (
+                <div className="space-y-4 text-sm">
+                  <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 p-4 rounded-xl">
+                    <h3 className="font-bold text-teal-900 dark:text-teal-200 mb-1 inline-flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4" /> Lampiran Foto Dokumentasi
+                    </h3>
+                    <p className="text-xs text-teal-700 dark:text-teal-300">
+                      Tempel <strong>tautan Google Drive</strong> foto kegiatan. Foto otomatis ditarik dari Drive dan
+                      dicetak pada lembar Lampiran Foto. Pastikan berbagi file disetel
+                      <strong> "Siapa saja yang memiliki link"</strong> agar foto tampil saat dicetak.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <LinkIcon className="w-4 h-4 text-teal-600 shrink-0" />
+                    <input
+                      type="url"
+                      id="lampiran-foto-input"
+                      placeholder="https://drive.google.com/file/d/... atau https://drive.google.com/open?id=..."
+                      className="w-full border border-teal-300 dark:border-teal-700 rounded-lg p-2 text-xs bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter") return;
+                        e.preventDefault();
+                        const el = e.currentTarget;
+                        const val = el.value.trim();
+                        if (!val) return;
+                        if (!parseDriveFileId(val)) {
+                          alert("Tautan Google Drive tidak dikenali. Contoh: https://drive.google.com/file/d/XXXXXXXX/view");
+                          return;
+                        }
+                        const current: string[] = formData.fotoList || [];
+                        if (current.some((c) => parseDriveFileId(c) === parseDriveFileId(val))) {
+                          alert("Foto ini sudah ditautkan.");
+                          return;
+                        }
+                        handleFormChange("fotoList", [...current, val]);
+                        el.value = "";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById("lampiran-foto-input") as HTMLInputElement | null;
+                        const val = (el?.value || "").trim();
+                        if (!val) {
+                          alert("Tempel tautan Google Drive terlebih dahulu.");
+                          return;
+                        }
+                        if (!parseDriveFileId(val)) {
+                          alert("Tautan Google Drive tidak dikenali. Contoh: https://drive.google.com/file/d/XXXXXXXX/view");
+                          return;
+                        }
+                        const current: string[] = formData.fotoList || [];
+                        if (current.some((c) => parseDriveFileId(c) === parseDriveFileId(val))) {
+                          alert("Foto ini sudah ditautkan.");
+                          return;
+                        }
+                        handleFormChange("fotoList", [...current, val]);
+                        if (el) el.value = "";
+                      }}
+                      className="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1 shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Tautkan</span>
+                    </button>
+                  </div>
+
+                  {(formData.fotoList || []).length === 0 ? (
+                    <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-xl text-xs">
+                      Belum ada foto yang ditautkan. Tempel tautan Google Drive di atas, lalu tekan Enter.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase">
+                        Foto Ditautkan ({(formData.fotoList || []).length})
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {(formData.fotoList as string[]).map((link, idx) => {
+                          const info = inspectDriveLink(link);
+                          return (
+                            <div
+                              key={`${info?.fileId || idx}`}
+                              className="border border-gray-200 dark:border-slate-600 rounded-xl overflow-hidden bg-white dark:bg-slate-800"
+                            >
+                              <div className="bg-gray-50 dark:bg-slate-700/50 h-32 flex items-center justify-center overflow-hidden">
+                                {info ? (
+                                  <img
+                                    src={drivePhotoUrl(link) as string}
+                                    alt={`Foto ${idx + 1}`}
+                                    className="w-full h-32 object-contain"
+                                    crossOrigin="anonymous"
+                                  />
+                                ) : (
+                                  <span className="text-[10px] text-gray-400 px-2 text-center">Tautan tidak valid</span>
+                                )}
+                              </div>
+                              <div className="p-2 space-y-1.5">
+                                <p className="text-[10px] font-bold text-gray-700 dark:text-slate-300">Foto {idx + 1}</p>
+                                {info && (
+                                  <a
+                                    href={info.openUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[10px] text-teal-600 hover:underline inline-flex items-center gap-1"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    <span>Buka di Drive</span>
+                                  </a>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleFormChange(
+                                      "fotoList",
+                                      (formData.fotoList as string[]).filter((_, i) => i !== idx)
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[10px] font-semibold inline-flex items-center justify-center gap-1"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Hapus</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

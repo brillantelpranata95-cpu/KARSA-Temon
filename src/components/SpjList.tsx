@@ -19,6 +19,7 @@ import {
 import { formatDateDDMMYYYY, toDateInputValue } from "../utils/date";
 import { exportSpjRecapPdf } from "../utils/exportRecap";
 import { exportSpjPdf } from "../utils/exportSpjPdf";
+import { SearchableSelect, ComboOption } from "./SearchableSelect";
 import {
   Plus,
   FileText,
@@ -156,6 +157,30 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const visibleKegiatanList = effectiveJawatanId
     ? kegiatanList.filter((k) => k.jawatanId === effectiveJawatanId)
     : kegiatanList;
+
+  // Opsi kotak pencarian: kode rekening & sub-kegiatan dapat dicari lewat kode
+  // maupun namanya, sehingga tidak perlu menggulir daftar satu per satu.
+  const rekOptions: ComboOption[] = React.useMemo(
+    () =>
+      rekList.map((r) => ({
+        value: r.id,
+        label: `[${r.kode}] ${r.nama}`,
+        hint: r.kategori ? `Kategori: ${r.kategori}` : undefined,
+        keywords: `${r.kode} ${r.nama}`,
+      })),
+    [rekList]
+  );
+
+  const kegiatanOptions: ComboOption[] = React.useMemo(
+    () =>
+      visibleKegiatanList.map((k) => ({
+        value: k.id,
+        label: `[${k.kodeKegiatan}] ${k.namaKegiatan}`,
+        hint: k.tahunAnggaran ? `Tahun Anggaran ${k.tahunAnggaran}` : undefined,
+        keywords: `${k.kodeKegiatan} ${k.namaKegiatan}`,
+      })),
+    [visibleKegiatanList]
+  );
 
   const handleCreateSpj = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -721,17 +746,16 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                     + Ajukan Rekening Baru
                   </button>
                 </div>
-                <select
+                <SearchableSelect
+                  options={rekOptions}
                   value={selectedRekId}
-                  onChange={(e) => setSelectedRekId(e.target.value)}
-                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
-                >
-                  {rekList.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      [{r.kode}] {r.nama}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedRekId}
+                  searchPlaceholder="Ketik kode atau nama rekening..."
+                  emptyText="Rekening tidak ditemukan. Coba kata kunci lain."
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Ketik kata kunci (mis. <span className="font-mono">makan rapat</span> atau <span className="font-mono">5.1.02</span>) — daftar di bawahnya otomatis tersaring.
+                </p>
               </div>
 
               <div>
@@ -745,20 +769,20 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                     + Ajukan Sub-Kegiatan Baru
                   </button>
                 </div>
-                <select
+                <SearchableSelect
+                  options={kegiatanOptions}
                   value={selectedKegiatanId}
-                  onChange={(e) => setSelectedKegiatanId(e.target.value)}
-                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
-                >
-                  {visibleKegiatanList.length === 0 && (
-                    <option value="">— Belum ada sub-kegiatan untuk jawatan ini —</option>
-                  )}
-                  {visibleKegiatanList.map((k) => (
-                    <option key={k.id} value={k.id}>
-                      [{k.kodeKegiatan}] {k.namaKegiatan}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedKegiatanId}
+                  searchPlaceholder="Ketik kode atau nama sub-kegiatan..."
+                  emptyText={
+                    visibleKegiatanList.length === 0
+                      ? "Belum ada sub-kegiatan untuk jawatan ini."
+                      : "Sub-kegiatan tidak ditemukan. Coba kata kunci lain."
+                  }
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Kotak ini bisa langsung diketik untuk mencari, lalu pilih dari daftar yang muncul.
+                </p>
               </div>
 
               {/* Package checklist preview — resolved automatically from the chosen Kode Rekening */}

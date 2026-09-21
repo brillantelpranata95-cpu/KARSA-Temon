@@ -8,7 +8,7 @@ import {
   getDocumentTypesList,
   getKodeRekeningList,
 } from "../services/api";
-import { FileStack, Plus, Edit, Trash2, Save, RefreshCw, Info, X, Package } from "lucide-react";
+import { FileStack, Plus, Edit, Trash2, Save, RefreshCw, Info, X, Package, Image as ImageIcon } from "lucide-react";
 
 interface PackageTemplatesProps {
   user: UserProfile;
@@ -215,6 +215,10 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
             Setiap pengguna yang membuat SPJ dengan kode rekening tersebut otomatis wajib melengkapi tepat dokumen itu.
           </p>
           <p className="font-semibold">Bend 26 diperlakukan sama dengan Bend 26 pada paket yang sudah ada — form nominal, pajak, dan penerima tetap identik.</p>
+          <p>
+            Centang <strong>Lampiran Foto</strong> bila paket ini juga membutuhkan dokumentasi foto —
+            pengguna cukup menempelkan <strong>tautan Google Drive</strong> fotonya dan sistem otomatis mencetaknya.
+          </p>
         </div>
       </div>
 
@@ -378,6 +382,7 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
                   {docTypes.map((dt) => {
                     const selected = formDocs.find((d) => d.documentTypeId === dt.id);
                     const orderIdx = formDocs.findIndex((d) => d.documentTypeId === dt.id);
+                    const needsDriveLink = dt.code === "LAMPIRAN_FOTO";
                     return (
                       <div
                         key={dt.id}
@@ -402,8 +407,18 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
                                 </span>
                               )}
                               {dt.name}
+                              {needsDriveLink && (
+                                <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-900/40 px-1.5 py-0.5 rounded-full align-middle">
+                                  <ImageIcon className="w-2.5 h-2.5" />
+                                  LINK DRIVE
+                                </span>
+                              )}
                             </p>
-                            <p className="text-[10px] text-gray-500 dark:text-slate-400 truncate">{dt.description}</p>
+                            <p className="text-[10px] text-gray-500 dark:text-slate-400 truncate">
+                              {needsDriveLink
+                                ? "Pengguna cukup menempelkan tautan Google Drive foto — otomatis dicetak."
+                                : dt.description}
+                            </p>
                           </div>
                         </label>
                         {selected && (

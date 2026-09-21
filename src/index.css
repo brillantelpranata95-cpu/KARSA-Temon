@@ -34,6 +34,22 @@
   .print\:hidden {
     display: none !important;
   }
+
+  /* Bend 26 — kertas setengah folio vertikal (16,5 × 21,5 cm).
+     Margin @page = 0, sehingga ukuran lembar dokumen tepat seukuran kertas.
+     Padding 6mm di dalam lembar berperan sebagai sisa tepi kertas agar isi
+     tidak menempel pada batas cetak. */
+  .bend26-sheet {
+    width: 165mm !important;
+    height: 215mm !important;
+    min-height: 215mm !important;
+    max-height: 215mm !important;
+    padding: 6mm !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
 }
 
 @page {
