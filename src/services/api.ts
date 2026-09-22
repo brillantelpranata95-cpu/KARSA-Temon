@@ -383,6 +383,7 @@ export const invalidateMasterCache = (): void => {
   invalidateCache("kodeRekening:");
   invalidateCache("jawatan:");
   invalidateCache("packageTemplates:");
+  invalidateCache("checklistConfigs:");
   invalidateCache("documentTypes:");
   invalidateCache("officials:");
 };
@@ -855,6 +856,25 @@ export const getPackageTemplateByKodeRekening = async (kodeRekeningId: string): 
   return active[0] || null;
 };
 
+/**
+ * Checklist bawaan per Kode Rekening (koleksi `checklistConfigs`).
+ *
+ * Paket dokumen yang BENAR-BENAR berlaku saat membuat SPJ mengikuti prioritas:
+ *   1) `packageTemplates` — paket buatan admin lewat menu "Buat Paket SPJ",
+ *   2) `checklistConfigs` — checklist bawaan per kode rekening,
+ *   3) daftar dokumen standar (Bend 26, Undangan, Daftar Hadir, Notulen).
+ *
+ * Menu "Buat Paket SPJ" harus membaca keduanya, karena paket yang dipakai
+ * pengguna bisa berasal dari sumber (2) — tanpa ini paket yang sudah berjalan
+ * tampak hilang dari menu dan tidak bisa disunting.
+ */
+export const getChecklistConfigList = async (): Promise<ChecklistConfig[]> => {
+  return cachedFetch("checklistConfigs:all", async () => {
+    const snap = await getDocs(collection(db, "checklistConfigs"));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as ChecklistConfig));
+  });
+};
+
 export const adminCreatePackageTemplate = async (data: {
   kodeRekeningId: string;
   kodeRekeningKode?: string;
@@ -915,6 +935,31 @@ export const adminUpdatePackageTemplate = async (id: string, data: {
     entityType: "MASTER_DATA",
     entityId: id,
     newValue: { type: "PACKAGE_TEMPLATE_UPDATE", data: patch }
+  });
+};
+
+/**
+ * Perbarui checklist BAWAAN per Kode Rekening (koleksi `checklistConfigs`).
+ * Dipakai menu "Buat Paket SPJ" untuk paket yang belum punya dokumen
+ * `packageTemplates` — yaitu paket yang selama ini benar-benar dipakai.
+ */
+export const adminUpdateChecklistConfig = async (
+  id: string,
+  data: { documents?: { documentTypeId: string; required: boolean; order: number }[]; isActive?: boolean },
+  actor: UserProfile
+) => {
+  const patch: Record<string, any> = { updatedAt: serverTimestamp() };
+  if (data.documents !== undefined) patch.documents = data.documents;
+  if (data.isActive !== undefined) patch.isActive = data.isActive;
+  await updateDoc(doc(db, "checklistConfigs", id), sanitizeData(patch));
+  invalidateMasterCache();
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "MASTER_DATA_UPDATE",
+    entityType: "MASTER_DATA",
+    entityId: id,
+    newValue: { type: "CHECKLIST_CONFIG_UPDATE", data: patch }
   });
 };
 
@@ -1065,9 +1110,12 @@ export const createSpjPackage = async (params: {
     checklistDocs = [...packageTemplate.documents].sort((a, b) => a.order - b.order);
   } else {
     const configSnap = await getDocs(query(collection(db, "checklistConfigs"), where("kodeRekeningId", "==", kodeRekening.id)));
-    if (!configSnap.empty) {
-      const configData = configSnap.docs[0].data() as ChecklistConfig;
-      configId = configSnap.docs[0].id;
+    // Hanya checklist yang aktif yang berlaku; menonaktifkannya dari menu
+    // "Buat Paket SPJ" mengembalikan kode rekening ke checklist standar.
+    const activeConfig = configSnap.docs.find((d) => (d.data() as ChecklistConfig).isActive !== false);
+    if (activeConfig) {
+      const configData = activeConfig.data() as ChecklistConfig;
+      configId = activeConfig.id;
       checklistDocs = configData.documents;
     } else {
       checklistDocs = [

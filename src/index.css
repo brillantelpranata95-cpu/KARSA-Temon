@@ -10,8 +10,9 @@
 
 /* ============================================================
    PRATINJAU LAYAR BEND 26
-   Lembar Bend 26 berukuran 330mm (≈1247px) — lebih lebar daripada kartu
-   pratinjau — sehingga tanpa penanganan khusus isinya mendorong lebar
+   Lembar Bend 26 berukuran satu folio tegak (215 × 330 mm, ≈813 × 1247px)
+   — lebih tinggi daripada kartu pratinjau dan pada layar sempit bisa lebih
+   lebar juga — sehingga tanpa penanganan khusus isinya mendorong lebar
    halaman dan muncul geser mendatar. Skalanya diatur lewat inline style
    (zoom) oleh PrintPreview; pembungkus ini hanya menahan sisa geseran di
    dalam kartu agar halaman tidak ikut bergeser.
@@ -58,17 +59,16 @@
     box-sizing: border-box !important;
   }
 
-  /* Bend 26 — setengah folio horizontal (33 × 16,5 cm).
-     Lebarnya memenuhi panjang kertas folio, tingginya setengah halaman
-     folio. Ukuran lembar dibuat tetap agar tepat seukuran kertas. */
+  /* Bend 26 — satu lembar folio tegak (21,5 × 33 cm).
+     Isi formulir dimulai dari tepi atas lembar dan menyisakan bagian bawah
+     halaman kosong, persis blanko resmi Bend 26. Tinggi hanya diberi batas
+     bawah (min-height), bukan dipatok, supaya isi yang lebih panjang
+     mengalir ke halaman berikutnya alih-alih terpotong diam-diam. */
   .bend26-sheet {
-    width: 330mm !important;
-    height: 165mm !important;
-    min-height: 165mm !important;
-    max-height: 165mm !important;
+    width: 215mm !important;
+    min-height: 330mm !important;
     padding: 12mm !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
     page-break-after: avoid;
     break-after: avoid;
   }

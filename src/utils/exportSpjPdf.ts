@@ -42,12 +42,10 @@ const waitForAssets = async (host: HTMLElement) => {
 
 /**
  * Ukuran & orientasi kertas per jenis dokumen. Satu halaman PDF = satu lembar
- * dokumen. Bend 26 memakai setengah folio HORIZONTAL (33 × 16,5 cm) sehingga
- * panjangnya memenuhi panjang kertas folio; dokumen lain tetap A4.
+ * dokumen. Bend 26 memakai satu lembar folio TEGAK (21,5 × 33 cm) sehingga
+ * ukurannya sama dengan blanko resmi; dokumen lain tetap A4.
  *
- * Catatan jsPDF: `format` dianggap sebagai [tinggi, lebar] untuk orientasi
- * landscape, jadi Bend 26 memakai [165, 330] + orientation "landscape" agar
- * halaman yang dihasilkan benar-benar 330mm × 165mm.
+ * Catatan jsPDF: untuk orientasi "portrait", `format` dianggap [lebar, tinggi].
  */
 interface PageFormat {
   format: [number, number];
@@ -55,7 +53,7 @@ interface PageFormat {
 }
 
 const PAGE_FORMAT: Record<string, PageFormat> = {
-  BEND_26: { format: [165, 330], orientation: "landscape" },
+  BEND_26: { format: [215, 330], orientation: "portrait" },
 };
 
 /** Ukuran A4 dalam mm — dipakai sebagai ukuran bawaan halaman PDF. */
@@ -65,8 +63,8 @@ const A4_PAGE: PageFormat = { format: A4_FORMAT, orientation: "portrait" };
 
 /** Lebar host render (px) per dokumen agar tata letak sama dengan hasil cetak. */
 const HOST_WIDTH: Record<string, number> = {
-  // Bend 26 = 330mm ≈ 1247px pada 96dpi; beri sedikit ruang agar tidak membungkus.
-  BEND_26: 1250,
+  // Bend 26 = 215mm ≈ 813px pada 96dpi; beri sedikit ruang agar tidak membungkus.
+  BEND_26: 815,
 };
 
 const DEFAULT_HOST_WIDTH = 1000;
@@ -114,7 +112,7 @@ export const exportSpjPdf = async (
     const label = docItem.documentTypeCode.replace(/_/g, " ");
     onProgress?.(`Dokumen ${i + 1}/${renderable.length}: ${label}`);
 
-    // Bend 26 dicetak pada setengah folio horizontal; dokumen lain tetap A4.
+    // Bend 26 dicetak pada satu lembar folio tegak; dokumen lain tetap A4.
     const page = PAGE_FORMAT[docItem.documentTypeCode] || A4_PAGE;
 
     if (firstPage) {
@@ -149,7 +147,7 @@ export const exportSpjPdf = async (
           initialDocCode: docItem.documentTypeCode,
           liveAttendance: false,
           // Jangan pakai skala pratinjau layar: gambar harus diambil pada
-          // ukuran asli 330mm agar rasio halaman tetap 330 × 165 mm.
+          // ukuran asli 215mm agar rasio halaman tetap 215 × 330 mm.
           screenFit: false,
         })
       );

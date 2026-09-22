@@ -132,6 +132,32 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
     return () => unsub();
   }, [spjId]);
 
+  /**
+   * Isian otomatis untuk dokumen SPJ Aktivitas Lapangan — sekali isi, tetap
+   * bisa disunting:
+   *   - Maksud dan Tujuan Perjalanan Dinas ← Judul Aktivitas (Tagging Sub-Kegiatan)
+   *   - Tempat Tujuan                      ← Tempat/Lokasi paket SPJ
+   *
+   * Nilai hanya diisi bila kolomnya BELUM PERNAH diisi (undefined/null). Kolom
+   * yang sengaja dikosongkan pengguna (string kosong) dibiarkan kosong, sehingga
+   * suntingan manual tidak pernah ditimpa isian otomatis.
+   */
+  const withDocDefaults = (
+    docItem: SpjDocumentItem,
+    data: Record<string, any>,
+    shared?: SpjItem["sharedData"]
+  ): Record<string, any> => {
+    if (docItem.documentTypeCode !== "SPJ_AKTIVITAS_LAPANGAN") return data;
+    const next = { ...data };
+    if (next.maksudTujuan === undefined || next.maksudTujuan === null) {
+      next.maksudTujuan = shared?.judulAktivitas || "";
+    }
+    if (next.tempatTujuan === undefined || next.tempatTujuan === null) {
+      next.tempatTujuan = shared?.tempat || "";
+    }
+    return next;
+  };
+
   const loadSpjData = async () => {
     try {
       const [s, docs] = await Promise.all([getSpjById(spjId), getSpjDocuments(spjId)]);
@@ -154,7 +180,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
       if (docs.length > 0 && !selectedDocId) {
         setSelectedDocId(docs[0].id);
-        setFormData(docs[0].data || {});
+        setFormData(withDocDefaults(docs[0], docs[0].data || {}, s?.sharedData));
         setExternalUrl(docs[0].externalUrl || "");
       }
     } catch (err) {
@@ -170,7 +196,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
   const handleSelectDoc = (docItem: SpjDocumentItem) => {
     setSelectedDocId(docItem.id);
-    setFormData(docItem.data || {});
+    setFormData(withDocDefaults(docItem, docItem.data || {}, spj?.sharedData));
     setExternalUrl(docItem.externalUrl || "");
   };
 
@@ -793,7 +819,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
-                      Poin-Poin Isi Keputusan Rapat (Tengah)
+                      Poin-Poin Isi Keputusan Rapat
                     </label>
                     <textarea
                       value={formData.poinTengah || "Pembukaan dari Panewu Temon.\nDiskusi teknis pelaksanaan kegiatan."}

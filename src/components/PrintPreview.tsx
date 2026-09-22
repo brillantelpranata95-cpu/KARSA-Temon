@@ -9,14 +9,14 @@ import { db } from "../config/firebase";
 import { collection, onSnapshot, getDocs } from "firebase/firestore";
 
 /**
- * Ukuran kertas Bend 26: setengah lembar folio dalam posisi horizontal
- * (folio 21,5 × 33 cm dipotong melintang) → 33 × 16,5 cm.
- * Lebar memenuhi panjang kertas folio, tingginya setengah halaman folio,
- * dengan margin kiri/kanan/atas/bawah normal.
+ * Ukuran kertas Bend 26: satu lembar folio penuh dalam posisi tegak
+ * (folio 21,5 × 33 cm). Isi formulir tercetak mulai dari tepi atas dan
+ * menyisakan bagian bawah halaman kosong — persis blanko resmi Bend 26.
+ * `marginMm` adalah sisa tepi kertas agar isi tidak menempel pada batas cetak.
  */
 export const BEND26_PAGE = {
-  widthMm: 330,
-  heightMm: 165,
+  widthMm: 215,
+  heightMm: 330,
   marginMm: 12,
 };
 
@@ -46,8 +46,8 @@ interface PrintPreviewProps {
   liveAttendance?: boolean;
   /**
    * Saat false, lembar Bend 26 tidak diperkecil pada pratinjau layar sehingga
-   * dirender tepat 330mm. Dipakai saat mengekspor PDF agar gambar yang
-   * diambil beresolusi penuh dan rasio halaman tetap 330 × 165 mm.
+   * dirender tepat 215mm. Dipakai saat mengekspor PDF agar gambar yang
+   * diambil beresolusi penuh dan rasio halaman tetap 215 × 330 mm.
    */
   screenFit?: boolean;
 }
@@ -64,9 +64,10 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
   const [selectedDocCode, setSelectedDocCode] = React.useState<string>(initialDocCode || "BEND_26");
   // Live QR attendance rows so the printed daftar hadir matches what was submitted
   const [qrAttendance, setQrAttendance] = React.useState<Array<{ id: string; nama: string; jabatan: string; ttdImage?: string }>>([]);
-  // Lembar Bend 26 (330mm) lebih lebar daripada kartu pratinjau, jadi pada layar
-  // diskalakan agar tidak menimbulkan geser mendatar. Saat mencetak, skala
-  // dikembalikan ke 1 lewat .bend26-fit-inner pada aturan @media print.
+  // Lembar Bend 26 (folio tegak 215mm) bisa lebih lebar daripada kartu
+  // pratinjau, jadi pada layar diskalakan agar tidak menimbulkan geser
+  // mendatar. Saat mencetak, skala dikembalikan ke 1 lewat .bend26-fit-inner
+  // pada aturan @media print.
   const [screenZoom, setScreenZoom] = React.useState(1);
   const sheetBoxRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -105,7 +106,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
   // Lampiran foto: kumpulkan seluruh tautan Google Drive yang ditautkan
   const lampiranPhotos = React.useMemo(() => collectDocPhotos(activeDoc?.data), [activeDoc?.data]);
 
-  // Bend 26 dicetak pada setengah folio horizontal (33 × 16,5 cm).
+  // Bend 26 dicetak pada satu lembar folio tegak (21,5 × 33 cm).
   // Margin @page dibuat 0 agar browser tidak menyisipkan header/footer cetak
   // (tanggal, judul halaman, alamat URL); tepi kertas diwakili padding di
   // dalam lembar sehingga hasil cetak tetap memiliki margin normal.
@@ -118,9 +119,10 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
     return () => style.remove();
   }, [selectedDocCode]);
 
-  // Skala pratinjau layar: lembar 330mm dikecilkan agar pas di kartu pratinjau,
-  // sehingga tidak ada geser mendatar di halaman. Perhitungan diulang saat
-  // ukuran kartu berubah (jendela di-resize / sidebar dibuka).
+  // Skala pratinjau layar: lembar folio tegak (215mm ≈ 813px) bisa lebih lebar
+  // daripada kartu pratinjau, jadi dikecilkan agar pas dan tidak menimbulkan
+  // geser mendatar di halaman. Perhitungan diulang saat ukuran kartu berubah
+  // (jendela di-resize / sidebar dibuka).
   React.useEffect(() => {
     if (!screenFit || selectedDocCode !== "BEND_26") {
       setScreenZoom(1);
@@ -652,7 +654,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <tr className="border-b border-black">
                   <td className="p-3 font-semibold text-center border-r border-black">2.</td>
                   <td className="p-3 font-semibold border-r border-black">Tempat Tujuan</td>
-                  <td className="p-3">: {data.tempatTujuan || "Kapanewon Temon"}</td>
+                  <td className="p-3">: {data.tempatTujuan || spj.sharedData?.tempat || "Kapanewon Temon"}</td>
                 </tr>
                 <tr className="border-b border-black">
                   <td className="p-3 font-semibold text-center border-r border-black">3.</td>
