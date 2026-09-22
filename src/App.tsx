@@ -138,7 +138,7 @@ function MainApp() {
           ) : activeTab === "spj" ? (
             <SpjList user={user} onSelectSpj={handleSelectSpj} />
           ) : activeTab === "packages" ? (
-            <PackageTemplates user={user} onOpenSpj={handleSelectSpj} />
+            <PackageTemplates user={user} />
           ) : activeTab === "officials" ? (
             <OfficialsSettings user={user} />
           ) : activeTab === "gamification" ? (

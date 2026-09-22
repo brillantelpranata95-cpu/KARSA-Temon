@@ -280,3 +280,18 @@ test("Buat Paket SPJ: menampilkan paket efektif dari template maupun checklist b
   assert.match(api, /activeConfig/, "checklist nonaktif tidak boleh dipakai saat membuat SPJ");
 });
 
+test("Buat Paket SPJ: kartu 'Paket SPJ yang Sudah Ada' dihapus dari menu admin", async () => {
+  const fs = await import("node:fs/promises");
+  const comp = await fs.readFile(new URL("../src/components/PackageTemplates.tsx", import.meta.url), "utf8");
+
+  // Menu ini hanya untuk mengelola paket dokumen per kode rekening.
+  // Daftar SPJ yang sudah dibuat punya menunya sendiri ("SPJ Saya"), jadi
+  // kartu ringkasan di sini dihapus agar menu tidak tercampur.
+  assert.doesNotMatch(comp, /Paket SPJ yang Sudah Ada/, "kartu daftar SPJ harus dihapus");
+  assert.doesNotMatch(comp, /getSpjList/, "menu paket tidak boleh lagi menarik daftar SPJ");
+  assert.doesNotMatch(comp, /onOpenSpj/, "prop pembuka SPJ harus dihapus bersama kartunya");
+  // Bagian pengelolaan paket tetap ada.
+  assert.match(comp, /effectivePackages/, "pengelolaan paket per kode rekening tetap ada");
+  assert.match(comp, /getChecklistConfigList/, "checklist bawaan tetap dibaca");
+});
+
