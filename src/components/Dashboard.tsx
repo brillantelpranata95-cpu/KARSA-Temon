@@ -9,6 +9,8 @@ import {
   PieChart,
   Pie,
   Cell,
+  Sector,
+  LabelList,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -49,6 +51,66 @@ const KATEGORI_AKSEN: Record<string, string> = {
   LAINNYA: "#CBD5E1",
 };
 
+/**
+ * Warna ketiga (lebih pekat) — melengkapi gradien 3 tingkat di diagram.
+ * Dengan tiga stop (terang → dasar → pekat) tiap irisan/batang punya kedalaman
+ * warna, bukan sekadar blok datar.
+ */
+const KATEGORI_GELAP: Record<string, string> = {
+  MAKAN_MINUM: "#1F5A61",
+  HONOR: "#5B21B6",
+  ATK: "#047857",
+  TRANSPORT: "#B45309",
+  LAINNYA: "#475569",
+};
+
+/** Format rupiah ringkas untuk label di dalam diagram (mis. "Rp 12,3 jt"). */
+function rupiahRingkas(n: number): string {
+  const angka = n || 0;
+  if (angka >= 1_000_000_000) return `Rp ${(angka / 1_000_000_000).toFixed(1)} M`;
+  if (angka >= 1_000_000) return `Rp ${(angka / 1_000_000).toFixed(1)} jt`;
+  if (angka >= 1_000) return `Rp ${(angka / 1_000).toFixed(0)} rb`;
+  return `Rp ${angka}`;
+}
+
+/**
+ * Recharts 3 mengganti API sorotan diagram lingkaran: `activeIndex` DIHAPUS dan
+ * `activeShape` sudah deprecated. Cara yang benar adalah prop `shape`, yang
+ * menerima `isActive` (ditentukan otomatis dari hover Tooltip).
+ *
+ * `entri` dikirim pemanggil karena fungsi tingkat-modul tidak bisa membaca `pieData`.
+ */
+function sektorIrisan(props: any, entri: { key: string } | undefined) {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, cornerRadius, isActive } = props;
+  const isi = entri?.key ? `url(#pepin-pie-${entri.key})` : "#94A3B8";
+  return (
+    <g>
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={isActive ? outerRadius + 8 : outerRadius}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        cornerRadius={cornerRadius ?? 8}
+        fill={isi}
+      />
+      {isActive && (
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={outerRadius + 13}
+          outerRadius={outerRadius + 17}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={isi}
+          opacity={0.5}
+        />
+      )}
+    </g>
+  );
+}
+
 /** Ikon khas tiap kategori — nama Koboyo (semua sudah ada di public/koboyo/). */
 const KATEGORI_IKON: Record<string, string> = {
   MAKAN_MINUM: "package",
@@ -70,6 +132,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
   const [stats, setStats] = useState<SpjStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [hideScores] = useHideScores(user.uid);
+  // Indeks irisan diagram lingkaran yang sedang disorot kursor (null = tidak ada).
+  const [pieAktif, setPieAktif] = useState<number | null>(null);
 
   const loadStats = async () => {
     setLoading(true);
@@ -121,6 +185,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
   const kategoriTeratas = pieData.length
     ? pieData.reduce((a, b) => ((b.value || 0) > (a.value || 0) ? b : a))
     : null;
+
+  // Isi label tengah donat: kategori yang disorot, atau kategori terbesar.
+  const sorotPie = pieAktif !== null ? pieData[pieAktif] : kategoriTeratas;
 
   return (
     <div>
@@ -280,52 +347,79 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
                     </span>
                     Distribusi Persentase
                   </h3>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <PieChart>
-                      <defs>
-                        {pieData.map((entry) => (
-                          <linearGradient
-                            key={entry.key}
-                            id={`pepin-pie-${entry.key}`}
-                            x1="0"
-                            y1="0"
-                            x2="1"
-                            y2="1"
-                          >
-                            <stop offset="0%" stopColor={KATEGORI_COLORS[entry.key] || "#94A3B8"} />
-                            <stop offset="100%" stopColor={KATEGORI_AKSEN[entry.key] || "#CBD5E1"} />
-                          </linearGradient>
-                        ))}
-                      </defs>
-                      <Pie
-                        data={pieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={90}
-                        innerRadius={42}
-                        paddingAngle={3}
-                        label={({ name, value }: any) => `${name || ""}: ${(value || 0).toFixed(1)}%`}
+                  <div className="relative">
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart>
+                        <defs>
+                          {pieData.map((entry) => (
+                            <linearGradient
+                              key={entry.key}
+                              id={`pepin-pie-${entry.key}`}
+                              x1="0"
+                              y1="0"
+                              x2="1"
+                              y2="1"
+                            >
+                              <stop offset="0%" stopColor={KATEGORI_AKSEN[entry.key] || "#CBD5E1"} />
+                              <stop offset="45%" stopColor={KATEGORI_COLORS[entry.key] || "#94A3B8"} />
+                              <stop offset="100%" stopColor={KATEGORI_GELAP[entry.key] || "#475569"} />
+                            </linearGradient>
+                          ))}
+                        </defs>
+                        <Pie
+                          data={pieData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={92}
+                          innerRadius={48}
+                          paddingAngle={4}
+                          cornerRadius={8}
+                          shape={(props: any) => sektorIrisan(props, pieData[props.index])}
+                          onMouseEnter={(_: any, index: number) => setPieAktif(index)}
+                          onMouseLeave={() => setPieAktif(null)}
+                          label={({ name, value }: any) => `${name || ""}: ${(value || 0).toFixed(1)}%`}
+                        >
+                          {pieData.map((entry) => (
+                            <Cell
+                              key={entry.key}
+                              fill={`url(#pepin-pie-${entry.key})`}
+                              stroke="#fff"
+                              strokeWidth={2}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ borderRadius: 12, border: "1px solid #E2E8F0", fontSize: 12 }}
+                          formatter={(value: any, _name: any, props: any) => [
+                            `${(value || 0).toFixed(1)}% — Rp ${(props?.payload?.nominal || 0).toLocaleString("id-ID")} (${props?.payload?.count || 0} SPJ)`,
+                            props?.payload?.name || "",
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+
+                    {/* Label tengah donat — ikut berubah saat irisan disorot */}
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
+                        {sorotPie ? sorotPie.name : "Total"}
+                      </p>
+                      <p
+                        className="mt-0.5 text-lg font-bold leading-none"
+                        style={{
+                          color: sorotPie ? KATEGORI_COLORS[sorotPie.key] || "#94A3B8" : undefined,
+                        }}
                       >
-                        {pieData.map((entry) => (
-                          <Cell
-                            key={entry.key}
-                            fill={`url(#pepin-pie-${entry.key})`}
-                            stroke="#fff"
-                            strokeWidth={2}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ borderRadius: 12, border: "1px solid #E2E8F0", fontSize: 12 }}
-                        formatter={(value: any, _name: any, props: any) => [
-                          `${(value || 0).toFixed(1)}% — Rp ${(props?.payload?.nominal || 0).toLocaleString("id-ID")} (${props?.payload?.count || 0} SPJ)`,
-                          props?.payload?.name || "",
-                        ]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                        {sorotPie
+                          ? `${(sorotPie.value || 0).toFixed(1)}%`
+                          : rupiahRingkas(stats?.totalNominal || 0)}
+                      </p>
+                      <p className="mt-1 text-[10px] text-gray-400 dark:text-slate-500">
+                        {sorotPie ? rupiahRingkas(sorotPie.nominal || 0) : `${pieData.length} kategori`}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Bar Chart */}
@@ -336,8 +430,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
                     </span>
                     Nominal per Kategori (Rp)
                   </h3>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={barData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={barData} margin={{ top: 26, right: 10, left: 0, bottom: 0 }}>
                       <defs>
                         {barData.map((entry) => (
                           <linearGradient
@@ -348,23 +442,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
                             x2="0"
                             y2="1"
                           >
-                            <stop
-                              offset="0%"
-                              stopColor={KATEGORI_COLORS[entry.key] || "#94A3B8"}
-                              stopOpacity={0.95}
-                            />
-                            <stop
-                              offset="100%"
-                              stopColor={KATEGORI_COLORS[entry.key] || "#94A3B8"}
-                              stopOpacity={0.35}
-                            />
+                            <stop offset="0%" stopColor={KATEGORI_AKSEN[entry.key] || "#CBD5E1"} />
+                            <stop offset="45%" stopColor={KATEGORI_COLORS[entry.key] || "#94A3B8"} />
+                            <stop offset="100%" stopColor={KATEGORI_GELAP[entry.key] || "#475569"} />
                           </linearGradient>
                         ))}
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} className="dark:opacity-20" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <CartesianGrid
+                        strokeDasharray="4 4"
+                        vertical={false}
+                        stroke="#94A3B8"
+                        strokeOpacity={0.25}
+                      />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 11, fill: "#64748B" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
                       <YAxis
-                        tick={{ fontSize: 11 }}
+                        tick={{ fontSize: 11, fill: "#64748B" }}
                         axisLine={false}
                         tickLine={false}
                         tickFormatter={(v) => `${(v / 1000).toFixed(0)}rb`}
@@ -373,10 +470,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
                         contentStyle={{ borderRadius: 12, border: "1px solid #E2E8F0", fontSize: 12 }}
                         formatter={(value: any) => [`Rp ${(value || 0).toLocaleString("id-ID")}`, "Nominal"]}
                       />
-                      <Bar dataKey="nominal" radius={[8, 8, 0, 0]}>
+                      <Bar
+                        dataKey="nominal"
+                        radius={[10, 10, 0, 0]}
+                        maxBarSize={56}
+                        background={{ fill: "#94A3B8", fillOpacity: 0.12, radius: 10 }}
+                      >
                         {barData.map((entry) => (
                           <Cell key={entry.key} fill={`url(#pepin-bar-${entry.key})`} />
                         ))}
+                        {/* Label nilai di atas tiap batang, diwarnai sesuai kategori */}
+                        <LabelList
+                          dataKey="nominal"
+                          position="top"
+                          content={(props: any) => {
+                            const { x, y, width, index } = props;
+                            const entry = barData[index];
+                            if (!entry) return <g />;
+                            return (
+                              <text
+                                x={x + width / 2}
+                                y={y - 8}
+                                fill={KATEGORI_COLORS[entry.key] || "#94A3B8"}
+                                textAnchor="middle"
+                                fontSize={10}
+                                fontWeight={700}
+                              >
+                                {rupiahRingkas(entry.nominal)}
+                              </text>
+                            );
+                          }}
+                        />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
