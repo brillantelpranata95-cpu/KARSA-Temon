@@ -1,0 +1,64 @@
+# ⛔ DINONAKTIFKAN — JANGAN DIAKTIFKAN KEMBALI TANPA MEMBACA INI
+#
+# Workflow ini di-rename dari deploy.yml menjadi deploy.yml.disabled karena
+# BERBAHAYA untuk arsitektur saat ini.
+#
+# MASALAHNYA
+# ----------
+# GRAHA (aplikasi peminjaman ruangan) disajikan di https://karsa-temon.web.app/graha
+# dengan cara MENYALIN hasil build-nya ke KARSA-Temon/public/graha/. Folder itu
+# ada di .gitignore, sehingga:
+#
+#   1. CI menjalankan `actions/checkout` -> hanya source KARSA (source GRAHA ada di
+#      D:/Temon/Graha-Temon, DI LUAR repo ini — CI tidak punya akses ke sana)
+#   2. `npm run build` -> menghasilkan dist/ TANPA folder graha/
+#   3. `firebase deploy --only hosting` -> mengganti SELURUH isi site
+#   4. Akibatnya /graha HILANG dari produksi. Karena firebase.json punya rewrite
+#      catch-all, /graha tidak menampilkan 404 — ia menampilkan aplikasi KARSA.
+#      Kegagalannya SENYAP dan membingungkan pengguna.
+#
+# Kenapa tidak diperbaiki dengan "build GRAHA di dalam workflow"? Karena source
+# GRAHA tidak ada di repo ini. Itu baru mungkin setelah GRAHA dipindahkan ke dalam
+# repo (opsi restrukturisasi yang belum diputuskan pengguna).
+#
+# CARA DEPLOY YANG BENAR
+# ----------------------
+# Deploy dilakukan manual dari D:/Temon dengan skrip `deploy.sh` di root repo ini.
+# Urutannya PENTING: build GRAHA dulu -> salin ke public/graha -> baru build KARSA.
+# Lihat deploy.sh untuk perintah lengkapnya.
+#
+# Untuk mengaktifkan kembali: ganti nama berkas ini menjadi deploy.yml, TAPI
+# pastikan dulu masalah di atas sudah benar-benar teratasi (mis. GRAHA sudah
+# ada di dalam repo dan ikut di-build oleh workflow).
+
+name: Deploy to Firebase
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      # Authenticate with the FIREBASE_SERVICE_ACCOUNT secret (keyless flow).
+      # firebase-tools picks up the generated credentials automatically.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Firebase Hosting
+        run: npx firebase-tools deploy --only hosting --project karsa-temon --non-interactive
