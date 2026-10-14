@@ -327,7 +327,9 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
         </div>
       ) : effectivePackages.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 p-12 rounded-2xl border border-gray-200 dark:border-slate-700 text-center space-y-3">
-          <Icon name="package" className="w-10 h-10 text-gray-300 dark:text-slate-600 mx-auto" />
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#32848D]/10 dark:bg-[#32848D]/20">
+            <Icon name="package" className="w-8 h-8 text-[#32848D] dark:text-[#9ED4DA]" />
+          </div>
           <p className="text-sm font-medium text-gray-500 dark:text-slate-400">
             Belum ada paket SPJ khusus. Paket standar (checklist bawaan per Kode Rekening) tetap tersedia untuk pengguna.
           </p>

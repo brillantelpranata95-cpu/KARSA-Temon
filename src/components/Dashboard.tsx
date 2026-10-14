@@ -49,6 +49,15 @@ const KATEGORI_AKSEN: Record<string, string> = {
   LAINNYA: "#CBD5E1",
 };
 
+/** Ikon khas tiap kategori — nama Koboyo (semua sudah ada di public/koboyo/). */
+const KATEGORI_IKON: Record<string, string> = {
+  MAKAN_MINUM: "package",
+  HONOR: "users",
+  ATK: "pencil",
+  TRANSPORT: "map-pin",
+  LAINNYA: "tag",
+};
+
 const KATEGORI_LABELS: Record<string, string> = {
   MAKAN_MINUM: "Makan & Minum",
   HONOR: "Honor / Jasa",
@@ -77,11 +86,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
     loadStats();
   }, [user]);
 
+  // Badge ikon memakai latar GRADIEN PENUH dengan ikon PUTIH.
+  //
+  // Sebelumnya memakai `bg-<warna> bg-opacity-10`, tetapi `bg-opacity-*` sudah
+  // DIHAPUS di Tailwind v4 (proyek ini v4) sehingga latarnya jadi SOLID dan ikon
+  // berwarna senada di atasnya nyaris tak terlihat (biru di atas biru).
   const statCards = [
-    { label: "Total SPJ", value: stats?.totalSpj || 0, icon: "file-text", color: "bg-blue-500", textColor: "text-blue-600" },
-    { label: "Selesai", value: stats?.finalizedSpj || 0, icon: "circle-check", color: "bg-emerald-500", textColor: "text-emerald-600" },
-    { label: "Dalam Proses", value: stats?.inProgressSpj || 0, icon: "clock", color: "bg-amber-500", textColor: "text-amber-600" },
-    { label: "Draft", value: stats?.draftSpj || 0, icon: "warning", color: "bg-gray-400", textColor: "text-gray-600" },
+    { label: "Total SPJ", value: stats?.totalSpj || 0, icon: "file-text", grad: "from-blue-500 to-indigo-600", glow: "shadow-blue-500/40", labelColor: "text-blue-600 dark:text-blue-400" },
+    { label: "Selesai", value: stats?.finalizedSpj || 0, icon: "circle-check", grad: "from-emerald-500 to-teal-600", glow: "shadow-emerald-500/40", labelColor: "text-emerald-600 dark:text-emerald-400" },
+    { label: "Dalam Proses", value: stats?.inProgressSpj || 0, icon: "clock", grad: "from-amber-500 to-orange-600", glow: "shadow-amber-500/40", labelColor: "text-amber-600 dark:text-amber-400" },
+    { label: "Draft", value: stats?.draftSpj || 0, icon: "warning", grad: "from-slate-400 to-slate-600", glow: "shadow-slate-400/40", labelColor: "text-slate-600 dark:text-slate-400" },
   ];
 
   const pieData = stats
@@ -103,6 +117,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
       }))
     : [];
 
+  // Kategori dengan porsi terbesar — dipakai untuk sorotan berwarna.
+  const kategoriTeratas = pieData.length
+    ? pieData.reduce((a, b) => ((b.value || 0) > (a.value || 0) ? b : a))
+    : null;
+
   return (
     <div>
       <HeroSection variant="app" name={user.displayName || user.email} />
@@ -121,14 +140,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {statCards.map((card) => (
-          <div key={card.label} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className={`p-3 rounded-xl ${card.color} bg-opacity-10`}>
-                <Icon name={card.icon} className={`w-6 h-6 ${card.textColor}`} />
+          <div
+            key={card.label}
+            className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-800"
+          >
+            {/* Pita warna di tepi atas kartu */}
+            <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${card.grad}`} />
+            <div className="flex items-center justify-between gap-3">
+              <div
+                className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${card.grad} text-white shadow-lg ${card.glow}`}
+              >
+                <Icon name={card.icon} className="w-6 h-6" />
               </div>
-              <div className="text-right">
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{card.value}</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{card.label}</p>
+              <div className="min-w-0 text-right">
+                <p className="text-3xl font-bold leading-none text-gray-900 dark:text-white">{card.value}</p>
+                <p className={`mt-1.5 truncate text-xs font-semibold ${card.labelColor}`}>{card.label}</p>
               </div>
             </div>
           </div>
@@ -152,29 +178,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
 
       {/* Analisis PEPIN Panel */}
       <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        {/* Pita aksen berwarna di tepi atas */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-[#32848D] via-[#8B5CF6] to-[#F59E0B]" />
-
-        <div className="p-6">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        {/* Kepala berwarna solid — bukan sekadar gradien tipis */}
+        <div className="bg-gradient-to-r from-[#276972] via-[#32848D] to-[#7C4DBE] px-6 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#32848D] to-[#276972] text-white shadow-lg shadow-[#32848D]/30">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/25 text-white backdrop-blur-sm">
                 <Icon name="trending-up" className="w-5 h-5" />
-              </div>
+              </span>
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Analisis PEPIN</h2>
-                <p className="text-xs text-gray-500 dark:text-slate-400">
+                <h2 className="text-lg font-bold text-white">Analisis PEPIN</h2>
+                <p className="text-xs text-white/80">
                   Pemetaan penggunaan anggaran berdasarkan kategori belanja
                 </p>
               </div>
             </div>
             {!loading && pieData.length > 0 && (
-              <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#32848D]/10 to-[#8B5CF6]/10 px-3 py-1.5 text-xs font-semibold text-[#276972] dark:text-[#9ED4DA]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#32848D]" />
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#FCD34D]" />
                 {pieData.length} kategori · {stats?.totalSpj || 0} SPJ
               </span>
             )}
           </div>
+        </div>
+
+        <div className="p-6">
 
           {loading ? (
             <div className="py-12 text-center text-gray-400 dark:text-slate-500">
@@ -187,40 +214,70 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
             </div>
           ) : (
             <>
-              {/* Ringkasan berwarna per kategori */}
+              {/* Kartu warna SOLID per kategori (bukan sekadar gradien tipis) */}
               <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
                 {pieData.map((entry) => {
                   const warna = KATEGORI_COLORS[entry.key] || "#94A3B8";
-                  const aksen = KATEGORI_AKSEN[entry.key] || "#CBD5E1";
+                  const ikon = KATEGORI_IKON[entry.key] || "tag";
                   return (
                     <div
                       key={entry.key}
-                      className="rounded-xl border border-gray-100 p-3 transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700"
-                      style={{ background: `linear-gradient(135deg, ${warna}14, ${aksen}26)` }}
+                      className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-800"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: warna }} />
-                        <span className="truncate text-xs font-semibold text-gray-700 dark:text-slate-200">
-                          {entry.name}
-                        </span>
+                      <div className="h-1.5 w-full" style={{ background: warna }} />
+                      <div className="p-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white"
+                            style={{ background: warna }}
+                          >
+                            <Icon name={ikon} className="h-3.5 w-3.5" />
+                          </span>
+                          <span className="truncate text-xs font-semibold text-gray-700 dark:text-slate-200">
+                            {entry.name}
+                          </span>
+                        </div>
+                        <p className="mt-2.5 text-2xl font-bold leading-none" style={{ color: warna }}>
+                          {(entry.value || 0).toFixed(1)}%
+                        </p>
+                        <p className="mt-1.5 truncate text-[11px] font-medium text-gray-600 dark:text-slate-300">
+                          Rp {(entry.nominal || 0).toLocaleString("id-ID")}
+                        </p>
+                        <p className="text-[11px] text-gray-400 dark:text-slate-500">{entry.count} SPJ</p>
                       </div>
-                      <p className="mt-2 text-xl font-bold leading-none" style={{ color: warna }}>
-                        {(entry.value || 0).toFixed(1)}%
-                      </p>
-                      <p className="mt-1.5 truncate text-[11px] font-medium text-gray-600 dark:text-slate-300">
-                        Rp {(entry.nominal || 0).toLocaleString("id-ID")}
-                      </p>
-                      <p className="text-[11px] text-gray-400 dark:text-slate-500">{entry.count} SPJ</p>
                     </div>
                   );
                 })}
               </div>
 
+              {/* Sorotan kategori terbesar — blok warna SOLID */}
+              {kategoriTeratas && (
+                <div
+                  className="mb-6 flex flex-wrap items-center gap-3 rounded-xl px-4 py-3 text-white shadow-md"
+                  style={{ background: KATEGORI_COLORS[kategoriTeratas.key] || "#94A3B8" }}
+                >
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/25">
+                    <Icon name="trophy" className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-white/80">
+                      Kategori terbesar
+                    </p>
+                    <p className="truncate text-sm font-bold">
+                      {kategoriTeratas.name} · {(kategoriTeratas.value || 0).toFixed(1)}% · Rp{" "}
+                      {(kategoriTeratas.nominal || 0).toLocaleString("id-ID")}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Pie Chart */}
-                <div className="rounded-xl bg-gradient-to-br from-gray-50 to-white p-4 dark:from-slate-900/40 dark:to-slate-800/40">
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-300">
-                    <span className="h-1.5 w-4 rounded-full bg-gradient-to-r from-[#32848D] to-[#8B5CF6]" />
+                <div className="rounded-xl border-2 border-[#32848D]/25 bg-[#32848D]/5 p-4 dark:border-[#32848D]/40 dark:bg-[#32848D]/10">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#276972] dark:text-[#9ED4DA]">
+                    <span className="grid h-6 w-6 place-items-center rounded-lg bg-[#32848D] text-white">
+                      <Icon name="target" className="h-3.5 w-3.5" />
+                    </span>
                     Distribusi Persentase
                   </h3>
                   <ResponsiveContainer width="100%" height={260}>
@@ -272,9 +329,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
                 </div>
 
                 {/* Bar Chart */}
-                <div className="rounded-xl bg-gradient-to-br from-gray-50 to-white p-4 dark:from-slate-900/40 dark:to-slate-800/40">
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-300">
-                    <span className="h-1.5 w-4 rounded-full bg-gradient-to-r from-[#F59E0B] to-[#10B981]" />
+                <div className="rounded-xl border-2 border-amber-500/30 bg-amber-500/5 p-4 dark:border-amber-400/40 dark:bg-amber-400/10">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300">
+                    <span className="grid h-6 w-6 place-items-center rounded-lg bg-amber-500 text-white">
+                      <Icon name="trending-up" className="h-3.5 w-3.5" />
+                    </span>
                     Nominal per Kategori (Rp)
                   </h3>
                   <ResponsiveContainer width="100%" height={260}>

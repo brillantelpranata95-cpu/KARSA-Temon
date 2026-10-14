@@ -637,12 +637,16 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
           <div className="p-12 text-center text-gray-400 dark:text-slate-500">Memuat data SPJ...</div>
         ) : spjs.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <Icon name="warning" className="w-10 h-10 text-gray-300 dark:text-slate-600 mx-auto" />
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-amber-500/10 dark:bg-amber-400/15">
+              <Icon name="warning" className="w-8 h-8 text-amber-500 dark:text-amber-400" />
+            </div>
             <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Belum ada dokumen SPJ yang dibuat.</p>
           </div>
         ) : spjsTersaring.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <Icon name="warning" className="w-10 h-10 text-gray-300 dark:text-slate-600 mx-auto" />
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-amber-500/10 dark:bg-amber-400/15">
+              <Icon name="warning" className="w-8 h-8 text-amber-500 dark:text-amber-400" />
+            </div>
             <p className="text-sm font-medium text-gray-500 dark:text-slate-400">
               Tidak ada SPJ yang cocok dengan pencarian / filter.
             </p>
