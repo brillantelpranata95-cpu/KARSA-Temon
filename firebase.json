@@ -8,6 +8,10 @@
     ],
     "rewrites": [
       {
+        "source": "/graha/**",
+        "destination": "/graha/index.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

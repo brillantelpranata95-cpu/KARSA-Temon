@@ -4,15 +4,7 @@ import { getSpjStatistics } from "../services/api";
 import { HeroSection } from "./HeroSection";
 import { GamificationOverview } from "./GamificationOverview";
 import { useHideScores } from "../utils/prefs";
-import {
-  FileText,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  DollarSign,
-  RefreshCw,
-  TrendingUp,
-} from "lucide-react";
+import { Icon } from "./Icon";
 import {
   PieChart,
   Pie,
@@ -77,10 +69,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
   }, [user]);
 
   const statCards = [
-    { label: "Total SPJ", value: stats?.totalSpj || 0, icon: FileText, color: "bg-blue-500", textColor: "text-blue-600" },
-    { label: "Selesai", value: stats?.finalizedSpj || 0, icon: CheckCircle2, color: "bg-emerald-500", textColor: "text-emerald-600" },
-    { label: "Dalam Proses", value: stats?.inProgressSpj || 0, icon: Clock, color: "bg-amber-500", textColor: "text-amber-600" },
-    { label: "Draft", value: stats?.draftSpj || 0, icon: AlertCircle, color: "bg-gray-400", textColor: "text-gray-600" },
+    { label: "Total SPJ", value: stats?.totalSpj || 0, icon: "file-text", color: "bg-blue-500", textColor: "text-blue-600" },
+    { label: "Selesai", value: stats?.finalizedSpj || 0, icon: "circle-check", color: "bg-emerald-500", textColor: "text-emerald-600" },
+    { label: "Dalam Proses", value: stats?.inProgressSpj || 0, icon: "clock", color: "bg-amber-500", textColor: "text-amber-600" },
+    { label: "Draft", value: stats?.draftSpj || 0, icon: "warning", color: "bg-gray-400", textColor: "text-gray-600" },
   ];
 
   const pieData = stats
@@ -123,7 +115,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
           <div key={card.label} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div className={`p-3 rounded-xl ${card.color} bg-opacity-10`}>
-                <card.icon className={`w-6 h-6 ${card.textColor}`} />
+                <Icon name={card.icon} className={`w-6 h-6 ${card.textColor}`} />
               </div>
               <div className="text-right">
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">{card.value}</p>
@@ -144,7 +136,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
             </p>
           </div>
           <div className="p-4 bg-white/20 rounded-2xl">
-            <DollarSign className="w-10 h-10" />
+            <Icon name="dollar-sign" className="w-10 h-10" />
           </div>
         </div>
       </div>
@@ -153,7 +145,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm">
         <div className="flex items-center space-x-3 border-b border-gray-100 dark:border-slate-700 pb-4 mb-4">
           <div className="p-2 bg-[#32848D]/10 rounded-xl">
-            <TrendingUp className="w-5 h-5 text-[#32848D]" />
+            <Icon name="trending-up" className="w-5 h-5 text-[#32848D]" />
           </div>
           <div>
             <h2 className="font-bold text-gray-900 dark:text-white">Analisis PEPIN</h2>
@@ -163,7 +155,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
 
         {loading ? (
           <div className="py-12 text-center text-gray-400 dark:text-slate-500">
-            <RefreshCw className="w-8 h-8 mx-auto animate-spin mb-2" />
+            <Icon name="refresh-ccw" className="w-8 h-8 mx-auto animate-spin mb-2" />
             <p className="text-sm">Menganalisis data...</p>
           </div>
         ) : pieData.length === 0 ? (

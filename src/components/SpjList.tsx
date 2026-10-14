@@ -20,23 +20,7 @@ import { formatDateDDMMYYYY, toDateInputValue } from "../utils/date";
 import { exportSpjRecapPdf } from "../utils/exportRecap";
 import { exportSpjPdf } from "../utils/exportSpjPdf";
 import { SearchableSelect, ComboOption } from "./SearchableSelect";
-import {
-  Plus,
-  FileText,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Eye,
-  RefreshCw,
-  Trash2,
-  ArrowRight,
-  Archive,
-  Package,
-  Download,
-  ChevronLeft,
-  ChevronRight,
-  FileDown,
-} from "lucide-react";
+import { Icon } from "./Icon";
 
 interface SpjListProps {
   user: UserProfile;
@@ -77,14 +61,80 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   // Pagination (Rekomendasi 4): tampilkan bertahap agar ringan saat data besar
   const PAGE_SIZE = 15;
   const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(spjs.length / PAGE_SIZE));
-  const pagedSpjs = spjs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // Ekspor rekap PDF — sedang proses & nominal cache per SPJ
   const [exportingPdf, setExportingPdf] = useState(false);
   const [downloadingSpjId, setDownloadingSpjId] = useState<string | null>(null);
   const [downloadLabel, setDownloadLabel] = useState("");
   const [nominalBySpjId, setNominalBySpjId] = useState<Record<string, number>>({});
+
+  // ------------------- FILTER & URUTAN DAFTAR SPJ -------------------
+  // Penyaringan dilakukan di sisi klien atas daftar yang SUDAH dimuat, supaya
+  // tidak menambah pembacaan Firestore — kuota Spark dipakai bersama GRAHA.
+  const [cariTeks, setCariTeks] = useState("");
+  const [filterStatus, setFilterStatus] = useState("SEMUA");
+  const [filterBulan, setFilterBulan] = useState("SEMUA");
+  const [urut, setUrut] = useState("TERBARU");
+
+  const spjsTersaring = React.useMemo(() => {
+    const kata = cariTeks.trim().toLowerCase();
+
+    const hasil = spjs.filter((spj) => {
+      if (filterStatus !== "SEMUA" && spj.status !== filterStatus) return false;
+      if (filterBulan !== "SEMUA" && String(spj.bulan) !== filterBulan) return false;
+      if (!kata) return true;
+      const kolom = [
+        spj.nomorSpj,
+        spj.masterSnapshot?.kegiatan?.nama,
+        spj.masterSnapshot?.kegiatan?.kode,
+        spj.masterSnapshot?.kodeRekening?.nama,
+        spj.masterSnapshot?.kodeRekening?.kode,
+        spj.sharedData?.judulAktivitas,
+        spj.userName,
+        spj.jawatanName,
+      ];
+      return kolom.some((v) => String(v || "").toLowerCase().includes(kata));
+    });
+
+    // Urutan "TERBARU/TERLAMA" memakai waktu dibuat; nomor SPJ sebagai cadangan
+    // untuk dokumen lama yang belum punya createdAt.
+    const waktu = (x: SpjItem) => {
+      const t = x.createdAt?.toMillis ? x.createdAt.toMillis() : 0;
+      if (t) return t;
+      const n = Number(String(x.nomorSpj || "").replace(/[^0-9]/g, ""));
+      return Number.isFinite(n) ? n : 0;
+    };
+    const nominal = (x: SpjItem) => nominalBySpjId[x.id] || 0;
+
+    return [...hasil].sort((a, b) => {
+      switch (urut) {
+        case "TERLAMA":
+          return waktu(a) - waktu(b);
+        case "NOMOR_TURUN":
+          return String(b.nomorSpj).localeCompare(String(a.nomorSpj));
+        case "NOMOR_NAIK":
+          return String(a.nomorSpj).localeCompare(String(b.nomorSpj));
+        case "NOMINAL_TURUN":
+          return nominal(b) - nominal(a);
+        case "NOMINAL_NAIK":
+          return nominal(a) - nominal(b);
+        case "STATUS":
+          return String(a.status).localeCompare(String(b.status)) || waktu(b) - waktu(a);
+        default:
+          return waktu(b) - waktu(a);
+      }
+    });
+  }, [spjs, cariTeks, filterStatus, filterBulan, urut, nominalBySpjId]);
+
+  const totalPages = Math.max(1, Math.ceil(spjsTersaring.length / PAGE_SIZE));
+  const pagedSpjs = spjsTersaring.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Kembali ke halaman 1 setiap penyaringan/urutan berubah, supaya pengguna
+  // tidak terdampar di halaman kosong.
+  useEffect(() => {
+    setPage(1);
+  }, [cariTeks, filterStatus, filterBulan, urut]);
+
 
   // Request modals
   const [isRequestKegiatanOpen, setIsRequestKegiatanOpen] = useState(false);
@@ -384,7 +434,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       {downloadingSpjId && (
         <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl px-8 py-7 shadow-2xl max-w-sm w-full text-center space-y-3">
-            <RefreshCw className="w-8 h-8 mx-auto text-[#32848D] animate-spin" />
+            <Icon name="refresh-ccw" className="w-8 h-8 mx-auto text-[#32848D] animate-spin" />
             <p className="font-bold text-gray-900 dark:text-white">Menyusun berkas PDF...</p>
             <p className="text-xs text-gray-500 dark:text-slate-400 min-h-[2.5rem]">
               {downloadLabel || "Menyiapkan dokumen"}
@@ -400,7 +450,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <FileText className="w-6 h-6 text-[#32848D]" />
+            <Icon name="file-text" className="w-6 h-6 text-[#32848D]" />
             Daftar Paket SPJ {user.role === "ADMIN" ? "Seluruh Jawatan" : user.jawatanName}
           </h1>
           <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
@@ -414,7 +464,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
             className="px-4 py-2.5 rounded-2xl font-semibold text-sm flex items-center space-x-2 transition bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             title="Unduh rekapitulasi seluruh SPJ dalam format PDF"
           >
-            <FileDown className="w-4 h-4" />
+            <Icon name="download" className="w-4 h-4" />
             <span>{exportingPdf ? "Menyusun..." : "Ekspor Rekap PDF"}</span>
           </button>
           <button
@@ -425,14 +475,14 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200"
             }`}
           >
-            <Archive className="w-4 h-4" />
+            <Icon name="archive" className="w-4 h-4" />
             <span>Arsip ({archivedSpjs.length})</span>
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
             className="px-5 py-2.5 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-2xl shadow-md transition inline-flex items-center space-x-2 text-sm"
           >
-            <Plus className="w-4 h-4" />
+            <Icon name="plus" className="w-4 h-4" />
             <span>Buat Paket SPJ Baru</span>
           </button>
         </div>
@@ -452,7 +502,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         <div className="bg-amber-50 dark:bg-amber-900/20 p-6 rounded-3xl border border-amber-200 dark:border-amber-800 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
-              <Package className="w-5 h-5 text-amber-700 dark:text-amber-400" />
+              <Icon name="package" className="w-5 h-5 text-amber-700 dark:text-amber-400" />
               <h2 className="text-lg font-bold text-amber-900 dark:text-amber-200">Box Arsip SPJ</h2>
             </div>
             <span className="text-xs font-semibold bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-3 py-1 rounded-full">
@@ -485,12 +535,12 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                     >
                       {downloadingSpjId === spj.id ? (
                         <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <Icon name="refresh-ccw" className="w-3.5 h-3.5 animate-spin" />
                           <span>Menyusun...</span>
                         </>
                       ) : (
                         <>
-                          <Download className="w-3.5 h-3.5" />
+                          <Icon name="download" className="w-3.5 h-3.5" />
                           <span>Download PDF</span>
                         </>
                       )}
@@ -499,7 +549,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                       onClick={() => onSelectSpj(spj.id, "preview")}
                       className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg inline-flex items-center space-x-1"
                     >
-                      <Eye className="w-3.5 h-3.5" />
+                      <Icon name="eye" className="w-3.5 h-3.5" />
                       <span>Lihat</span>
                     </button>
                   </div>
@@ -512,12 +562,100 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
 
       {/* TABLE LIST */}
       <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
+        {!loading && spjs.length > 0 && (
+          <div className="p-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/40 dark:bg-slate-700/20">
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={cariTeks}
+                onChange={(e) => setCariTeks(e.target.value)}
+                placeholder="Cari nomor SPJ, sub-kegiatan, rekening, judul..."
+                className="flex-1 min-w-[220px] px-3.5 py-2 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-800 dark:text-slate-100 placeholder:text-gray-400 outline-none focus:border-[#32848D]"
+              />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-700 dark:text-slate-200 outline-none focus:border-[#32848D]"
+                title="Saring menurut status"
+              >
+                <option value="SEMUA">Semua status</option>
+                <option value="DRAFT">Draft</option>
+                <option value="IN_PROGRESS">Sedang Diproses</option>
+                <option value="COMPLETE">Lengkap</option>
+                <option value="FINALIZED">Final</option>
+                <option value="ARCHIVED">Arsip</option>
+              </select>
+              <select
+                value={filterBulan}
+                onChange={(e) => setFilterBulan(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-700 dark:text-slate-200 outline-none focus:border-[#32848D]"
+                title="Saring menurut bulan"
+              >
+                <option value="SEMUA">Semua bulan</option>
+                {[
+                  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+                ].map((nm, i) => (
+                  <option key={nm} value={String(i + 1)}>
+                    {nm}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={urut}
+                onChange={(e) => setUrut(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-700 dark:text-slate-200 outline-none focus:border-[#32848D]"
+                title="Urutkan"
+              >
+                <option value="TERBARU">Terbaru dulu</option>
+                <option value="TERLAMA">Terlama dulu</option>
+                <option value="NOMOR_TURUN">Nomor SPJ (besar ke kecil)</option>
+                <option value="NOMOR_NAIK">Nomor SPJ (kecil ke besar)</option>
+                <option value="NOMINAL_TURUN">Nominal (besar ke kecil)</option>
+                <option value="NOMINAL_NAIK">Nominal (kecil ke besar)</option>
+                <option value="STATUS">Status</option>
+              </select>
+            </div>
+            <p className="mt-2 text-[11px] text-gray-500 dark:text-slate-400">
+              Menampilkan {spjsTersaring.length} dari {spjs.length} SPJ
+              {(cariTeks || filterStatus !== "SEMUA" || filterBulan !== "SEMUA") && (
+                <button
+                  onClick={() => {
+                    setCariTeks("");
+                    setFilterStatus("SEMUA");
+                    setFilterBulan("SEMUA");
+                  }}
+                  className="ml-2 font-semibold text-[#32848D] hover:underline"
+                >
+                  Bersihkan filter
+                </button>
+              )}
+            </p>
+          </div>
+        )}
         {loading ? (
           <div className="p-12 text-center text-gray-400 dark:text-slate-500">Memuat data SPJ...</div>
         ) : spjs.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <AlertCircle className="w-10 h-10 text-gray-300 dark:text-slate-600 mx-auto" />
+            <Icon name="warning" className="w-10 h-10 text-gray-300 dark:text-slate-600 mx-auto" />
             <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Belum ada dokumen SPJ yang dibuat.</p>
+          </div>
+        ) : spjsTersaring.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <Icon name="warning" className="w-10 h-10 text-gray-300 dark:text-slate-600 mx-auto" />
+            <p className="text-sm font-medium text-gray-500 dark:text-slate-400">
+              Tidak ada SPJ yang cocok dengan pencarian / filter.
+            </p>
+            <button
+              onClick={() => {
+                setCariTeks("");
+                setFilterStatus("SEMUA");
+                setFilterBulan("SEMUA");
+              }}
+              className="text-xs font-semibold text-[#32848D] hover:underline"
+            >
+              Bersihkan filter
+            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -577,15 +715,15 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                     <td className="p-4 whitespace-nowrap">
                       {spj.status === "FINALIZED" ? (
                         <span className="inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full font-semibold bg-emerald-100 text-emerald-800">
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1 shrink-0" /> Final
+                          <Icon name="circle-check" className="w-3.5 h-3.5 mr-1 shrink-0" /> Final
                         </span>
                       ) : spj.status === "COMPLETE" ? (
                         <span className="inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full font-semibold bg-blue-100 text-blue-800">
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1 shrink-0" /> Lengkap
+                          <Icon name="circle-check" className="w-3.5 h-3.5 mr-1 shrink-0" /> Lengkap
                         </span>
                       ) : spj.status === "IN_PROGRESS" ? (
                         <span className="inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full font-semibold bg-amber-100 text-amber-800">
-                          <Clock className="w-3.5 h-3.5 mr-1 shrink-0" /> Proses
+                          <Icon name="clock" className="w-3.5 h-3.5 mr-1 shrink-0" /> Proses
                         </span>
                       ) : (
                         <span className="inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full font-semibold bg-gray-100 text-gray-700">
@@ -599,7 +737,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                           onClick={() => onSelectSpj(spj.id, "preview")}
                           className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
                         >
-                          <Eye className="w-3.5 h-3.5 shrink-0" />
+                          <Icon name="eye" className="w-3.5 h-3.5 shrink-0" />
                           <span>Preview</span>
                         </button>
 
@@ -611,12 +749,12 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                     >
                       {downloadingSpjId === spj.id ? (
                         <>
-                          <RefreshCw className="w-3.5 h-3.5 shrink-0 animate-spin" />
+                          <Icon name="refresh-ccw" className="w-3.5 h-3.5 shrink-0 animate-spin" />
                           <span>Menyusun...</span>
                         </>
                       ) : (
                         <>
-                          <Download className="w-3.5 h-3.5 shrink-0" />
+                          <Icon name="download" className="w-3.5 h-3.5 shrink-0" />
                           <span>PDF</span>
                         </>
                       )}
@@ -628,14 +766,14 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                             className="px-3 py-1.5 text-xs font-semibold text-white bg-[#32848D] hover:bg-[#276972] rounded-lg inline-flex items-center space-x-1 shadow-sm whitespace-nowrap"
                           >
                             <span>Kelola</span>
-                            <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                            <Icon name="arrow-right" className="w-3.5 h-3.5 shrink-0" />
                           </button>
                         ) : (
                           <button
                             onClick={() => setArchiveSpjId(spj.id)}
                             className="px-3 py-1.5 text-xs font-medium text-[#32848D] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
                           >
-                            <Archive className="w-3.5 h-3.5 shrink-0" />
+                            <Icon name="archive" className="w-3.5 h-3.5 shrink-0" />
                             <span>Arsipkan</span>
                           </button>
                         )}
@@ -645,7 +783,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                             onClick={() => setReopenSpjId(spj.id)}
                             className="px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
                           >
-                            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                            <Icon name="refresh-ccw" className="w-3.5 h-3.5 shrink-0" />
                             <span>Reopen</span>
                           </button>
                         )}
@@ -655,7 +793,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                             onClick={() => setDeleteSpjId(spj.id)}
                             className="px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
                           >
-                            <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                            <Icon name="trash" className="w-3.5 h-3.5 shrink-0" />
                             <span>Hapus</span>
                           </button>
                         )}
@@ -681,7 +819,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
               disabled={page <= 1}
               className="px-3 py-2 rounded-xl text-xs font-semibold bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <Icon name="chevron-left" className="w-4 h-4" />
               <span>Sebelumnya</span>
             </button>
             <span className="text-xs font-bold text-gray-700 dark:text-slate-300 px-2">
@@ -693,7 +831,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
               className="px-3 py-2 rounded-xl text-xs font-semibold bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
             >
               <span>Berikutnya</span>
-              <ChevronRight className="w-4 h-4" />
+              <Icon name="chevron-right" className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -888,7 +1026,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <h3 className="text-base font-bold text-[#32848D] flex items-center gap-2">
-              <Archive className="w-5 h-5" /> Arsipkan SPJ
+              <Icon name="archive" className="w-5 h-5" /> Arsipkan SPJ
             </h3>
             <p className="text-xs text-gray-600 dark:text-slate-300">
               SPJ yang diarsipkan akan dipindahkan ke Box Arsip dan dapat diunduh dalam format PDF.
@@ -916,7 +1054,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <h3 className="text-base font-bold text-amber-600 flex items-center gap-2">
-              <RefreshCw className="w-5 h-5" /> Konfirmasi Reopen SPJ
+              <Icon name="refresh-ccw" className="w-5 h-5" /> Konfirmasi Reopen SPJ
             </h3>
             <p className="text-xs text-gray-500 dark:text-slate-400">
               Mengizinkan perbaikan dokumen SPJ yang sudah difinalisasi. Alasan reopening wajib dicatat ke Audit Log.
@@ -953,7 +1091,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <h3 className="text-base font-bold text-red-600 flex items-center gap-2">
-              <Trash2 className="w-5 h-5" /> Hapus Paket SPJ
+              <Icon name="trash" className="w-5 h-5" /> Hapus Paket SPJ
             </h3>
             <p className="text-xs text-gray-600 dark:text-slate-300">
               Apakah Anda yakin ingin menghapus paket SPJ ini beserta seluruh dokumennya? Tindakan ini tidak dapat dibatalkan.

@@ -10,7 +10,7 @@
  * tidak menambah pembacaan Firestore.
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { History, X } from "lucide-react";
+import { Icon } from "./Icon";
 
 const MAX_HISTORY = 30;
 const STORAGE_PREFIX = "karsa.suggest.";
@@ -132,7 +132,7 @@ export const SuggestionInput: React.FC<SuggestionInputProps> = ({
       {open && matches.length > 0 && (
         <div className="absolute z-30 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-lg overflow-hidden">
           <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-slate-500 border-b border-gray-100 dark:border-slate-700 inline-flex items-center gap-1">
-            <History className="w-3 h-3" /> Nama yang pernah dipakai
+            <Icon name="rewind" className="w-3 h-3" /> Nama yang pernah dipakai
           </p>
           <ul className="max-h-52 overflow-y-auto">
             {matches.map((name) => (
@@ -160,7 +160,7 @@ export const SuggestionInput: React.FC<SuggestionInputProps> = ({
                   title="Hapus dari riwayat"
                   className="px-2 py-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
                 >
-                  <X className="w-3 h-3" />
+                  <Icon name="x" className="w-3 h-3" />
                 </button>
               </li>
             ))}

@@ -4,7 +4,7 @@ import { terbilangRupiah, toTitleCase } from "../utils/format";
 import { formatDateDDMMYYYY, getNamaHari, getNamaHariCapitalized, getYearFromDate } from "../utils/date";
 import { drivePhotoUrl, collectDocPhotos, inspectDriveLink } from "../utils/drive";
 import { DriveImage } from "./DriveImage";
-import { ArrowLeft, ExternalLink, Printer } from "lucide-react";
+import { Icon } from "./Icon";
 import { db } from "../config/firebase";
 import { collection, onSnapshot, getDocs } from "firebase/firestore";
 
@@ -191,7 +191,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
             onClick={onBack}
             className="p-2 rounded-xl text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <Icon name="arrow-left" className="w-5 h-5" />
           </button>
           <div>
             <h2 className="font-bold text-gray-900 dark:text-white">{spj.nomorSpj}</h2>
@@ -217,7 +217,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
             onClick={handlePrint}
             className="ml-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold flex items-center space-x-2 shadow-sm transition-all"
           >
-            <Printer className="w-4 h-4" />
+            <Icon name="printer-2" className="w-4 h-4" />
             <span>Cetak / Simpan PDF</span>
           </button>
         </div>
@@ -711,7 +711,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                     className="inline-flex items-center space-x-2 text-indigo-600 underline font-mono text-sm"
                   >
                     <span>{activeDoc.externalUrl}</span>
-                    <ExternalLink className="w-4 h-4" />
+                    <Icon name="external-link" className="w-4 h-4" />
                   </a>
                 </div>
                 <div className="border border-gray-300 rounded-xl overflow-hidden">
@@ -745,7 +745,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                     className="inline-flex items-center space-x-2 text-blue-600 underline font-mono text-sm"
                   >
                     <span>{activeDoc.externalUrl}</span>
-                    <ExternalLink className="w-4 h-4" />
+                    <Icon name="external-link" className="w-4 h-4" />
                   </a>
                 </div>
                 <div className="border border-gray-300 rounded-xl overflow-hidden">

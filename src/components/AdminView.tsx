@@ -23,24 +23,7 @@ import {
   adminUpdateKodeRekening,
 } from "../services/api";
 import { getCurrentYear } from "../utils/date";
-import {
-  RefreshCw,
-  Users,
-  CheckCircle2,
-  XCircle,
-  Edit,
-  Plus,
-  Trash2,
-  Save,
-  Building2,
-  UserCheck,
-  UserPlus,
-  Check,
-  X,
-  Clock,
-  BookOpen,
-  Tag,
-} from "lucide-react";
+import { Icon } from "./Icon";
 
 interface AdminViewProps {
   user: UserProfile;
@@ -447,7 +430,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           onClick={activeTab === "audit" ? fetchAuditLogs : fetchMasterData}
           className="px-4 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center space-x-1"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <Icon name="refresh-ccw" className="w-3.5 h-3.5" />
           <span>Refresh Data</span>
         </button>
       </div>
@@ -497,7 +480,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Users className="w-5 h-5 text-[#32848D]" />
+                <Icon name="users" className="w-5 h-5 text-[#32848D]" />
                 <div>
                   <h2 className="font-bold text-gray-900 dark:text-white">Daftar Pengguna & Penugasan Jawatan</h2>
                   <p className="text-xs text-gray-500 dark:text-slate-400">Atur hak akses login tiap akun jawatan</p>
@@ -513,7 +496,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                 }}
                 className="px-4 py-2 bg-[#32848D] hover:bg-[#276972] text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 shadow-sm"
               >
-                <UserPlus className="w-4 h-4" />
+                <Icon name="user-plus" className="w-4 h-4" />
                 <span>Tambah Pengguna Baru</span>
               </button>
             </div>
@@ -556,11 +539,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                         <td className="p-4 text-center">
                           {u.isActive !== false ? (
                             <span className="inline-flex items-center text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Aktif
+                              <Icon name="circle-check" className="w-3.5 h-3.5 mr-1" /> Aktif
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-xs font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full">
-                              <XCircle className="w-3.5 h-3.5 mr-1" /> Nonaktif
+                              <Icon name="circle-x" className="w-3.5 h-3.5 mr-1" /> Nonaktif
                             </span>
                           )}
                         </td>
@@ -569,14 +552,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                             onClick={() => handleOpenEditUser(u)}
                             className="px-3 py-1.5 bg-[#32848D] hover:bg-[#276972] text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1 shadow-sm"
                           >
-                            <Edit className="w-3.5 h-3.5" />
+                            <Icon name="pencil" className="w-3.5 h-3.5" />
                             <span>Ubah Akses</span>
                           </button>
                           <button
                             onClick={() => setDeleteUserUid(u.uid)}
                             className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Icon name="trash" className="w-3.5 h-3.5" />
                             <span>Hapus</span>
                           </button>
                         </td>
@@ -592,7 +575,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Building2 className="w-5 h-5 text-[#32848D]" />
+                <Icon name="bank" className="w-5 h-5 text-[#32848D]" />
                 <div>
                   <h2 className="font-bold text-gray-900 dark:text-white">Daftar Unit Jawatan</h2>
                   <p className="text-xs text-gray-500 dark:text-slate-400">CRUD unit jawatan kecamatan</p>
@@ -602,7 +585,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                 onClick={handleOpenCreateJawatan}
                 className="px-4 py-2 bg-[#32848D] hover:bg-[#276972] text-white rounded-xl text-xs font-semibold flex items-center space-x-1 shadow-sm"
               >
-                <Plus className="w-4 h-4" />
+                <Icon name="plus" className="w-4 h-4" />
                 <span>Tambah Jawatan</span>
               </button>
             </div>
@@ -632,11 +615,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                         <td className="p-4 text-center">
                           {j.isActive !== false ? (
                             <span className="inline-flex items-center text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Aktif
+                              <Icon name="circle-check" className="w-3.5 h-3.5 mr-1" /> Aktif
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-xs font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full">
-                              <XCircle className="w-3.5 h-3.5 mr-1" /> Nonaktif
+                              <Icon name="circle-x" className="w-3.5 h-3.5 mr-1" /> Nonaktif
                             </span>
                           )}
                         </td>
@@ -645,14 +628,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                             onClick={() => handleOpenEditJawatan(j)}
                             className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
                           >
-                            <Edit className="w-3.5 h-3.5" />
+                            <Icon name="pencil" className="w-3.5 h-3.5" />
                             <span>Edit</span>
                           </button>
                           <button
                             onClick={() => handleDeleteJawatan(j)}
                             className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Icon name="trash" className="w-3.5 h-3.5" />
                             <span>Hapus</span>
                           </button>
                         </td>
@@ -668,7 +651,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <BookOpen className="w-5 h-5 text-[#32848D]" />
+                <Icon name="open-book" className="w-5 h-5 text-[#32848D]" />
                 <div>
                   <h2 className="font-bold text-gray-900 dark:text-white">Daftar Kode Sub-Kegiatan & Pengajuan</h2>
                   <p className="text-xs text-gray-500 dark:text-slate-400">Persetujuan usulan sub-kegiatan baru & penetapan jawatan naungan</p>
@@ -683,7 +666,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                 }}
                 className="px-4 py-2 bg-[#32848D] hover:bg-[#276972] text-white rounded-xl text-xs font-semibold flex items-center space-x-1 shadow-sm"
               >
-                <Plus className="w-4 h-4" />
+                <Icon name="plus" className="w-4 h-4" />
                 <span>Tambah Kode Sub-Kegiatan</span>
               </button>
             </div>
@@ -721,11 +704,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                         <td className="p-4 text-center">
                           {isPending ? (
                             <span className="inline-flex items-center text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                              <Clock className="w-3 h-3 mr-1" /> Menunggu Approval
+                              <Icon name="clock" className="w-3 h-3 mr-1" /> Menunggu Approval
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-                              <CheckCircle2 className="w-3 h-3 mr-1" /> Aktif
+                              <Icon name="circle-check" className="w-3 h-3 mr-1" /> Aktif
                             </span>
                           )}
                         </td>
@@ -736,14 +719,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                                 onClick={() => handleApproveKegiatan(k.id)}
                                 className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
                               >
-                                <Check className="w-3.5 h-3.5" />
+                                <Icon name="check" className="w-3.5 h-3.5" />
                                 <span>Setujui</span>
                               </button>
                               <button
                                 onClick={() => handleRejectKegiatan(k.id)}
                                 className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
                               >
-                                <X className="w-3.5 h-3.5" />
+                                <Icon name="x" className="w-3.5 h-3.5" />
                                 <span>Tolak</span>
                               </button>
                             </>
@@ -753,7 +736,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                                 onClick={() => handleOpenEditKegiatan(k)}
                                 className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
                               >
-                                <Edit className="w-3.5 h-3.5" />
+                                <Icon name="pencil" className="w-3.5 h-3.5" />
                                 <span>Edit</span>
                               </button>
                               <button
@@ -761,7 +744,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                                 className="px-2.5 py-1 text-gray-400 hover:text-red-600 rounded-lg text-xs"
                                 title="Hapus Sub-Kegiatan"
                               >
-                                <Trash2 className="w-4 h-4 inline" />
+                                <Icon name="trash" className="w-4 h-4 inline" />
                               </button>
                             </>
                           )}
@@ -778,7 +761,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Tag className="w-5 h-5 text-[#32848D]" />
+                <Icon name="tag" className="w-5 h-5 text-[#32848D]" />
                 <div>
                   <h2 className="font-bold text-gray-900 dark:text-white">Daftar Kode Rekening & Pengajuan</h2>
                   <p className="text-xs text-gray-500 dark:text-slate-400">Persetujuan usulan rekening belanja baru</p>
@@ -793,7 +776,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                 }}
                 className="px-4 py-2 bg-[#32848D] hover:bg-[#276972] text-white rounded-xl text-xs font-semibold flex items-center space-x-1 shadow-sm"
               >
-                <Plus className="w-4 h-4" />
+                <Icon name="plus" className="w-4 h-4" />
                 <span>Tambah Kode Rekening</span>
               </button>
             </div>
@@ -830,11 +813,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                         <td className="p-4 text-center">
                           {isPending ? (
                             <span className="inline-flex items-center text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                              <Clock className="w-3 h-3 mr-1" /> Menunggu Approval
+                              <Icon name="clock" className="w-3 h-3 mr-1" /> Menunggu Approval
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-                              <CheckCircle2 className="w-3 h-3 mr-1" /> Aktif
+                              <Icon name="circle-check" className="w-3 h-3 mr-1" /> Aktif
                             </span>
                           )}
                         </td>
@@ -845,14 +828,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                                 onClick={() => handleApproveRekening(r.id)}
                                 className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
                               >
-                                <Check className="w-3.5 h-3.5" />
+                                <Icon name="check" className="w-3.5 h-3.5" />
                                 <span>Setujui</span>
                               </button>
                               <button
                                 onClick={() => handleRejectRekening(r.id)}
                                 className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
                               >
-                                <X className="w-3.5 h-3.5" />
+                                <Icon name="x" className="w-3.5 h-3.5" />
                                 <span>Tolak</span>
                               </button>
                             </>
@@ -862,7 +845,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                                 onClick={() => handleOpenEditRekening(r)}
                                 className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
                               >
-                                <Edit className="w-3.5 h-3.5" />
+                                <Icon name="pencil" className="w-3.5 h-3.5" />
                                 <span>Edit</span>
                               </button>
                               <button
@@ -870,7 +853,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                                 className="px-2.5 py-1 text-gray-400 hover:text-red-600 rounded-lg text-xs"
                                 title="Hapus Rekening"
                               >
-                                <Trash2 className="w-4 h-4 inline" />
+                                <Icon name="trash" className="w-4 h-4 inline" />
                               </button>
                             </>
                           )}
@@ -890,7 +873,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
-              <UserCheck className="w-5 h-5" />
+              <Icon name="user-check" className="w-5 h-5" />
               <span>Atur Akses & Jawatan Pengguna</span>
             </div>
             <div className="text-xs text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-700/50 p-3 rounded-xl">
@@ -962,7 +945,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
-              <UserPlus className="w-5 h-5" />
+              <Icon name="user-plus" className="w-5 h-5" />
               <span>Tambah Pengguna Baru</span>
             </div>
             <form onSubmit={handleCreateUser} className="space-y-3 text-sm">
@@ -1043,7 +1026,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
-              <Building2 className="w-5 h-5" />
+              <Icon name="bank" className="w-5 h-5" />
               <span>{editingJawatan ? "Edit Jawatan" : "Tambah Jawatan Baru"}</span>
             </div>
             <div className="space-y-3 text-sm">
@@ -1101,7 +1084,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                 onClick={handleSaveJawatan}
                 className="px-5 py-2 bg-[#32848D] hover:bg-[#276972] text-white font-semibold rounded-xl text-sm shadow-sm"
               >
-                <Save className="w-4 h-4 inline mr-1" />
+                <Icon name="save" className="w-4 h-4 inline mr-1" />
                 Simpan Jawatan
               </button>
             </div>
@@ -1114,7 +1097,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
-              <BookOpen className="w-5 h-5" />
+              <Icon name="open-book" className="w-5 h-5" />
               <span>Tambah Kode Sub-Kegiatan Baru</span>
             </div>
             <form onSubmit={handleDirectCreateKegiatan} className="space-y-3 text-sm">
@@ -1182,7 +1165,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
-              <Tag className="w-5 h-5" />
+              <Icon name="tag" className="w-5 h-5" />
               <span>Tambah Kode Rekening Baru</span>
             </div>
             <form onSubmit={handleDirectCreateRekening} className="space-y-3 text-sm">
@@ -1250,7 +1233,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-red-600 font-bold text-lg border-b pb-3">
-              <Trash2 className="w-5 h-5" />
+              <Icon name="trash" className="w-5 h-5" />
               <span>Hapus Pengguna</span>
             </div>
             <p className="text-sm text-gray-600 dark:text-slate-300">
@@ -1279,7 +1262,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
-              <Edit className="w-5 h-5" />
+              <Icon name="pencil" className="w-5 h-5" />
               <span>Edit Kode Sub-Kegiatan</span>
             </div>
             <div className="space-y-3 text-sm">
@@ -1338,7 +1321,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
-              <Edit className="w-5 h-5" />
+              <Icon name="pencil" className="w-5 h-5" />
               <span>Edit Kode Rekening</span>
             </div>
             <div className="space-y-3 text-sm">

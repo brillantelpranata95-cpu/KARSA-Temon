@@ -7,7 +7,7 @@
  * yang jelas beserta tautan untuk membuka berkas di Drive — bukan gambar rusak.
  */
 import React, { useState } from "react";
-import { ImageOff, ExternalLink } from "lucide-react";
+import { Icon } from "./Icon";
 import { drivePhotoUrl, inspectDriveLink } from "../utils/drive";
 
 interface DriveImageProps {
@@ -38,7 +38,7 @@ export const DriveImage: React.FC<DriveImageProps> = ({
   if (!src) {
     return (
       <div className={fallbackClassName}>
-        <ImageOff className="w-6 h-6 mx-auto mb-1" />
+        <Icon name="image-off" className="w-6 h-6 mx-auto mb-1" />
         <p className="text-[10px] text-center px-2">Tautan tidak dikenali</p>
       </div>
     );
@@ -47,7 +47,7 @@ export const DriveImage: React.FC<DriveImageProps> = ({
   if (failed) {
     return (
       <div className={fallbackClassName}>
-        <ImageOff className="w-6 h-6 mx-auto mb-1" />
+        <Icon name="image-off" className="w-6 h-6 mx-auto mb-1" />
         <p className="text-[10px] text-center px-2 leading-relaxed">
           Foto tidak dapat ditampilkan — berkas belum dibagikan publik.
           <br />
@@ -60,7 +60,7 @@ export const DriveImage: React.FC<DriveImageProps> = ({
             rel="noreferrer"
             className="mt-1 text-[10px] font-semibold underline inline-flex items-center gap-1 justify-center w-full"
           >
-            <ExternalLink className="w-3 h-3" />
+            <Icon name="external-link" className="w-3 h-3" />
             <span>Buka di Drive</span>
           </a>
         )}

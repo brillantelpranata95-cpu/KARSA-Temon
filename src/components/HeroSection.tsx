@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { Icon } from "./Icon";
 import { getDayPart, getGreetingWord, heroAsset, type DayPart } from "../utils/heroTime";
 
 interface HeroSectionProps {
@@ -114,7 +114,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 className="mt-8 inline-flex w-fit items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-sm font-bold text-[#32848D] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#F6FAF5] disabled:translate-y-0 disabled:opacity-70"
               >
                 {loading ? "Menyiapkan login..." : "Masuk Dashboard Internal"}
-                <ArrowRight className="h-4 w-4" />
+                <Icon name="arrow-right" className="h-4 w-4" />
               </button>
             )}
           </>

@@ -8,7 +8,7 @@ import {
   saveJawatanOfficial,
   savePemimpinRapatOption,
 } from "../services/api";
-import { UserCog, Plus, Trash2, Save, RefreshCw, CheckCircle2, Info, Gavel, Lock, Eye, Building2 } from "lucide-react";
+import { Icon } from "./Icon";
 
 interface OfficialsSettingsProps {
   user: UserProfile;
@@ -235,7 +235,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm flex flex-wrap gap-3 justify-between items-center">
         <div className="flex items-center space-x-3">
           <div className="p-2.5 bg-[#32848D]/10 rounded-xl">
-            <UserCog className="w-6 h-6 text-[#32848D]" />
+            <Icon name="user-cog" className="w-6 h-6 text-[#32848D]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -252,13 +252,13 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
           onClick={loadOfficials}
           className="px-4 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center space-x-1"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <Icon name="refresh-ccw" className="w-3.5 h-3.5" />
           <span>Refresh</span>
         </button>
       </div>
 
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 flex items-start space-x-3">
-        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+        <Icon name="info" className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
         <div className="text-xs text-blue-900 dark:text-blue-200 space-y-1">
           {isAdmin ? (
             <>
@@ -287,7 +287,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
           {/* Section 1: Admin-managed pejabat (PA, Panewu, Bendahara) in cards */}
           <div className="space-y-4">
             <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Lock className="w-4 h-4 text-[#32848D]" />
+              <Icon name="lock" className="w-4 h-4 text-[#32848D]" />
               <span>Pejabat Tingkat Kapanewon (PA / Panewu / Bendahara Pengeluaran)</span>
             </h2>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -304,7 +304,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                   >
                     <div className={`px-5 py-3 border-b ${c.bg} ${c.border}`}>
                       <h3 className={`font-bold text-sm flex items-center gap-2 ${c.text}`}>
-                        <UserCog className="w-4 h-4" />
+                        <Icon name="user-cog" className="w-4 h-4" />
                         {field.label}
                       </h3>
                       <p className={`text-[11px] mt-1 ${c.text} opacity-80`}>{field.helper}</p>
@@ -348,7 +348,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                         disabled={saving === field.type}
                         className={`w-full py-2.5 ${c.button} text-white rounded-xl text-xs font-semibold inline-flex items-center justify-center space-x-2 shadow-sm disabled:opacity-60`}
                       >
-                        <Save className="w-3.5 h-3.5" />
+                        <Icon name="save" className="w-3.5 h-3.5" />
                         <span>{primary ? "Perbarui" : "Simpan"}</span>
                       </button>
                     </div>
@@ -363,7 +363,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-[#32848D]" />
+                  <Icon name="bank" className="w-4 h-4 text-[#32848D]" />
                   <span>Daftar Penandatangan Jawatan (PPTK, Notulis & Pemimpin Rapat)</span>
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-slate-400">
@@ -431,7 +431,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                               className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg text-xs font-semibold inline-flex items-center space-x-1 transition"
                               title="Hapus Penandatangan Ini"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Icon name="trash" className="w-3.5 h-3.5" />
                               <span>Hapus</span>
                             </button>
                           </td>
@@ -463,7 +463,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
               >
                 <div className={`px-5 py-3 border-b ${c.bg} ${c.border}`}>
                   <h2 className={`font-bold text-sm flex items-center gap-2 ${c.text}`}>
-                    {field.type === "PEMIMPIN_RAPAT" ? <Gavel className="w-4 h-4" /> : <UserCog className="w-4 h-4" />}
+                    {field.type === "PEMIMPIN_RAPAT" ? <Icon name="gavel" className="w-4 h-4" /> : <Icon name="user-cog" className="w-4 h-4" />}
                     {field.label}
                     {field.jawatanManaged ? (
                       <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/60 dark:bg-slate-800/60">
@@ -471,7 +471,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                       </span>
                     ) : (
                       <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/60 dark:bg-slate-800/60 inline-flex items-center gap-1">
-                        <Lock className="w-2.5 h-2.5" /> ADMIN
+                        <Icon name="lock" className="w-2.5 h-2.5" /> ADMIN
                       </span>
                     )}
                   </h2>
@@ -522,7 +522,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                           <span>Menyimpan...</span>
                         ) : (
                           <>
-                            <Save className="w-4 h-4" />
+                            <Icon name="save" className="w-4 h-4" />
                             <span>{primary ? "Perbarui Data Utama" : "Simpan Data Utama"}</span>
                           </>
                         )}
@@ -531,7 +531,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                   ) : (
                     <div className="bg-gray-50 dark:bg-slate-700/40 rounded-xl p-4 space-y-1.5">
                       <div className="flex items-center space-x-2 text-[11px] font-semibold text-gray-500 dark:text-slate-400">
-                        <Eye className="w-3.5 h-3.5" />
+                        <Icon name="eye" className="w-3.5 h-3.5" />
                         <span>Data ditetapkan Administrator Kapanewon</span>
                       </div>
                       {primary ? (
@@ -571,7 +571,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                               className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg shrink-0"
                               title="Hapus"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Icon name="trash" className="w-3.5 h-3.5" />
                             </button>
                           )}
                         </div>
@@ -613,7 +613,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
                         disabled={saving === field.type}
                         className="w-full py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-xl text-xs font-semibold inline-flex items-center justify-center space-x-1.5 disabled:opacity-60"
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Icon name="plus" className="w-3.5 h-3.5" />
                         <span>Tambah Pilihan</span>
                       </button>
                     </div>
@@ -621,7 +621,7 @@ export const OfficialsSettings: React.FC<OfficialsSettingsProps> = ({ user }) =>
 
                   {primary && (
                     <div className="flex items-center space-x-1.5 text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 rounded-lg">
-                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <Icon name="circle-check" className="w-3.5 h-3.5 shrink-0" />
                       <span>Data tersimpan — otomatis dipakai dokumen SPJ baru.</span>
                     </div>
                   )}

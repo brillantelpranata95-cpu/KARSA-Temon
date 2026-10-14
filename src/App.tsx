@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
-import { Navbar, AppTab } from "./components/Navbar";
+import { Sidebar, AppTab } from "./components/Sidebar";
 import { getSpjById, getSpjDocuments, purgeExpiredAttendanceSessions, recordDailyActivity } from "./services/api";
 import { SpjItem, SpjDocumentItem } from "./types";
 
@@ -107,8 +107,8 @@ function MainApp() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors">
-      <Navbar
+    <div className="flex min-h-screen bg-slate-50/50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors">
+      <Sidebar
         user={user}
         activeTab={activeTab}
         setActiveTab={(tab) => {
@@ -118,7 +118,8 @@ function MainApp() {
         onLogout={logout}
       />
 
-      <main className={activeTab === "dashboard" && viewMode === "list" ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
+      <div className="flex min-w-0 flex-1 flex-col pt-16 lg:pt-0">
+        <main className={activeTab === "dashboard" && viewMode === "list" ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
         <Suspense fallback={<PageLoader />}>
           {viewMode === "preview" && selectedSpj ? (
             <PrintPreview
@@ -147,7 +148,8 @@ function MainApp() {
             <AdminView user={user} activeTab={activeTab as "master" | "audit"} />
           )}
         </Suspense>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Search, X } from "lucide-react";
+import { Icon } from "./Icon";
 
 export interface ComboOption {
   value: string;
@@ -101,7 +101,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   return (
     <div className="relative" ref={boxRef}>
       <div className="relative">
-        <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <Icon name="search" className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           type="text"
           disabled={disabled}
@@ -131,7 +131,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             title="Kosongkan pilihan"
           >
-            <X className="w-3.5 h-3.5" />
+            <Icon name="x" className="w-3.5 h-3.5" />
           </button>
         )}
         <button
@@ -140,7 +140,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
           tabIndex={-1}
         >
-          <ChevronDown className="w-4 h-4" />
+          <Icon name="chevron-down" className="w-4 h-4" />
         </button>
       </div>
 

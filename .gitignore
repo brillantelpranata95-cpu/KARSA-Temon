@@ -29,3 +29,9 @@ dist-ssr
 # Local scratch (Firestore backup & PDF extraction temp)
 tmp_backup/
 tmp_pdf/
+
+# Hasil build GRAHA yang disalin ke sini (SSO satu origin dengan KARSA).
+# Sumbernya: D:/Temon/Graha-Temon — build ulang dengan:
+#   cd D:/Temon/Graha-Temon && VITE_BASE=/graha/ npm run build
+#   lalu salin dist/ ke public/graha
+public/graha/

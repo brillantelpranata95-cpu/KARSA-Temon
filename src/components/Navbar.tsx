@@ -1,20 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { UserProfile } from "../types";
-import {
-  LogOut,
-  Building2,
-  Shield,
-  Moon,
-  Sun,
-  Settings,
-  FileStack,
-  UserCog,
-  Database,
-  ScrollText,
-  Trophy,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { Icon } from "./Icon";
+import { GRAHA_URL } from "../config/appConfig";
 import { useHideScores } from "../utils/prefs";
 
 export type AppTab = "dashboard" | "spj" | "master" | "audit" | "packages" | "officials" | "gamification";
@@ -99,13 +86,26 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
           </nav>
 
           <div className="flex items-center space-x-3">
+            {/* Pintasan GRAHA — aplikasi turunan dengan sesi login yang sama.
+                Karena GRAHA disajikan di origin ini (/graha), pengguna yang
+                sudah masuk TIDAK perlu login ulang. */}
+            <a
+              href={GRAHA_URL}
+              className="hidden sm:inline-flex items-center space-x-2 px-3 py-2 rounded-xl bg-[#32848D]/10 hover:bg-[#32848D]/20 text-[#32848D] dark:text-[#9ED4DA] dark:bg-[#32848D]/25 dark:hover:bg-[#32848D]/35 text-sm font-semibold transition-colors"
+              title="Buka GRAHA Temon — peminjaman ruangan & fasilitas"
+            >
+              <Icon name="landmark" className="w-4 h-4" />
+              <span>GRAHA</span>
+              <Icon name="external-link" className="w-3.5 h-3.5 opacity-60" />
+            </a>
+
             {/* Dark Mode Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
               title={darkMode ? "Ganti ke Light Mode" : "Ganti ke Dark Mode"}
             >
-              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {darkMode ? <Icon name="sun" className="w-5 h-5" /> : <Icon name="moon" className="w-5 h-5" />}
             </button>
 
             {/* User chip — clicking opens the Pengaturan menu */}
@@ -127,16 +127,16 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
                     <span className="max-w-[140px] truncate">{user.displayName}</span>
                     {user.role === "ADMIN" && (
                       <span className="bg-[#CBDCA5]/50 text-[#32848D] text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center shrink-0">
-                        <Shield className="w-3 h-3 mr-0.5" /> ADMIN
+                        <Icon name="shield" className="w-3 h-3 mr-0.5" /> ADMIN
                       </span>
                     )}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-slate-400 flex items-center justify-end space-x-1">
-                    <Building2 className="w-3 h-3 text-gray-400 shrink-0" />
+                    <Icon name="bank" className="w-3 h-3 text-gray-400 shrink-0" />
                     <span className="max-w-[140px] truncate">{user.jawatanName}</span>
                   </div>
                 </div>
-                <Settings className={`w-4 h-4 text-gray-400 transition-transform ${settingsOpen ? "rotate-90" : ""}`} />
+                <Icon name="settings" className={`w-4 h-4 text-gray-400 transition-transform ${settingsOpen ? "rotate-90" : ""}`} />
               </button>
 
               {settingsOpen && (
@@ -155,9 +155,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
                       className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
                     >
                       {hideScores ? (
-                        <EyeOff className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                        <Icon name="eye-off" className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
                       ) : (
-                        <Eye className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                        <Icon name="eye" className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -175,7 +175,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
                       onClick={() => openTab("gamification")}
                       className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
                     >
-                      <Trophy className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                      <Icon name="trophy" className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">Papan Peringkat</p>
                         <p className="text-[11px] text-gray-500 dark:text-slate-400">
@@ -184,11 +184,27 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
                       </div>
                     </button>
 
+                    <a
+                      href={GRAHA_URL}
+                      className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
+                    >
+                      <Icon name="landmark" className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white flex items-center space-x-1">
+                          <span>GRAHA Temon</span>
+                          <Icon name="external-link" className="w-3 h-3 opacity-50" />
+                        </p>
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                          Peminjaman ruangan &amp; fasilitas — tanpa login ulang
+                        </p>
+                      </div>
+                    </a>
+
                     <button
                       onClick={() => openTab("officials")}
                       className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
                     >
-                      <UserCog className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                      <Icon name="user-cog" className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
                       <div>
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">Penandatangan Jawatan</p>
                         <p className="text-[11px] text-gray-500 dark:text-slate-400">
@@ -203,7 +219,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
                           onClick={() => openTab("packages")}
                           className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
                         >
-                          <FileStack className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                          <Icon name="files" className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
                           <div>
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">Buat Paket SPJ</p>
                             <p className="text-[11px] text-gray-500 dark:text-slate-400">
@@ -215,7 +231,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
                           onClick={() => openTab("master")}
                           className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
                         >
-                          <Database className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                          <Icon name="database" className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
                           <div>
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">Master Data & Akses</p>
                             <p className="text-[11px] text-gray-500 dark:text-slate-400">
@@ -227,7 +243,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
                           onClick={() => openTab("audit")}
                           className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F6FAF5] dark:hover:bg-slate-700/60 flex items-start space-x-2.5 transition-colors"
                         >
-                          <ScrollText className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
+                          <Icon name="scroll" className="w-4 h-4 text-[#32848D] mt-0.5 shrink-0" />
                           <div>
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">Audit Log</p>
                             <p className="text-[11px] text-gray-500 dark:text-slate-400">
@@ -244,7 +260,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
                       onClick={onLogout}
                       className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2.5 transition-colors"
                     >
-                      <LogOut className="w-4 h-4 text-red-600 shrink-0" />
+                      <Icon name="log-out" className="w-4 h-4 text-red-600 shrink-0" />
                       <span className="text-sm font-semibold text-red-600">Keluar / Logout</span>
                     </button>
                   </div>
@@ -256,6 +272,13 @@ export const Navbar: React.FC<NavbarProps> = ({ user, activeTab, setActiveTab, o
 
         {/* Mobile Nav */}
         <div className="md:hidden flex space-x-1 pb-2 overflow-x-auto">
+          <a
+            href={GRAHA_URL}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#32848D]/10 text-[#32848D] dark:text-[#9ED4DA] whitespace-nowrap inline-flex items-center space-x-1.5"
+          >
+            <Icon name="landmark" className="w-3.5 h-3.5" />
+            <span>GRAHA</span>
+          </a>
           {navItems.map(([tab, label]) => (
             <button
               key={tab}

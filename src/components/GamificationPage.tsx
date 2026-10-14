@@ -16,7 +16,7 @@ import {
   ACTION_LABELS,
   GamificationAction,
 } from "../utils/gamification";
-import { Trophy, Flame, Star, Award, TrendingUp, RefreshCw, Target } from "lucide-react";
+import { Icon } from "./Icon";
 
 interface GamificationPageProps {
   user: UserProfile;
@@ -68,7 +68,7 @@ export const GamificationPage: React.FC<GamificationPageProps> = ({ user }) => {
       <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Trophy className="w-6 h-6 text-amber-500" />
+            <Icon name="trophy" className="w-6 h-6 text-amber-500" />
             Gamifikasi & Pencapaian
           </h1>
           <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
@@ -79,7 +79,7 @@ export const GamificationPage: React.FC<GamificationPageProps> = ({ user }) => {
           onClick={loadData}
           className="px-4 py-2.5 rounded-2xl bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 font-semibold text-sm inline-flex items-center gap-2"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          <Icon name="refresh-ccw" className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           <span>Segarkan</span>
         </button>
       </div>
@@ -103,7 +103,7 @@ export const GamificationPage: React.FC<GamificationPageProps> = ({ user }) => {
                   </p>
                 </div>
                 <div className="p-4 bg-white/20 rounded-2xl">
-                  <Star className="w-10 h-10" />
+                  <Icon name="star" className="w-10 h-10" />
                 </div>
               </div>
 
@@ -131,14 +131,14 @@ export const GamificationPage: React.FC<GamificationPageProps> = ({ user }) => {
                 </div>
                 <div className="bg-white/10 rounded-2xl p-3 text-center">
                   <p className="text-2xl font-bold flex items-center justify-center gap-1">
-                    <Flame className="w-5 h-5 text-amber-300" />
+                    <Icon name="fire" className="w-5 h-5 text-amber-300" />
                     {profile?.streakDays || 0}
                   </p>
                   <p className="text-[11px] opacity-80 mt-0.5">Hari Beruntun</p>
                 </div>
                 <div className="bg-white/10 rounded-2xl p-3 text-center">
                   <p className="text-2xl font-bold flex items-center justify-center gap-1">
-                    <Award className="w-5 h-5 text-amber-300" />
+                    <Icon name="award" className="w-5 h-5 text-amber-300" />
                     {earnedBadgeIds.length}
                   </p>
                   <p className="text-[11px] opacity-80 mt-0.5">Lencana</p>
@@ -149,7 +149,7 @@ export const GamificationPage: React.FC<GamificationPageProps> = ({ user }) => {
             {/* Rank Card */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col justify-center items-center text-center space-y-3">
               <div className="p-4 bg-amber-50 dark:bg-amber-900/30 rounded-2xl">
-                <TrendingUp className="w-10 h-10 text-amber-500" />
+                <Icon name="trending-up" className="w-10 h-10 text-amber-500" />
               </div>
               <div>
                 <p className="text-xs text-gray-500 dark:text-slate-400 font-semibold">Peringkat Kamu</p>
@@ -166,7 +166,7 @@ export const GamificationPage: React.FC<GamificationPageProps> = ({ user }) => {
           {/* LENCANA */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
             <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-700 pb-3">
-              <Award className="w-5 h-5 text-[#32848D]" />
+              <Icon name="award" className="w-5 h-5 text-[#32848D]" />
               <h2 className="font-bold text-gray-900 dark:text-white">Lencana Penghargaan</h2>
               <span className="ml-auto text-xs font-semibold text-gray-500 dark:text-slate-400">
                 {earnedBadgeIds.length}/{BADGES.length} diperoleh
@@ -201,7 +201,7 @@ export const GamificationPage: React.FC<GamificationPageProps> = ({ user }) => {
             {/* Aktivitas */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
               <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-700 pb-3">
-                <Target className="w-5 h-5 text-[#32848D]" />
+                <Icon name="target" className="w-5 h-5 text-[#32848D]" />
                 <h2 className="font-bold text-gray-900 dark:text-white">Rincian Aktivitas</h2>
               </div>
               {actionEntries.length === 0 ? (
@@ -230,7 +230,7 @@ export const GamificationPage: React.FC<GamificationPageProps> = ({ user }) => {
             {/* Papan Peringkat */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
               <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-700 pb-3">
-                <Trophy className="w-5 h-5 text-amber-500" />
+                <Icon name="trophy" className="w-5 h-5 text-amber-500" />
                 <h2 className="font-bold text-gray-900 dark:text-white">Papan Peringkat</h2>
               </div>
               {leaderboard.length === 0 ? (

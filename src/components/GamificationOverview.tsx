@@ -9,7 +9,7 @@ import {
   getNextLevel,
   getLevelProgress,
 } from "../utils/gamification";
-import { Award, Flame, Star } from "lucide-react";
+import { Icon } from "./Icon";
 
 interface GamificationOverviewProps {
   user: UserProfile;
@@ -54,7 +54,7 @@ export const GamificationOverview: React.FC<GamificationOverviewProps> = ({ user
               </p>
             </div>
             <div className="rounded-2xl bg-white/20 p-4">
-              <Star className="h-10 w-10" />
+              <Icon name="star" className="h-10 w-10" />
             </div>
           </div>
           <div>
@@ -77,14 +77,14 @@ export const GamificationOverview: React.FC<GamificationOverviewProps> = ({ user
             </div>
             <div className="rounded-2xl bg-white/10 p-3 text-center">
               <p className="flex items-center justify-center gap-1 text-2xl font-bold">
-                <Flame className="h-5 w-5 text-amber-300" />
+                <Icon name="fire" className="h-5 w-5 text-amber-300" />
                 {profile?.streakDays || 0}
               </p>
               <p className="mt-0.5 text-[11px] opacity-80">Hari Beruntun</p>
             </div>
             <div className="rounded-2xl bg-white/10 p-3 text-center">
               <p className="flex items-center justify-center gap-1 text-2xl font-bold">
-                <Award className="h-5 w-5 text-amber-300" />
+                <Icon name="award" className="h-5 w-5 text-amber-300" />
                 {earned.length}
               </p>
               <p className="mt-0.5 text-[11px] opacity-80">Lencana</p>
@@ -93,7 +93,7 @@ export const GamificationOverview: React.FC<GamificationOverviewProps> = ({ user
         </div>
         <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <div className="mb-3 flex items-center gap-2 border-b border-gray-100 pb-3 dark:border-slate-700">
-            <Award className="h-5 w-5 text-[#32848D]" />
+            <Icon name="award" className="h-5 w-5 text-[#32848D]" />
             <h2 className="font-bold text-gray-900 dark:text-white">Badge</h2>
             <span className="ml-auto text-xs font-semibold text-gray-500">
               {earned.length}/{BADGES.length}

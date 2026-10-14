@@ -10,7 +10,7 @@ import {
   getDocumentTypesList,
   getKodeRekeningList,
 } from "../services/api";
-import { FileStack, Plus, Edit, Trash2, Save, RefreshCw, Info, X, Package, ShieldCheck } from "lucide-react";
+import { Icon } from "./Icon";
 
 interface PackageTemplatesProps {
   user: UserProfile;
@@ -275,7 +275,7 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm flex flex-wrap gap-3 justify-between items-center">
         <div className="flex items-center space-x-3">
           <div className="p-2.5 bg-[#32848D]/10 rounded-xl">
-            <FileStack className="w-6 h-6 text-[#32848D]" />
+            <Icon name="files" className="w-6 h-6 text-[#32848D]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Buat Paket SPJ</h1>
@@ -289,21 +289,21 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
             onClick={loadData}
             className="px-4 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center space-x-1"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <Icon name="refresh-ccw" className="w-3.5 h-3.5" />
             <span>Refresh</span>
           </button>
           <button
             onClick={openCreate}
             className="px-4 py-2 bg-[#32848D] hover:bg-[#276972] text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 shadow-sm"
           >
-            <Plus className="w-4 h-4" />
+            <Icon name="plus" className="w-4 h-4" />
             <span>Buat Paket Baru</span>
           </button>
         </div>
       </div>
 
       <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl p-4 flex items-start space-x-3">
-        <Info className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" />
+        <Icon name="info" className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" />
         <div className="text-xs text-violet-900 dark:text-violet-200 space-y-1">
           <p className="font-semibold">Cara kerja:</p>
           <p>
@@ -327,7 +327,7 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
         </div>
       ) : effectivePackages.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 p-12 rounded-2xl border border-gray-200 dark:border-slate-700 text-center space-y-3">
-          <Package className="w-10 h-10 text-gray-300 dark:text-slate-600 mx-auto" />
+          <Icon name="package" className="w-10 h-10 text-gray-300 dark:text-slate-600 mx-auto" />
           <p className="text-sm font-medium text-gray-500 dark:text-slate-400">
             Belum ada paket SPJ khusus. Paket standar (checklist bawaan per Kode Rekening) tetap tersedia untuk pengguna.
           </p>
@@ -335,7 +335,7 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
             onClick={openCreate}
             className="px-4 py-2 bg-[#32848D] hover:bg-[#276972] text-white rounded-xl text-xs font-semibold inline-flex items-center space-x-1.5"
           >
-            <Plus className="w-4 h-4" />
+            <Icon name="plus" className="w-4 h-4" />
             <span>Buat Paket Pertama</span>
           </button>
         </div>
@@ -375,7 +375,7 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
                         : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
                     }`}
                   >
-                    {p.source === "template" ? <ShieldCheck className="w-3 h-3" /> : <Package className="w-3 h-3" />}
+                    {p.source === "template" ? <Icon name="shield-check" className="w-3 h-3" /> : <Icon name="package" className="w-3 h-3" />}
                     {p.source === "template" ? "Paket Admin" : "Checklist Bawaan"}
                   </span>
                 </div>
@@ -424,7 +424,7 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
                   onClick={() => openEdit(p)}
                   className="flex-1 px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs font-semibold inline-flex items-center justify-center space-x-1"
                 >
-                  <Edit className="w-3.5 h-3.5" />
+                  <Icon name="pencil" className="w-3.5 h-3.5" />
                   <span>Edit</span>
                 </button>
                 <button
@@ -440,7 +440,7 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
                     className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-semibold"
                     title="Hapus paket"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Icon name="trash" className="w-3.5 h-3.5" />
                   </button>
                 ) : (
                   <span
@@ -462,11 +462,11 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-700 pb-3">
               <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg">
-                <FileStack className="w-5 h-5" />
+                <Icon name="files" className="w-5 h-5" />
                 <span>{editing ? "Edit Paket SPJ" : "Buat Paket SPJ Baru"}</span>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
+                <Icon name="x" className="w-5 h-5" />
               </button>
             </div>
 
@@ -588,7 +588,7 @@ export const PackageTemplates: React.FC<PackageTemplatesProps> = ({ user }) => {
                   <span>Menyimpan...</span>
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
+                    <Icon name="save" className="w-4 h-4" />
                     <span>{editing ? "Simpan Perubahan" : "Buat Paket"}</span>
                   </>
                 )}

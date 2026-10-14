@@ -27,21 +27,7 @@ import { applyNumberedEnter } from "../utils/numbering";
 import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari } from "../utils/date";
 import { SuggestionInput } from "./SuggestionInput";
 import { DriveImage } from "./DriveImage";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  FileCheck,
-  Link as LinkIcon,
-  Printer,
-  ShieldCheck,
-  QrCode,
-  ExternalLink,
-  Plus,
-  X,
-  Calculator,
-  Image as ImageIcon,
-  Trash2,
-} from "lucide-react";
+import { Icon } from "./Icon";
 
 interface SpjWizardProps {
   user: UserProfile;
@@ -316,7 +302,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
             onClick={onBack}
             className="p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <Icon name="arrow-left" className="w-5 h-5" />
           </button>
           <div>
             <div className="flex items-center space-x-2">
@@ -335,7 +321,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
             onClick={onPreview}
             className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-semibold flex items-center space-x-2"
           >
-            <Printer className="w-4 h-4" />
+            <Icon name="printer-2" className="w-4 h-4" />
             <span>Cetak / Preview</span>
           </button>
 
@@ -349,7 +335,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                   : "bg-gray-200 text-gray-400 cursor-not-allowed"
               }`}
             >
-              <ShieldCheck className="w-4 h-4" />
+              <Icon name="shield-check" className="w-4 h-4" />
               <span>Finalisasi SPJ</span>
             </button>
           )}
@@ -394,7 +380,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                 >
                   <div className="flex items-center space-x-3 truncate">
                     {isCompleted ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <Icon name="circle-check" className="w-5 h-5 text-emerald-600 shrink-0" />
                     ) : (
                       <div className="w-5 h-5 rounded-full border-2 border-gray-300 shrink-0"></div>
                     )}
@@ -500,7 +486,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                             title={`Hitung ${label} ${rate * 100}% secara otomatis dari angka terbilang`}
                             className="mt-1 w-full px-2 py-1.5 rounded-lg text-[10px] font-bold bg-[#32848D] hover:bg-[#276972] text-white inline-flex items-center justify-center gap-1 shadow-sm"
                           >
-                            <Calculator className="w-3 h-3" />
+                            <Icon name="calculator" className="w-3 h-3" />
                             <span>Hitung {label}</span>
                           </button>
                         </div>
@@ -647,7 +633,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-bold text-amber-900 dark:text-amber-200">Tambah Pemimpin Rapat Baru</p>
                         <button type="button" onClick={() => setShowNewPemimpin(false)} className="text-amber-600 hover:text-amber-800">
-                          <X className="w-4 h-4" />
+                          <Icon name="x" className="w-4 h-4" />
                         </button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -712,7 +698,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-bold text-teal-900 dark:text-teal-200">Tambah Notulis Baru</p>
                         <button type="button" onClick={() => setShowNewNotulis(false)} className="text-teal-600 hover:text-teal-800">
-                          <X className="w-4 h-4" />
+                          <Icon name="x" className="w-4 h-4" />
                         </button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -892,7 +878,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-2">
-                        <QrCode className="w-5 h-5 text-blue-600" />
+                        <Icon name="qr-code" className="w-5 h-5 text-blue-600" />
                         <h3 className="font-bold text-blue-900 dark:text-blue-200">Absensi Online via QR Code</h3>
                       </div>
                       <button
@@ -901,7 +887,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                         disabled={qrGenerating}
                         className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1.5 disabled:opacity-60"
                       >
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <Icon name="external-link" className="w-3.5 h-3.5" />
                         <span>{qrGenerating ? "Membuat..." : qrExpiresAt ? "Buka QR Lagi (30 mnt)" : "Buat QR Absensi"}</span>
                       </button>
                     </div>
@@ -1063,7 +1049,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       Surat undangan sudah dibuat di luar web app ini. Cukup tautkan link Google Drive untuk verifikasi & cetak.
                     </p>
                     <div className="flex items-center space-x-2">
-                      <LinkIcon className="w-4 h-4 text-blue-600" />
+                      <Icon name="link" className="w-4 h-4 text-blue-600" />
                       <input
                         type="url"
                         value={externalUrl}
@@ -1097,7 +1083,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       Surat Perintah sudah dibuat di luar web app ini. Cukup paste link Google Drive untuk verifikasi & cetak.
                     </p>
                     <div className="flex items-center space-x-2">
-                      <LinkIcon className="w-4 h-4 text-indigo-600" />
+                      <Icon name="link" className="w-4 h-4 text-indigo-600" />
                       <input
                         type="url"
                         value={externalUrl}
@@ -1206,7 +1192,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                                   }}
                                   className="text-emerald-600 hover:text-red-600"
                                 >
-                                  <X className="w-3 h-3" />
+                                  <Icon name="x" className="w-3 h-3" />
                                 </button>
                               </span>
                             ))}
@@ -1237,7 +1223,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                             }}
                             className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold inline-flex items-center space-x-1"
                           >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Icon name="plus" className="w-3.5 h-3.5" />
                             <span>Tambah</span>
                           </button>
                         </div>
@@ -1279,7 +1265,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                 <div className="space-y-4 text-sm">
                   <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 p-4 rounded-xl">
                     <h3 className="font-bold text-teal-900 dark:text-teal-200 mb-1 inline-flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4" /> Lampiran Foto Dokumentasi
+                      <Icon name="gallery" className="w-4 h-4" /> Lampiran Foto Dokumentasi
                     </h3>
                     <p className="text-xs text-teal-700 dark:text-teal-300">
                       Tempel tautan Google Drive foto kegiatan, lalu tekan Enter. Foto otomatis
@@ -1288,7 +1274,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    <LinkIcon className="w-4 h-4 text-teal-600 shrink-0" />
+                    <Icon name="link" className="w-4 h-4 text-teal-600 shrink-0" />
                     <input
                       type="url"
                       id="lampiran-foto-input"
@@ -1336,7 +1322,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       }}
                       className="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1 shrink-0"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <Icon name="plus" className="w-3.5 h-3.5" />
                       <span>Tautkan</span>
                     </button>
                   </div>
@@ -1379,7 +1365,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                                     rel="noreferrer"
                                     className="text-[10px] text-teal-600 hover:underline inline-flex items-center gap-1"
                                   >
-                                    <ExternalLink className="w-3 h-3" />
+                                    <Icon name="external-link" className="w-3 h-3" />
                                     <span>Buka di Drive</span>
                                   </a>
                                 )}
@@ -1393,7 +1379,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                                   }
                                   className="w-full px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[10px] font-semibold inline-flex items-center justify-center gap-1"
                                 >
-                                  <Trash2 className="w-3 h-3" />
+                                  <Icon name="trash" className="w-3 h-3" />
                                   <span>Hapus</span>
                                 </button>
                               </div>
@@ -1421,7 +1407,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                     disabled={saving}
                     className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow-sm"
                   >
-                    <FileCheck className="w-4 h-4" />
+                    <Icon name="file-check" className="w-4 h-4" />
                     <span>Tandai Selesai & Simpan</span>
                   </button>
                 </div>
