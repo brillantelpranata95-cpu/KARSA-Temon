@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { UserProfile } from "../types";
 import { getSpjStatistics } from "../services/api";
 import { HeroSection } from "./HeroSection";
-import { GamificationOverview } from "./GamificationOverview";
+import { GamificationPanel } from "./GamificationPanel";
 import { useHideScores } from "../utils/prefs";
 import { Icon } from "./Icon";
 import {
@@ -194,7 +194,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
       <HeroSection variant="app" name={user.displayName || user.email} />
 
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-        {!hideScores && <GamificationOverview user={user} />}
+        {!hideScores && <GamificationPanel user={user} />}
 
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm">

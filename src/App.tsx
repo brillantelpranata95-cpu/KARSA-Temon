@@ -18,7 +18,6 @@ const AdminView = lazy(() => import("./components/AdminView").then((m) => ({ def
 const PackageTemplates = lazy(() => import("./components/PackageTemplates").then((m) => ({ default: m.PackageTemplates })));
 const OfficialsSettings = lazy(() => import("./components/OfficialsSettings").then((m) => ({ default: m.OfficialsSettings })));
 const PublicDashboard = lazy(() => import("./components/PublicDashboard").then((m) => ({ default: m.PublicDashboard })));
-const GamificationPage = lazy(() => import("./components/GamificationPage").then((m) => ({ default: m.GamificationPage })));
 const QRAttendancePage = lazy(() => import("./components/QRAttendancePage"));
 const QrDisplayPage = lazy(() => import("./components/QrDisplayPage"));
 
@@ -142,8 +141,6 @@ function MainApp() {
             <PackageTemplates user={user} />
           ) : activeTab === "officials" ? (
             <OfficialsSettings user={user} />
-          ) : activeTab === "gamification" ? (
-            <GamificationPage user={user} />
           ) : (
             <AdminView user={user} activeTab={activeTab as "master" | "audit"} />
           )}

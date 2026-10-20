@@ -4,7 +4,7 @@ import { Icon } from "./Icon";
 import { useHideScores } from "../utils/prefs";
 import { GRAHA_URL } from "../config/appConfig";
 
-export type AppTab = "dashboard" | "spj" | "master" | "audit" | "packages" | "officials" | "gamification";
+export type AppTab = "dashboard" | "spj" | "master" | "audit" | "packages" | "officials";
 
 interface SidebarProps {
   user: UserProfile;
@@ -70,12 +70,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab,
   ];
 
   const menuPengaturan: { id: AppTab; label: string; ket: string; ikon: React.ReactNode }[] = [
-    {
-      id: "gamification",
-      label: "Papan Peringkat",
-      ket: "Detail poin, lencana & ranking",
-      ikon: <Icon name="trophy" className="w-5 h-5" />,
-    },
     {
       id: "officials",
       label: "Penandatangan Jawatan",
