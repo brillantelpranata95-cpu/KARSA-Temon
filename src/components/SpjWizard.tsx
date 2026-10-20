@@ -133,6 +133,16 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
     data: Record<string, any>,
     shared?: SpjItem["sharedData"]
   ): Record<string, any> => {
+    // Daftar Penerimaan selalu dibuka dengan satu baris kosong siap isi.
+    if (docItem.documentTypeCode === "DAFTAR_PENERIMAAN") {
+      const next = { ...data };
+      if (!Array.isArray(next.penerimaan) || next.penerimaan.length === 0) {
+        next.penerimaan = [
+          { nama: "", gol: "", npwp: "", volume: "1 orang", bruto: "", pph: "" },
+        ];
+      }
+      return next;
+    }
     if (docItem.documentTypeCode !== "SPJ_AKTIVITAS_LAPANGAN") return data;
     const next = { ...data };
     if (next.maksudTujuan === undefined || next.maksudTujuan === null) {
@@ -418,6 +428,156 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                   </span>
                 )}
               </div>
+
+              {/* ================= FORM EDITOR DAFTAR PENERIMAAN ================= */}
+              {activeDoc.documentTypeCode === "DAFTAR_PENERIMAAN" && (() => {
+                const rows: any[] = Array.isArray(formData.penerimaan) ? formData.penerimaan : [];
+                const rate = Number(formData.pphRate ?? 2.5);
+                const ubahBaris = (i: number, key: string, value: any) =>
+                  handleFormChange(
+                    "penerimaan",
+                    rows.map((r, idx) => (idx === i ? { ...r, [key]: value } : r))
+                  );
+                const tambahBaris = () =>
+                  handleFormChange("penerimaan", [
+                    ...rows,
+                    { nama: "", gol: "", npwp: "", volume: "1 orang", bruto: "", pph: "" },
+                  ]);
+                const hapusBaris = (i: number) =>
+                  handleFormChange("penerimaan", rows.filter((_, idx) => idx !== i));
+                const hitungBaris = (i: number) =>
+                  ubahBaris(i, "pph", Math.round(Number(rows[i]?.bruto || 0) * (rate / 100)));
+                const hitungSemua = () =>
+                  handleFormChange(
+                    "penerimaan",
+                    rows.map((r) => ({
+                      ...r,
+                      pph: Math.round(Number(r.bruto || 0) * (rate / 100)),
+                    }))
+                  );
+                const angka = (v: any) => Number(v || 0);
+                const totalBruto = rows.reduce((a, r) => a + angka(r.bruto), 0);
+                const totalPph = rows.reduce((a, r) => a + angka(r.pph), 0);
+                const totalBersih = totalBruto - totalPph;
+                const kolom = "w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-2 py-1.5 text-xs text-gray-900 dark:text-white";
+
+                return (
+                  <div className="space-y-4 text-sm">
+                    <div className="rounded-xl border border-[#32848D]/15 bg-[#F6FAF5] dark:bg-slate-700/50 p-4 text-xs leading-6 text-slate-700 dark:text-slate-300">
+                      <p>
+                        Judul, tanggal, Pengguna Anggaran, dan Bendahara Pengeluaran terisi
+                        otomatis dari data SPJ. Baris penerima diisi manual; PPh 21 boleh
+                        diketik sendiri atau dihitung dengan tombol.
+                      </p>
+                      <p className="mt-1 font-semibold text-[#32848D]">
+                        {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama} —{" "}
+                        {formatDateDDMMYYYY(spj.tanggal)}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">
+                        Tarif PPh 21 (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={formData.pphRate ?? 2.5}
+                        onChange={(e) => handleFormChange("pphRate", e.target.value === "" ? "" : Number(e.target.value))}
+                        className="w-20 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-2 py-1 text-xs text-gray-900 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={hitungSemua}
+                        className="ml-auto px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#32848D] hover:bg-[#276972] text-white inline-flex items-center gap-1"
+                      >
+                        <Icon name="calculator" className="w-3.5 h-3.5" />
+                        <span>Hitung PPh semua baris</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={tambahBaris}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center gap-1"
+                      >
+                        <Icon name="plus" className="w-3.5 h-3.5" />
+                        <span>Tambah baris</span>
+                      </button>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[760px] border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200">
+                            <th className="border border-gray-300 dark:border-slate-600 px-1 py-2 w-8">No</th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-1 py-2">Nama</th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-1 py-2 w-16">Gol</th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-1 py-2 w-32">NPWP</th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-1 py-2 w-20">Banyaknya</th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-1 py-2 w-28">Bruto (Rp)</th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-1 py-2 w-28">PPh 21 (Rp)</th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-1 py-2 w-28">Diterimakan</th>
+                            <th className="border border-gray-300 dark:border-slate-600 px-1 py-2 w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((r, i) => (
+                            <tr key={i}>
+                              <td className="border border-gray-300 dark:border-slate-600 px-1 py-1 text-center font-semibold">{i + 1}</td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-1 py-1">
+                                <input value={r.nama ?? ""} onChange={(e) => ubahBaris(i, "nama", e.target.value)} className={kolom} placeholder="Nama penerima" />
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-1 py-1">
+                                <input value={r.gol ?? ""} onChange={(e) => ubahBaris(i, "gol", e.target.value)} className={kolom} placeholder="III/a" />
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-1 py-1">
+                                <input value={r.npwp ?? ""} onChange={(e) => ubahBaris(i, "npwp", e.target.value)} className={kolom} placeholder="00.000.000.0-000.000" />
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-1 py-1">
+                                <input value={r.volume ?? ""} onChange={(e) => ubahBaris(i, "volume", e.target.value)} className={kolom} placeholder="1 orang" />
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-1 py-1">
+                                <input type="number" min="0" value={r.bruto ?? ""} onChange={(e) => ubahBaris(i, "bruto", e.target.value === "" ? "" : Math.max(0, Number(e.target.value) || 0))} className={kolom} placeholder="0" />
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-1 py-1">
+                                <input type="number" min="0" value={r.pph ?? ""} onChange={(e) => ubahBaris(i, "pph", e.target.value === "" ? "" : Math.max(0, Number(e.target.value) || 0))} className={kolom} placeholder="0" />
+                                <button
+                                  type="button"
+                                  onClick={() => hitungBaris(i)}
+                                  title={`Hitung PPh 21 ${rate}% dari bruto baris ini`}
+                                  className="mt-1 w-full px-1.5 py-1 rounded-md text-[10px] font-bold bg-[#32848D] hover:bg-[#276972] text-white"
+                                >
+                                  Hitung
+                                </button>
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-2 py-1 text-right font-mono">
+                                {(angka(r.bruto) - angka(r.pph)).toLocaleString("id-ID")}
+                              </td>
+                              <td className="border border-gray-300 dark:border-slate-600 px-1 py-1 text-center">
+                                <button type="button" onClick={() => hapusBaris(i)} title="Hapus baris" className="p-1 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
+                                  <Icon name="trash" className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-gray-50 dark:bg-slate-700/50 font-bold">
+                            <td colSpan={5} className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-right">Jumlah</td>
+                            <td className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-right font-mono">{totalBruto.toLocaleString("id-ID")}</td>
+                            <td className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-right font-mono">{totalPph.toLocaleString("id-ID")}</td>
+                            <td className="border border-gray-300 dark:border-slate-600 px-2 py-2 text-right font-mono">{totalBersih.toLocaleString("id-ID")}</td>
+                            <td className="border border-gray-300 dark:border-slate-600"></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Total diterimakan: <span className="font-bold text-[#32848D]">{terbilangRupiah(totalBersih)}</span>
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* ================= FORM EDITOR BEND 26 ================= */}
               {activeDoc.documentTypeCode === "BEND_26" && (

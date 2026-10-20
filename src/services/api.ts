@@ -69,6 +69,7 @@ export const syncDocumentTypes = async (): Promise<void> => {
       { id: "doctype-bend26", code: "BEND_26", name: "Bend 26 (Bukti Kas Pengeluaran)", description: "Kuitansi Bukti Kas Pengeluaran Keuangan", category: "FINANCIAL", isActive: true },
       { id: "doctype-undangan", code: "SURAT_UNDANGAN", name: "Surat Undangan", description: "Surat Undangan Rapat / URL Google Drive", category: "ADMINISTRATIVE", isActive: true },
       { id: "doctype-daftarhadir", code: "DAFTAR_HADIR", name: "Daftar Hadir", description: "Daftar Hadir Peserta Rapat / Acara", category: "ADMINISTRATIVE", isActive: true },
+      { id: "doctype-daftarpenerimaan", code: "DAFTAR_PENERIMAAN", name: "Daftar Penerimaan", description: "Tanda terima pembayaran honorarium narasumber / peserta", category: "FINANCIAL", isActive: true },
       { id: "doctype-notulen", code: "NOTULENSI_RAPAT", name: "Notulen Rapat", description: "Notulensi Rapat Koordinasi", category: "REPORT", isActive: true },
       { id: "doctype-lap-lapangan", code: "SPJ_AKTIVITAS_LAPANGAN", name: "Laporan Aktivitas Lapangan", description: "Laporan Hasil Pelaksanaan Tugas Lapangan", category: "REPORT", isActive: true },
       { id: "doctype-lampiran-foto", code: "LAMPIRAN_FOTO", name: "Lampiran Foto", description: "Dokumentasi Foto Kegiatan — tautkan tautan Google Drive", category: "REPORT", isActive: true },
@@ -179,6 +180,7 @@ export const seedMasterDataIfEmpty = async () => {
         { id: "doctype-bend26", code: "BEND_26", name: "Bend 26 (Bukti Kas Pengeluaran)", description: "Kuitansi Bukti Kas Pengeluaran Keuangan", category: "FINANCIAL", isActive: true },
         { id: "doctype-undangan", code: "SURAT_UNDANGAN", name: "Surat Undangan", description: "Surat Undangan Rapat / URL Google Drive", category: "ADMINISTRATIVE", isActive: true },
         { id: "doctype-daftarhadir", code: "DAFTAR_HADIR", name: "Daftar Hadir", description: "Daftar Hadir Peserta Rapat / Acara", category: "ADMINISTRATIVE", isActive: true },
+      { id: "doctype-daftarpenerimaan", code: "DAFTAR_PENERIMAAN", name: "Daftar Penerimaan", description: "Tanda terima pembayaran honorarium narasumber / peserta", category: "FINANCIAL", isActive: true },
         { id: "doctype-notulen", code: "NOTULENSI_RAPAT", name: "Notulen Rapat", description: "Notulensi Rapat Koordinasi", category: "REPORT", isActive: true },
         { id: "doctype-lap-lapangan", code: "SPJ_AKTIVITAS_LAPANGAN", name: "Laporan Aktivitas Lapangan", description: "Laporan Hasil Pelaksanaan Tugas Lapangan", category: "REPORT", isActive: true },
         { id: "doctype-lampiran-foto", code: "LAMPIRAN_FOTO", name: "Lampiran Foto", description: "Dokumentasi Foto Kegiatan — tautkan tautan Google Drive", category: "REPORT", isActive: true },
@@ -1122,9 +1124,21 @@ export const createSpjPackage = async (params: {
         { documentTypeId: "doctype-bend26", required: true, order: 1 },
         { documentTypeId: "doctype-undangan", required: true, order: 2 },
         { documentTypeId: "doctype-daftarhadir", required: true, order: 3 },
-        { documentTypeId: "doctype-notulen", required: true, order: 4 }
+        { documentTypeId: "doctype-notulen", required: true, order: 4 },
+        { documentTypeId: "doctype-daftarpenerimaan", required: false, order: 5 }
       ];
     }
+  }
+
+  // Daftar Penerimaan selalu disertakan pada setiap SPJ baru (opsional, tidak
+  // memblokir finalisasi) supaya blanko ini tersedia juga saat SPJ memakai
+  // paket dokumen buatan admin.
+  if (!checklistDocs.some((d) => d.documentTypeId === "doctype-daftarpenerimaan")) {
+    checklistDocs.push({
+      documentTypeId: "doctype-daftarpenerimaan",
+      required: false,
+      order: checklistDocs.length + 1,
+    });
   }
 
   // Get doc types details

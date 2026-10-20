@@ -52,6 +52,18 @@ interface PrintPreviewProps {
   screenFit?: boolean;
 }
 
+const BULAN_PANJANG = [
+  "JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI",
+  "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER",
+];
+
+/** Tanggal gaya blanko dinas: "30 JUNI 2025" (tanpa nol depan). */
+const formatTanggalPanjang = (iso?: string): string => {
+  const [y, m, d] = String(iso || "").slice(0, 10).split("-");
+  if (!y || !m || !d) return "";
+  return `${Number(d)} ${BULAN_PANJANG[Number(m) - 1] || ""} ${y}`.trim();
+};
+
 /** Format a list of ISO dates as "01-02-2026 s.d. 03-02-2026" or comma-joined. */
 const formatDateList = (dates?: string[], fallback?: string): string => {
   if (!dates || dates.length === 0) return formatDateDDMMYYYY(fallback);
@@ -110,6 +122,16 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
   // Margin @page dibuat 0 agar browser tidak menyisipkan header/footer cetak
   // (tanggal, judul halaman, alamat URL); tepi kertas diwakili padding di
   // dalam lembar sehingga hasil cetak tetap memiliki margin normal.
+  // Daftar Penerimaan memuat 9 kolom — dicetak mendatar agar tidak terpotong.
+  React.useEffect(() => {
+    if (selectedDocCode !== "DAFTAR_PENERIMAAN") return;
+    const style = document.createElement("style");
+    style.setAttribute("data-karsa", "daftar-penerimaan-page");
+    style.textContent = `@page { size: A4 landscape; margin: 12mm; }`;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, [selectedDocCode]);
+
   React.useEffect(() => {
     if (selectedDocCode !== "BEND_26") return;
     const style = document.createElement("style");
@@ -629,6 +651,91 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
         )}
 
         {/* ==================== SPJ AKTIVITAS LAPANGAN TEMPLATE ==================== */}
+        {/* ==================== DAFTAR PENERIMAAN ==================== */}
+        {selectedDocCode === "DAFTAR_PENERIMAAN" && (() => {
+          const rows: any[] = Array.isArray(data.penerimaan) ? data.penerimaan : [];
+          const angka = (v: any) => Number(v || 0);
+          const totalBruto = rows.reduce((a, r) => a + angka(r.bruto), 0);
+          const totalPph = rows.reduce((a, r) => a + angka(r.pph), 0);
+          const totalBersih = totalBruto - totalPph;
+          const judul = spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama;
+          const sel = "border border-black px-1.5 py-1 align-top";
+
+          return (
+            <div className="space-y-4 font-sans text-[11px] text-black">
+              <div className="space-y-0.5 text-center font-bold uppercase">
+                <p className="text-sm tracking-wide">DAFTAR PENERIMAAN</p>
+                <p className="text-sm">{judul}</p>
+                <p className="text-sm">TANGGAL {formatTanggalPanjang(spj.tanggal)}</p>
+              </div>
+
+              <table className="w-full border-collapse border border-black text-[11px]">
+                <thead>
+                  <tr className="text-center font-bold">
+                    <th className={`${sel} w-[4%]`}>No.</th>
+                    <th className={sel}>Nama</th>
+                    <th className={`${sel} w-[6%]`}>Gol</th>
+                    <th className={`${sel} w-[17%]`}>NPWP</th>
+                    <th className={sel} colSpan={2}>Jumlah Penerimaan sebelum PPh</th>
+                    <th className={`${sel} w-[12%]`}>Potongan Pph-21</th>
+                    <th className={`${sel} w-[12%]`}>Jumlah Diterimakan</th>
+                    <th className={`${sel} w-[14%]`}>Tanda Tangan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className={`${sel} py-6 text-center text-gray-500`}>
+                        Belum ada baris penerima.
+                      </td>
+                    </tr>
+                  ) : (
+                    rows.map((r, i) => (
+                      <tr key={i}>
+                        <td className={`${sel} text-center`}>{i + 1}</td>
+                        <td className={sel}>{r.nama || ""}</td>
+                        <td className={`${sel} text-center`}>{r.gol || ""}</td>
+                        <td className={sel}>{r.npwp || ""}</td>
+                        <td className={`${sel} text-center`}>{r.volume || "1 orang"}</td>
+                        <td className={`${sel} text-right font-mono`}>{angka(r.bruto).toLocaleString("id-ID")}</td>
+                        <td className={`${sel} text-right font-mono`}>{angka(r.pph).toLocaleString("id-ID")}</td>
+                        <td className={`${sel} text-right font-mono`}>{(angka(r.bruto) - angka(r.pph)).toLocaleString("id-ID")}</td>
+                        <td className={`${sel} h-8`}></td>
+                      </tr>
+                    ))
+                  )}
+                  <tr className="font-bold">
+                    <td colSpan={5} className={`${sel} text-center`}>Jumlah</td>
+                    <td className={`${sel} text-right font-mono`}>{totalBruto.toLocaleString("id-ID")}</td>
+                    <td className={`${sel} text-right font-mono`}>{totalPph.toLocaleString("id-ID")}</td>
+                    <td className={`${sel} text-right font-mono`}>{totalBersih.toLocaleString("id-ID")}</td>
+                    <td className={sel}></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="grid grid-cols-2 gap-6 pt-4 text-center text-[11px]">
+                <div className="space-y-0.5">
+                  <p>Mengetahui/ Menyetujui</p>
+                  <p>Pengguna Anggaran</p>
+                  <div className="h-20"></div>
+                  <p className="font-bold uppercase underline">{spj.sharedData?.paNama || "…………………………"}</p>
+                  <p>NIP. {spj.sharedData?.paNip || "…………………………"}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p>
+                    {data.tempatKota || "Temon"}, {formatTanggalPanjang(spj.tanggal)}
+                  </p>
+                  <p>Bendahara Pengeluaran</p>
+                  <div className="h-20"></div>
+                  <p className="font-bold uppercase underline">{spj.sharedData?.bendaharaNama || "…………………………"}</p>
+                  <p>NIP. {spj.sharedData?.bendaharaNip || "…………………………"}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {selectedDocCode === "SPJ_AKTIVITAS_LAPANGAN" && (
           <div className="space-y-6 font-serif text-black text-sm">
             <div className="flex items-center space-x-4 border-b-2 border-black pb-3">
