@@ -1206,8 +1206,6 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                   label="Tautan Surat Undangan"
                   value={externalUrl}
                   onChange={setExternalUrl}
-                  data={formData}
-                  onChangeData={handleFormChange}
                 />
               )}
 
@@ -1218,8 +1216,6 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                   label="Tautan Surat Perintah"
                   value={externalUrl}
                   onChange={setExternalUrl}
-                  data={formData}
-                  onChangeData={handleFormChange}
                 />
               )}
 

@@ -21,8 +21,6 @@ interface SuratLinkFieldProps {
   tone: Tone;
   value: string;
   onChange: (value: string) => void;
-  data: Record<string, any>;
-  onChangeData: (key: string, value: any) => void;
 }
 
 const TONE: Record<Tone, { box: string; label: string; hint: string; ring: string }> = {
@@ -40,16 +38,11 @@ const TONE: Record<Tone, { box: string; label: string; hint: string; ring: strin
   },
 };
 
-const inputCls =
-  "w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white";
-
 export const SuratLinkField: React.FC<SuratLinkFieldProps> = ({
   label,
   tone,
   value,
   onChange,
-  data,
-  onChangeData,
 }) => {
   const t = TONE[tone];
   const suratku = normalizeSuratkuUrl(value);
@@ -110,43 +103,6 @@ export const SuratLinkField: React.FC<SuratLinkFieldProps> = ({
         )}
       </div>
 
-      {(suratku || adaTautanLain) && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-700 dark:text-slate-300">
-              Nomor Surat
-            </label>
-            <input
-              value={data.nomorSurat ?? ""}
-              onChange={(e) => onChangeData("nomorSurat", e.target.value)}
-              placeholder="Nomor surat"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-700 dark:text-slate-300">
-              Tanggal Surat
-            </label>
-            <input
-              type="date"
-              value={data.tanggalSurat ?? ""}
-              onChange={(e) => onChangeData("tanggalSurat", e.target.value)}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-700 dark:text-slate-300">
-              Perihal
-            </label>
-            <input
-              value={data.perihal ?? ""}
-              onChange={(e) => onChangeData("perihal", e.target.value)}
-              placeholder="Perihal surat"
-              className={inputCls}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -73,39 +73,16 @@ const formatDateList = (dates?: string[], fallback?: string): string => {
   return sorted.map((d) => formatDateDDMMYYYY(d)).join(", ");
 };
 
-/** Lembar cetak untuk surat yang terbit di suratKU (bukan salinan isi surat). */
-const SuratkuSheet: React.FC<{ judul: string; url: string; data: Record<string, any> }> = ({
-  judul,
-  url,
-  data,
-}) => (
+/** Lembar cetak untuk surat yang terbit di suratKU (hanya tautan, bukan salinan surat). */
+const SuratkuSheet: React.FC<{ judul: string; url: string }> = ({ judul, url }) => (
   <div className="space-y-4">
     <div className="space-y-3 border-2 border-black p-4">
       <p className="text-center font-bold uppercase underline">{judul}</p>
-      <table className="w-full text-xs">
-        <tbody>
-          <tr>
-            <td className="w-24 py-0.5 align-top">Nomor</td>
-            <td className="py-0.5">: {data.nomorSurat || "-"}</td>
-          </tr>
-          <tr>
-            <td className="py-0.5 align-top">Tanggal</td>
-            <td className="py-0.5">: {data.tanggalSurat ? formatDateDDMMYYYY(data.tanggalSurat) : "-"}</td>
-          </tr>
-          <tr>
-            <td className="py-0.5 align-top">Perihal</td>
-            <td className="py-0.5">: {data.perihal || "-"}</td>
-          </tr>
-          <tr>
-            <td className="py-0.5 align-top">Tautan</td>
-            <td className="break-all font-mono text-[10px]">{url}</td>
-          </tr>
-        </tbody>
-      </table>
+      <p className="text-xs">Surat resmi ini terbit melalui suratKU Kabupaten Kulon Progo:</p>
+      <p className="break-all font-mono text-[11px]">{url}</p>
       <p className="text-[11px] leading-snug">
-        Surat ini diterbitkan dan ditandatangani secara elektronik melalui suratKU
-        Kabupaten Kulon Progo. Keasliannya diverifikasi dengan membuka tautan di atas
-        atau memindai QR pada dokumen asli.
+        Surat ditandatangani secara elektronik (BSrE). Keasliannya diverifikasi dengan
+        membuka tautan di atas atau memindai QR pada dokumen asli.
       </p>
     </div>
   </div>
@@ -850,7 +827,6 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               <SuratkuSheet
                 judul={String(selectedDocCode) === "SURAT_PERINTAH" ? "SURAT PERINTAH" : "SURAT UNDANGAN"}
                 url={activeDoc?.externalUrl || ""}
-                data={data}
               />
             ) : activeDoc?.externalUrl ? (
               <div className="space-y-4">
@@ -890,7 +866,6 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               <SuratkuSheet
                 judul={String(selectedDocCode) === "SURAT_PERINTAH" ? "SURAT PERINTAH" : "SURAT UNDANGAN"}
                 url={activeDoc?.externalUrl || ""}
-                data={data}
               />
             ) : activeDoc?.externalUrl ? (
               <div className="space-y-4">
