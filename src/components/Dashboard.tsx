@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { UserProfile } from "../types";
 import { getSpjStatistics } from "../services/api";
 import { HeroSection } from "./HeroSection";
-import { GamificationPanel } from "./GamificationPanel";
+import { SkorRingkas } from "./SkorRingkas";
 import { Icon } from "./Icon";
 import {
   PieChart,
@@ -31,6 +31,7 @@ interface SpjStats {
   draftSpj: number;
   totalNominal: number;
   byKategori: Record<string, { count: number; totalNominal: number; percentage: number }>;
+  monthlyNominal: Array<{ bulan: number; nominal: number; jumlahSpj: number }>;
 }
 
 const KATEGORI_COLORS: Record<string, string> = {
@@ -179,6 +180,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
       }))
     : [];
 
+  const BULAN_LABELS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  const bulananData = (stats?.monthlyNominal || []).map((m) => ({
+    label: BULAN_LABELS[m.bulan - 1] || String(m.bulan),
+    nominal: m.nominal,
+    jumlahSpj: m.jumlahSpj,
+  }));
+
   // Kategori dengan porsi terbesar — dipakai untuk sorotan berwarna.
   const kategoriTeratas = pieData.length
     ? pieData.reduce((a, b) => ((b.value || 0) > (a.value || 0) ? b : a))
@@ -189,18 +197,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
 
   return (
     <div>
-      <HeroSection variant="app" name={user.displayName || user.email} />
+      <HeroSection variant="app" name={user.displayName || user.email}>
+        <SkorRingkas user={user} />
+      </HeroSection>
 
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-        <GamificationPanel user={user} />
-
-      {/* Header */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Ringkasan SPJ</h1>
-        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
-          {user.jawatanName} — Analisis PEPIN
-        </p>
-      </div>
+      <div className="space-y-6">
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -238,6 +239,84 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
           <div className="p-4 bg-white/20 rounded-2xl">
             <Icon name="dollar-sign" className="w-10 h-10" />
           </div>
+        </div>
+      </div>
+
+      {/* Pengeluaran per Bulan — diagram batang */}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-[#276972] via-[#32848D] to-[#5FB8C2] px-6 py-5">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/25 text-white backdrop-blur-sm">
+              <Icon name="trending-up" className="w-5 h-5" />
+            </span>
+            <div>
+              <h2 className="text-lg font-bold text-white">Pengeluaran per Bulan</h2>
+              <p className="text-xs text-white/80">
+                Jumlah nilai SPJ tiap bulan berdasarkan bulan pelaksanaan
+              </p>
+            </div>
+          </div>
+          <span className="rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+            Total Rp {(stats?.totalNominal || 0).toLocaleString("id-ID")}
+          </span>
+        </div>
+        <div className="p-6">
+          {loading ? (
+            <div className="py-12 text-center text-sm text-gray-400 dark:text-slate-500">
+              Menghitung pengeluaran bulanan...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={bulananData} margin={{ top: 26, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="bulan-bar" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#5FB8C2" />
+                    <stop offset="100%" stopColor="#276972" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#CBD5E1" strokeOpacity={0.5} />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fontWeight: 600 }} />
+                <YAxis
+                  tickFormatter={(v) => rupiahRingkas(Number(v))}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 10 }}
+                  width={72}
+                />
+                <Tooltip
+                  formatter={(v: any, _n: any, p: any) => [
+                    `Rp ${Number(v).toLocaleString("id-ID")}`,
+                    `${p?.payload?.jumlahSpj || 0} SPJ`,
+                  ]}
+                  labelFormatter={(l) => `Bulan ${l}`}
+                  contentStyle={{ borderRadius: 12, border: "1px solid #E5E7EB", fontSize: 12 }}
+                />
+                <Bar dataKey="nominal" fill="url(#bulan-bar)" radius={[10, 10, 0, 0]} maxBarSize={64}>
+                  <LabelList
+                    dataKey="nominal"
+                    position="top"
+                    content={(props: any) => {
+                      const { x, y, width, index } = props;
+                      const entry = bulananData[index];
+                      if (!entry || !entry.nominal) return <g />;
+                      return (
+                        <text
+                          x={x + width / 2}
+                          y={y - 8}
+                          fill="#276972"
+                          textAnchor="middle"
+                          fontSize={10}
+                          fontWeight={700}
+                        >
+                          {rupiahRingkas(entry.nominal)}
+                        </text>
+                      );
+                    }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 

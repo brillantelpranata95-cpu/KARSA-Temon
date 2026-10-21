@@ -83,7 +83,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         className={`relative z-10 flex h-full flex-col ${
           variant === "public"
             ? "mx-auto max-w-5xl justify-center px-6 py-16"
-            : "mx-auto max-w-7xl justify-end px-4 pb-10 pt-8 sm:px-6 lg:px-8"
+            : "mx-auto w-full max-w-[1500px] justify-end px-6 pb-10 pt-8 sm:px-10 lg:px-14"
         }`}
       >
         {variant === "public" && (
@@ -93,14 +93,26 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             className="mb-6 h-16 w-16 rounded-2xl object-contain shadow-lg"
           />
         )}
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/80">
-          KARSA TEMON
-        </p>
-        <h1 className="mt-3 max-w-4xl text-4xl font-extrabold tracking-tight text-white drop-shadow-md sm:text-5xl md:text-6xl">
-          {line}
-        </h1>
-        {variant === "public" && (
+        {variant === "app" ? (
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/80">
+                KARSA TEMON
+              </p>
+              <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-white drop-shadow-md sm:text-5xl md:text-6xl">
+                {line}
+              </h1>
+            </div>
+            {children ? <div className="shrink-0">{children}</div> : null}
+          </div>
+        ) : (
           <>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/80">
+              KARSA TEMON
+            </p>
+            <h1 className="mt-3 max-w-4xl text-4xl font-extrabold tracking-tight text-white drop-shadow-md sm:text-5xl md:text-6xl">
+              {line}
+            </h1>
             <p className="mt-3 text-base font-semibold text-[#CBDCA5]">
               Kelola Administrasi dan Rekam SPJ
             </p>
@@ -117,9 +129,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <Icon name="arrow-right" className="h-4 w-4" />
               </button>
             )}
+            {children}
           </>
         )}
-        {children}
       </div>
     </section>
   );

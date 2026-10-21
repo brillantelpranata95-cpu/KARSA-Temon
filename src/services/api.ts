@@ -1667,6 +1667,7 @@ export const getSpjStatistics = async (user: UserProfile): Promise<{
   draftSpj: number;
   totalNominal: number;
   byKategori: Record<string, { count: number; totalNominal: number; percentage: number }>;
+  monthlyNominal: Array<{ bulan: number; nominal: number; jumlahSpj: number }>;
 }> => {
   // Hasil di-cache sebentar agar berpindah-pindah halaman tidak membaca ulang.
   const key = `stats:spj:${user.role}:${user.role === "ADMIN" ? "all" : user.jawatanId}`;
@@ -1688,6 +1689,7 @@ const computeSpjStatistics = async (user: UserProfile): Promise<{
   draftSpj: number;
   totalNominal: number;
   byKategori: Record<string, { count: number; totalNominal: number; percentage: number }>;
+  monthlyNominal: Array<{ bulan: number; nominal: number; jumlahSpj: number }>;
 }> => {
   const spjCol = collection(db, "spj");
   const q = user.role !== "ADMIN"
@@ -1709,10 +1711,18 @@ const computeSpjStatistics = async (user: UserProfile): Promise<{
 
   let totalNominal = 0;
   const byKategori: Record<string, { count: number; totalNominal: number }> = {};
+  // 12 bulan sekaligus — dihitung dari data yang SUDAH dimuat, jadi nol reads tambahan.
+  const monthlyNominal = Array.from({ length: 12 }, (_, i) => ({ bulan: i + 1, nominal: 0, jumlahSpj: 0 }));
 
   for (const spj of spjList) {
     const nominal = nominalBySpjId.get(spj.id) || 0;
     totalNominal += nominal;
+
+    const bulanSpj = Number(spj.bulan);
+    if (bulanSpj >= 1 && bulanSpj <= 12) {
+      monthlyNominal[bulanSpj - 1].nominal += nominal;
+      monthlyNominal[bulanSpj - 1].jumlahSpj += 1;
+    }
 
     // Classify by kode rekening nama for AI analysis
     const rekNama = spj.masterSnapshot.kodeRekening?.nama || "LAINNYA";
@@ -1745,7 +1755,8 @@ const computeSpjStatistics = async (user: UserProfile): Promise<{
     inProgressSpj: spjList.filter(s => s.status === "IN_PROGRESS" || s.status === "COMPLETE").length,
     draftSpj: spjList.filter(s => s.status === "DRAFT").length,
     totalNominal,
-    byKategori: byKategoriWithPercentage
+    byKategori: byKategoriWithPercentage,
+    monthlyNominal
   };
 };
 
