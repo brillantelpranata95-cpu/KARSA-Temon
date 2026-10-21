@@ -13,6 +13,7 @@ import {
   requestNewKegiatan,
   requestNewKodeRekening,
   getPackageTemplatesList,
+  getChecklistConfigList,
   getSpjDocuments,
   getSpjById,
 } from "../services/api";
@@ -50,6 +51,31 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
 
   // The package checklist follows the chosen Kode Rekening automatically
   const matchedPackage = packageTemplates.find((p) => p.kodeRekeningId === selectedRekId) || null;
+
+  // Rekening yang belum punya paket SPJ (admin) maupun checklist bawaan.
+  const [rekTanpaPaket, setRekTanpaPaket] = useState(false);
+  React.useEffect(() => {
+    let hidup = true;
+    setRekTanpaPaket(false);
+    if (!selectedRekId) return;
+    getChecklistConfigList()
+      .then((list) => {
+        if (!hidup) return;
+        const adaChecklist = list.some(
+          (c) => c.kodeRekeningId === selectedRekId && c.isActive !== false
+        );
+        const adaPaket = packageTemplates.some(
+          (p) => p.kodeRekeningId === selectedRekId && p.isActive !== false
+        );
+        setRekTanpaPaket(!adaChecklist && !adaPaket);
+      })
+      .catch(() => {
+        /* gagal cek = jangan tampilkan peringatan palsu */
+      });
+    return () => {
+      hidup = false;
+    };
+  }, [selectedRekId, packageTemplates]);
 
   const [creating, setCreating] = useState(false);
   const [reopenSpjId, setReopenSpjId] = useState<string | null>(null);
@@ -739,28 +765,24 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                       <div className="flex items-center justify-end gap-1.5 flex-wrap max-w-[260px] ml-auto">
                         <button
                           onClick={() => onSelectSpj(spj.id, "preview")}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
+                          title="Pratinjau seluruh dokumen SPJ"
+                          aria-label="Pratinjau"
+                          className="p-2 text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg inline-flex items-center justify-center"
                         >
-                          <Icon name="eye" className="w-3.5 h-3.5 shrink-0" />
-                          <span>Preview</span>
+                          <Icon name="eye" className="w-4 h-4 shrink-0" tebal />
                         </button>
 
                     <button
                       onClick={() => handleDownloadPdf(spj.id)}
                       disabled={downloadingSpjId !== null}
-                      className="px-3 py-1.5 text-xs font-medium text-[#32848D] dark:text-[#7Fc1c9] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2 text-[#32848D] dark:text-[#7Fc1c9] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Unduh seluruh dokumen paket ini sebagai satu berkas PDF"
+                      aria-label="Unduh PDF"
                     >
                       {downloadingSpjId === spj.id ? (
-                        <>
-                          <Icon name="refresh-ccw" className="w-3.5 h-3.5 shrink-0 animate-spin" />
-                          <span>Menyusun...</span>
-                        </>
+                        <Icon name="refresh-ccw" className="w-4 h-4 shrink-0 animate-spin" tebal />
                       ) : (
-                        <>
-                          <Icon name="download" className="w-3.5 h-3.5 shrink-0" />
-                          <span>PDF</span>
-                        </>
+                        <Icon name="download" className="w-4 h-4 shrink-0" tebal />
                       )}
                     </button>
 
@@ -775,10 +797,11 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                         ) : (
                           <button
                             onClick={() => setArchiveSpjId(spj.id)}
-                            className="px-3 py-1.5 text-xs font-medium text-[#32848D] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
+                            title="Arsipkan SPJ ini ke Box Arsip"
+                            aria-label="Arsipkan"
+                            className="p-2 text-[#32848D] bg-[#32848D]/10 hover:bg-[#32848D]/20 rounded-lg inline-flex items-center justify-center"
                           >
-                            <Icon name="archive" className="w-3.5 h-3.5 shrink-0" />
-                            <span>Arsipkan</span>
+                            <Icon name="archive" className="w-4 h-4 shrink-0" tebal />
                           </button>
                         )}
 
@@ -898,6 +921,17 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 <p className="text-[11px] text-gray-400 mt-1">
                   Ketik kata kunci (mis. <span className="font-mono">makan rapat</span> atau <span className="font-mono">5.1.02</span>) — daftar di bawahnya otomatis tersaring.
                 </p>
+                {selectedRekId && rekTanpaPaket && (
+                  <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+                    <p className="flex items-center gap-1.5 font-bold">
+                      <Icon name="warning" className="h-4 w-4" tebal />
+                      Rekening belum terhubung ke paket SPJ
+                    </p>
+                    <p className="mt-1">
+                      Silakan hubungi admin untuk membuat paket SPJ sesuai kebutuhan.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>

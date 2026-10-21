@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { UserProfile } from "../types";
 import { Icon } from "./Icon";
-import { useHideScores } from "../utils/prefs";
 import { GRAHA_URL } from "../config/appConfig";
 
 export type AppTab = "dashboard" | "spj" | "master" | "audit" | "packages" | "officials";
@@ -38,7 +37,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab,
 
   const [laciTerbuka, setLaciTerbuka] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const [hideScores, setHideScoresPref] = useHideScores(user.uid);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -65,8 +63,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab,
   };
 
   const menuUtama: { id: AppTab; label: string; ikon: React.ReactNode }[] = [
-    { id: "dashboard", label: "Dashboard", ikon: <Icon name="layout-dashboard" className="w-5 h-5" /> },
-    { id: "spj", label: "Daftar SPJ", ikon: <Icon name="file-text" className="w-5 h-5" /> },
+    { id: "dashboard", label: "Dashboard", ikon: <Icon name="layout-dashboard" className="w-5 h-5" tebal /> },
+    { id: "spj", label: "Daftar SPJ", ikon: <Icon name="file-text" className="w-5 h-5" tebal /> },
   ];
 
   const menuPengaturan: { id: AppTab; label: string; ket: string; ikon: React.ReactNode }[] = [
@@ -74,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab,
       id: "officials",
       label: "Penandatangan Jawatan",
       ket: "PPTK, Notulis & Pemimpin Rapat",
-      ikon: <Icon name="user-cog" className="w-5 h-5" />,
+      ikon: <Icon name="user-cog" className="w-5 h-5" tebal />,
     },
   ];
   if (user.role === "ADMIN") {
@@ -83,19 +81,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab,
         id: "packages",
         label: "Buat Paket SPJ",
         ket: "Dokumen wajib per Kode Rekening",
-        ikon: <Icon name="files" className="w-5 h-5" />,
+        ikon: <Icon name="files" className="w-5 h-5" tebal />,
       },
       {
         id: "master",
         label: "Master Data & Akses",
         ket: "Pengguna, jawatan, rekening",
-        ikon: <Icon name="database" className="w-5 h-5" />,
+        ikon: <Icon name="database" className="w-5 h-5" tebal />,
       },
       {
         id: "audit",
         label: "Audit Log",
         ket: "Riwayat aktivitas sistem",
-        ikon: <Icon name="scroll" className="w-5 h-5" />,
+        ikon: <Icon name="scroll" className="w-5 h-5" tebal />,
       },
     );
   }
@@ -200,30 +198,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab,
             />
           ))}
 
-          {/* Sembunyikan skor — preferensi, bukan halaman */}
-          <button
-            onClick={() => setHideScoresPref(!hideScores)}
-            title={lebarPenuh ? undefined : "Sembunyikan skor & pencapaian"}
-            className={`flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left text-gray-600 transition hover:bg-[#F6FAF5] dark:text-slate-300 dark:hover:bg-slate-700/60 ${
-              lebarPenuh ? "" : "justify-center"
-            }`}
-          >
-            <span className={`shrink-0 ${lebarPenuh ? "mt-0.5" : ""}`}>
-              {hideScores ? <Icon name="eye-off" className="w-5 h-5" /> : <Icon name="eye" className="w-5 h-5" />}
-            </span>
-            {lebarPenuh && (
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold">
-                  {hideScores ? "Tampilkan skor" : "Sembunyikan skor"}
-                </span>
-                <span className="mt-0.5 block text-[11px] text-gray-500 dark:text-slate-400">
-                  Kartu poin &amp; badge di dashboard
-                </span>
-              </span>
-            )}
-          </button>
-
-          {/* Pintasan GRAHA — satu origin, jadi tidak perlu login ulang */}
+                    {/* Pintasan GRAHA — satu origin, jadi tidak perlu login ulang */}
           <a
             href={GRAHA_URL}
             title={lebarPenuh ? undefined : "GRAHA Temon"}
@@ -232,7 +207,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab,
             }`}
           >
             <span className={`shrink-0 ${lebarPenuh ? "mt-0.5" : ""}`}>
-              <Icon name="landmark" className="w-5 h-5" />
+              <Icon name="landmark" className="w-5 h-5" tebal />
             </span>
             {lebarPenuh && (
               <span className="min-w-0 flex-1">
@@ -314,7 +289,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab,
         className="fixed left-3 top-3 z-40 grid h-10 w-10 place-items-center rounded-xl border border-gray-200 bg-white text-gray-600 shadow-lg lg:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
         aria-label="Buka menu"
       >
-        <Icon name="menu" className="w-5 h-5" />
+        <Icon name="menu" className="w-5 h-5" tebal />
       </button>
 
       {/* Sidebar tetap (layar besar) */}
@@ -347,7 +322,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab,
               className="absolute right-3 top-4 grid h-9 w-9 place-items-center rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700"
               aria-label="Tutup menu"
             >
-              <Icon name="x" className="w-5 h-5" />
+              <Icon name="x" className="w-5 h-5" tebal />
             </button>
             {isiSidebar(true)}
           </div>

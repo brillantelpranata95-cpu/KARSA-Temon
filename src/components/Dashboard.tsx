@@ -3,7 +3,6 @@ import { UserProfile } from "../types";
 import { getSpjStatistics } from "../services/api";
 import { HeroSection } from "./HeroSection";
 import { GamificationPanel } from "./GamificationPanel";
-import { useHideScores } from "../utils/prefs";
 import { Icon } from "./Icon";
 import {
   PieChart,
@@ -131,7 +130,6 @@ const KATEGORI_LABELS: Record<string, string> = {
 export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
   const [stats, setStats] = useState<SpjStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hideScores] = useHideScores(user.uid);
   // Indeks irisan diagram lingkaran yang sedang disorot kursor (null = tidak ada).
   const [pieAktif, setPieAktif] = useState<number | null>(null);
 
@@ -194,7 +192,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
       <HeroSection variant="app" name={user.displayName || user.email} />
 
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-        {!hideScores && <GamificationPanel user={user} />}
+        <GamificationPanel user={user} />
 
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm">

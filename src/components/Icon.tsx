@@ -46,14 +46,19 @@ function muatIkon(nama: string): Promise<string> {
  * Siapkan SVG agar mewarisi warna teks (`currentColor`) dan ukuran dari className.
  * Atribut width/height bawaan dibuang supaya ukuran ditentukan CSS, bukan berkas.
  */
-function siapkanSvg(mentah: string, className: string): string {
+function siapkanSvg(mentah: string, className: string, tebal = false): string {
   if (!mentah || !mentah.includes("<svg")) return "";
   let s = mentah
     .replace(/\swidth="[^"]*"/g, "")
     .replace(/\sheight="[^"]*"/g, "")
     .replace(/\sclass="[^"]*"/g, "")
     .replace(/fill="currentColor"/g, "");
-  return s.replace(/<svg\b/, `<svg class="${className}" fill="currentColor"`);
+  // `tebal` menambah garis tepi pada path supaya ikon terbaca lebih jelas,
+  // dipakai untuk ikon navigasi (sidebar) dan tombol aksi berikon saja.
+  const garis = tebal
+    ? ' stroke="currentColor" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"'
+    : "";
+  return s.replace(/<svg\b/, `<svg class="${className}" fill="currentColor"${garis}`);
 }
 
 export interface IconProps {
@@ -63,6 +68,8 @@ export interface IconProps {
   className?: string;
   /** Ukuran dalam piksel; alternatif cepat untuk w-/h-. */
   size?: number;
+  /** Garis tepi lebih tebal — untuk ikon navigasi & tombol aksi berikon. */
+  tebal?: boolean;
 }
 
 /**
@@ -71,7 +78,7 @@ export interface IconProps {
  * Selalu dibungkus <span> berukuran sama baik saat ikon masih dimuat maupun sudah
  * tampil, sehingga tata letak tidak bergeser (layout shift) saat SVG tiba.
  */
-export const Icon: React.FC<IconProps> = ({ name, className, size }) => {
+export const Icon: React.FC<IconProps> = ({ name, className, size, tebal = false }) => {
   const [svg, setSvg] = useState<string>(() => cache.get(name) ?? "");
 
   useEffect(() => {
@@ -98,7 +105,7 @@ export const Icon: React.FC<IconProps> = ({ name, className, size }) => {
       className={`inline-block shrink-0 align-middle ${kelas}`}
       style={gaya}
       aria-hidden="true"
-      dangerouslySetInnerHTML={svg ? { __html: siapkanSvg(svg, "block w-full h-full") } : undefined}
+      dangerouslySetInnerHTML={svg ? { __html: siapkanSvg(svg, "block w-full h-full", tebal) } : undefined}
     />
   );
 };

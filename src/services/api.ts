@@ -1735,9 +1735,17 @@ export const awardGamificationPoints = async (
 
 /** Leaderboard across every user — highest total points first. */
 export const getGamificationLeaderboard = async (): Promise<UserGamificationProfile[]> => {
-  const snap = await getDocs(collection(db, "userPoints"));
+  // Dokumen poin bisa tertinggal dari akun yang sudah tidak ada (mis. akun lama
+  // yang dihapus). Tanpa penyaringan, sisa dokumen itu tampil sebagai "pengguna"
+  // hantu di papan peringkat.
+  const [snap, usersSnap] = await Promise.all([
+    getDocs(collection(db, "userPoints")),
+    getDocs(collection(db, "users")),
+  ]);
+  const uidTerdaftar = new Set(usersSnap.docs.map((d) => d.id));
   return snap.docs
     .map((d) => d.data() as UserGamificationProfile)
+    .filter((p) => uidTerdaftar.has(p.uid))
     .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
 };
 
