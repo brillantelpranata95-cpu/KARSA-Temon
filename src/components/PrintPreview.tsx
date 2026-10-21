@@ -3,6 +3,7 @@ import { SpjItem, SpjDocumentItem } from "../types";
 import { terbilangRupiah, toTitleCase } from "../utils/format";
 import { formatDateDDMMYYYY, getNamaHari, getNamaHariCapitalized, getYearFromDate } from "../utils/date";
 import { drivePhotoUrl, collectDocPhotos, inspectDriveLink } from "../utils/drive";
+import { isSuratkuUrl } from "../utils/suratku";
 import { DriveImage } from "./DriveImage";
 import { Icon } from "./Icon";
 import { db } from "../config/firebase";
@@ -71,6 +72,44 @@ const formatDateList = (dates?: string[], fallback?: string): string => {
   if (sorted.length === 1) return formatDateDDMMYYYY(sorted[0]);
   return sorted.map((d) => formatDateDDMMYYYY(d)).join(", ");
 };
+
+/** Lembar cetak untuk surat yang terbit di suratKU (bukan salinan isi surat). */
+const SuratkuSheet: React.FC<{ judul: string; url: string; data: Record<string, any> }> = ({
+  judul,
+  url,
+  data,
+}) => (
+  <div className="space-y-4">
+    <div className="space-y-3 border-2 border-black p-4">
+      <p className="text-center font-bold uppercase underline">{judul}</p>
+      <table className="w-full text-xs">
+        <tbody>
+          <tr>
+            <td className="w-24 py-0.5 align-top">Nomor</td>
+            <td className="py-0.5">: {data.nomorSurat || "-"}</td>
+          </tr>
+          <tr>
+            <td className="py-0.5 align-top">Tanggal</td>
+            <td className="py-0.5">: {data.tanggalSurat ? formatDateDDMMYYYY(data.tanggalSurat) : "-"}</td>
+          </tr>
+          <tr>
+            <td className="py-0.5 align-top">Perihal</td>
+            <td className="py-0.5">: {data.perihal || "-"}</td>
+          </tr>
+          <tr>
+            <td className="py-0.5 align-top">Tautan</td>
+            <td className="break-all font-mono text-[10px]">{url}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="text-[11px] leading-snug">
+        Surat ini diterbitkan dan ditandatangani secara elektronik melalui suratKU
+        Kabupaten Kulon Progo. Keasliannya diverifikasi dengan membuka tautan di atas
+        atau memindai QR pada dokumen asli.
+      </p>
+    </div>
+  </div>
+);
 
 export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack, initialDocCode, liveAttendance = true, screenFit = true }) => {
   const [selectedDocCode, setSelectedDocCode] = React.useState<string>(initialDocCode || "BEND_26");
@@ -807,7 +846,13 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
         {/* ==================== SURAT PERINTAH TEMPLATE ==================== */}
         {selectedDocCode === "SURAT_PERINTAH" && (
           <div className="space-y-6 font-serif text-black text-sm">
-            {activeDoc?.externalUrl ? (
+            {isSuratkuUrl(activeDoc?.externalUrl) ? (
+              <SuratkuSheet
+                judul={String(selectedDocCode) === "SURAT_PERINTAH" ? "SURAT PERINTAH" : "SURAT UNDANGAN"}
+                url={activeDoc?.externalUrl || ""}
+                data={data}
+              />
+            ) : activeDoc?.externalUrl ? (
               <div className="space-y-4">
                 <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl text-center space-y-2 print:hidden">
                   <p className="text-indigo-900 font-semibold">Surat Perintah dari Google Drive:</p>
@@ -841,7 +886,13 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
         {/* ==================== SURAT UNDANGAN TEMPLATE ==================== */}
         {selectedDocCode === "SURAT_UNDANGAN" && (
           <div className="space-y-6 font-serif text-black text-sm">
-            {activeDoc?.externalUrl ? (
+            {isSuratkuUrl(activeDoc?.externalUrl) ? (
+              <SuratkuSheet
+                judul={String(selectedDocCode) === "SURAT_PERINTAH" ? "SURAT PERINTAH" : "SURAT UNDANGAN"}
+                url={activeDoc?.externalUrl || ""}
+                data={data}
+              />
+            ) : activeDoc?.externalUrl ? (
               <div className="space-y-4">
                 <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl text-center space-y-2 print:hidden">
                   <p className="text-blue-900 font-semibold">Surat Undangan dari Google Drive:</p>

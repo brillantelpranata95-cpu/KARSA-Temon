@@ -28,6 +28,7 @@ import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari } from "../util
 import { SuggestionInput } from "./SuggestionInput";
 import { DriveImage } from "./DriveImage";
 import { Icon } from "./Icon";
+import { SuratLinkField } from "./SuratLinkField";
 
 interface SpjWizardProps {
   user: UserProfile;
@@ -1198,75 +1199,31 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                 </div>
               )}
 
-              {/* ================= FORM EDITOR SURAT UNDANGAN ================= */}
+                            {/* ================= FORM EDITOR SURAT UNDANGAN ================= */}
               {activeDoc.documentTypeCode === "SURAT_UNDANGAN" && (
-                <div className="space-y-4 text-sm">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-xl space-y-2">
-                    <label className="block text-xs font-bold text-blue-900 dark:text-blue-200">
-                      Tautan Dokumen External Google Drive
-                    </label>
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
-                      Surat undangan sudah dibuat di luar web app ini. Cukup tautkan link Google Drive untuk verifikasi & cetak.
-                    </p>
-                    <div className="flex items-center space-x-2">
-                      <Icon name="link" className="w-4 h-4 text-blue-600" />
-                      <input
-                        type="url"
-                        value={externalUrl}
-                        onChange={(e) => setExternalUrl(e.target.value)}
-                        placeholder="https://drive.google.com/file/d/... atau https://drive.google.com/document/d/..."
-                        className="w-full border border-blue-300 dark:border-blue-700 rounded-lg p-2 text-xs bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                    {externalUrl && (
-                      <div className="mt-2 p-2 bg-white dark:bg-slate-700 rounded-lg border border-blue-200 dark:border-slate-600">
-                        <p className="text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Preview:</p>
-                        <iframe
-                          src={externalUrl.replace("/view?usp=drive_fs", "/preview").replace("/edit", "/preview")}
-                          className="w-full h-64 rounded-lg border-0"
-                          title="Surat Undangan Preview"
-                        ></iframe>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <SuratLinkField
+                  tone="blue"
+                  label="Tautan Surat Undangan"
+                  value={externalUrl}
+                  onChange={setExternalUrl}
+                  data={formData}
+                  onChangeData={handleFormChange}
+                />
               )}
 
               {/* ================= FORM EDITOR SURAT PERINTAH ================= */}
               {activeDoc.documentTypeCode === "SURAT_PERINTAH" && (
-                <div className="space-y-4 text-sm">
-                  <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl space-y-2">
-                    <label className="block text-xs font-bold text-indigo-900 dark:text-indigo-200">
-                      Tautan Surat Perintah Google Drive
-                    </label>
-                    <p className="text-xs text-indigo-700 dark:text-indigo-300">
-                      Surat Perintah sudah dibuat di luar web app ini. Cukup paste link Google Drive untuk verifikasi & cetak.
-                    </p>
-                    <div className="flex items-center space-x-2">
-                      <Icon name="link" className="w-4 h-4 text-indigo-600" />
-                      <input
-                        type="url"
-                        value={externalUrl}
-                        onChange={(e) => setExternalUrl(e.target.value)}
-                        placeholder="https://drive.google.com/file/d/..."
-                        className="w-full border border-indigo-300 dark:border-indigo-700 rounded-lg p-2 text-xs bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                    {externalUrl && (
-                      <div className="mt-2 p-2 bg-white dark:bg-slate-700 rounded-lg border border-indigo-200 dark:border-slate-600">
-                        <p className="text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Preview:</p>
-                        <iframe
-                          src={externalUrl.replace("/view?usp=drive_fs", "/preview").replace("/edit", "/preview")}
-                          className="w-full h-64 rounded-lg border-0"
-                          title="Surat Perintah Preview"
-                        ></iframe>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <SuratLinkField
+                  tone="indigo"
+                  label="Tautan Surat Perintah"
+                  value={externalUrl}
+                  onChange={setExternalUrl}
+                  data={formData}
+                  onChangeData={handleFormChange}
+                />
               )}
 
-              {/* ================= FORM EDITOR SPJ AKTIVITAS LAPANGAN ================= */}
+{/* ================= FORM EDITOR SPJ AKTIVITAS LAPANGAN ================= */}
               {activeDoc.documentTypeCode === "SPJ_AKTIVITAS_LAPANGAN" && (
                 <div className="space-y-4 text-sm">
                   <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4 rounded-xl">
