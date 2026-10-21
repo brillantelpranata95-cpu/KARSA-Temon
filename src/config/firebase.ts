@@ -1,7 +1,12 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 
 export const firebaseConfig = {
   apiKey: "AIzaSyDAA8EB5F553a8FRBQY_FQCIYVCVlzqXmc",
@@ -16,7 +21,23 @@ export const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-export const db = getFirestore(app);
+/**
+ * Firestore dengan cache PERSISTEN (IndexedDB).
+ *
+ * Kunjungan ulang dilayani dari disk: dokumen yang belum berubah tidak dibaca
+ * ulang dari server, dan aplikasi tetap terbaca saat jaringan putus. Ini
+ * penghemat reads terbesar untuk pemakaian harian di paket Spark.
+ */
+export const db = (() => {
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    });
+  } catch (e) {
+    console.warn("Cache persisten tidak tersedia, memakai cache memori:", e);
+    return getFirestore(app);
+  }
+})();
 
 // Analytics support check
 export const initAnalytics = async () => {

@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { UserProfile } from "../types";
-import { getUserGamification } from "../services/api";
+import { recordDailyActivity } from "../services/api";
 import { getLevelForPoints, getLevelProgress, UserGamificationProfile } from "../utils/gamification";
 import { Icon } from "./Icon";
 
 /**
  * Ringkasan skor capaian — satu kartu tipis yang menempel pada sapaan di header.
  *
- * Sengaja HANYA memuat dokumen poin milik pengguna sendiri (satu `getDoc`), tanpa
- * papan peringkat: peringkat antar pengguna menuntut pembacaan seluruh koleksi
- * `userPoints` dan tidak lagi ditampilkan di Dashboard.
+ * Memakai `recordDailyActivity` (bukan `getUserGamification`) supaya pencatatan
+ * poin harian dan pembacaan skor berbagi SATU dokumen yang sama — di-cache 60 detik
+ * di `api.ts`. Papan peringkat tidak lagi dibaca sama sekali.
  */
 export const SkorRingkas: React.FC<{ user: UserProfile }> = ({ user }) => {
   const [profile, setProfile] = useState<UserGamificationProfile | null>(null);
 
   useEffect(() => {
     let batal = false;
-    getUserGamification(user.uid)
+    recordDailyActivity(user)
       .then((p) => {
         if (!batal) setProfile(p);
       })

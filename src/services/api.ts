@@ -1434,6 +1434,16 @@ export const saveSpjDocumentData = async (
     ...(status === "COMPLETED" ? { completedAt: new Date().toISOString() } : {})
   }));
 
+  // Denormalisasi nominal ke dokumen SPJ: dashboard cukup membaca field ini,
+  // tidak perlu memindai SELURUH koleksi spjDocuments (biaya reads linear).
+  if (currentDoc.documentTypeCode === "BEND_26") {
+    const nominal = Number((docData as any)?.nominal || 0);
+    await updateDoc(doc(db, "spj", currentDoc.spjId), {
+      totalNominal: Number.isFinite(nominal) ? nominal : 0,
+      totalNominalUpdatedAt: serverTimestamp(),
+    }).catch((e) => console.warn("Gagal menyimpan totalNominal ke SPJ:", e));
+  }
+
   // Recalculate SPJ progress & status
   await recalculateSpjStatus(currentDoc.spjId);
 
@@ -1660,6 +1670,39 @@ export const deleteJawatan = async (jawatanId: string, user: UserProfile) => {
 };
 
 // Get SPJ statistics for dashboard/AI analysis
+/**
+ * Kunci dokumen agregat statistik.
+ *
+ * ADMIN melihat seluruh kapanewon; pengguna biasa hanya jawatannya. Dengan satu
+ * dokumen ringkasan, membuka Dashboard cukup 1 read, bukan N dokumen SPJ.
+ */
+const statDocId = (user: UserProfile): string =>
+  user.role === "ADMIN" ? "ringkasan-global" : `ringkasan-${user.jawatanId || "unassigned"}`;
+
+const loadStatsWithAggregate = async (user: UserProfile) => {
+  const ref = doc(db, "stats", statDocId(user));
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data() as any;
+      const umur = Date.now() - Number(data.updatedAtMs || 0);
+      if (umur >= 0 && umur < SPJ_STATS_TTL_MS) {
+        return data;
+      }
+    }
+  } catch (e) {
+    console.warn("Agregat statistik tidak terbaca, menghitung ulang:", e);
+  }
+
+  const hasil = await computeSpjStatistics(user);
+  // Simpan supaya pembukaan berikutnya hanya 1 read. Kegagalan menulis tidak
+  // boleh menggagalkan dashboard (mis. aturan menolak) — cukup diabaikan.
+  setDoc(ref, sanitizeData({ ...hasil, updatedAtMs: Date.now(), updatedAt: serverTimestamp() })).catch(
+    () => undefined
+  );
+  return hasil;
+};
+
 export const getSpjStatistics = async (user: UserProfile): Promise<{
   totalSpj: number;
   finalizedSpj: number;
@@ -1671,11 +1714,11 @@ export const getSpjStatistics = async (user: UserProfile): Promise<{
 }> => {
   // Hasil di-cache sebentar agar berpindah-pindah halaman tidak membaca ulang.
   const key = `stats:spj:${user.role}:${user.role === "ADMIN" ? "all" : user.jawatanId}`;
-  return cachedFetch(key, () => computeSpjStatistics(user), SPJ_STATS_TTL_MS);
+  return cachedFetch(key, () => loadStatsWithAggregate(user), SPJ_STATS_TTL_MS);
 };
 
 /** Lama data statistik dianggap segar (30 detik). */
-export const SPJ_STATS_TTL_MS = 30 * 1000;
+export const SPJ_STATS_TTL_MS = 5 * 60 * 1000;
 
 /** Buang cache statistik — dipanggil setiap kali ada perubahan data SPJ. */
 export const invalidateSpjStatsCache = (): void => {
@@ -1698,16 +1741,9 @@ const computeSpjStatistics = async (user: UserProfile): Promise<{
   const snap = await getDocs(q);
   const spjList = snap.docs.map(d => ({ id: d.id, ...d.data() } as SpjItem));
 
-  // Hanya dokumen Bend 26 yang dibutuhkan untuk nominal — jauh lebih hemat
-  // dibanding membaca seluruh koleksi spjDocuments (yang terus bertambah).
-  const bendSnap = await getDocs(
-    query(collection(db, "spjDocuments"), where("documentTypeCode", "==", "BEND_26"))
-  );
-  const nominalBySpjId = new Map<string, number>();
-  bendSnap.docs.forEach((d) => {
-    const row = d.data() as SpjDocumentItem;
-    if (row.spjId) nominalBySpjId.set(row.spjId, Number(row.data?.nominal || 0));
-  });
+  // Nominal dibaca dari FIELD di dokumen SPJ (hasil denormalisasi saat Bend 26
+  // disimpan). Dulu seluruh koleksi spjDocuments dipindai — biaya reads tumbuh
+  // linear terhadap jumlah dokumen dan menjadi penyedot kuota terbesar.
 
   let totalNominal = 0;
   const byKategori: Record<string, { count: number; totalNominal: number }> = {};
@@ -1715,7 +1751,7 @@ const computeSpjStatistics = async (user: UserProfile): Promise<{
   const monthlyNominal = Array.from({ length: 12 }, (_, i) => ({ bulan: i + 1, nominal: 0, jumlahSpj: 0 }));
 
   for (const spj of spjList) {
-    const nominal = nominalBySpjId.get(spj.id) || 0;
+    const nominal = Number(spj.totalNominal || 0);
     totalNominal += nominal;
 
     const bulanSpj = Number(spj.bulan);
@@ -1784,9 +1820,13 @@ export const updateUserAccess = async (targetUid: string, patchData: { role?: "A
 // Firestore so progress survives refresh and follows the account everywhere.
 
 export const getUserGamification = async (uid: string): Promise<UserGamificationProfile | null> => {
-  const snap = await getDoc(doc(db, "userPoints", uid));
-  if (!snap.exists()) return null;
-  return snap.data() as UserGamificationProfile;
+  // Di-cache singkat: App (pencatat aktivitas harian) dan kartu skor di header
+  // membaca dokumen yang sama saat Dashboard dibuka.
+  return cachedFetch(`gam:${uid}`, async () => {
+    const snap = await getDoc(doc(db, "userPoints", uid));
+    if (!snap.exists()) return null;
+    return snap.data() as UserGamificationProfile;
+  }, 60 * 1000);
 };
 
 /** Award points for one action, keeping counters, streak, and badges in sync. */
@@ -1866,7 +1906,9 @@ export const recordDailyActivity = async (user: UserProfile): Promise<UserGamifi
       // Already recorded today — just refresh streak continuity without adding points.
       return existing;
     }
-    return await awardGamificationPoints(user, "DAILY_LOGIN");
+    const hasil = await awardGamificationPoints(user, "DAILY_LOGIN");
+    invalidateCache(`gam:${user.uid}`);
+    return hasil;
   } catch (err) {
     console.warn("Gamification daily activity skipped:", err);
     return null;

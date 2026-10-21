@@ -84,6 +84,10 @@ service cloud.firestore {
 
     // Undangan akses: admin menetapkan peran/jawatan SEBELUM pemilik email login.
     // Pemilik email boleh menghapus undangannya sendiri saat login pertama (klaim).
+    // Statistik turunan dashboard (agregat). Bukan data resmi — boleh ditulis
+    // pengguna terautentikasi supaya angka tidak basi setelah SPJ berubah.
+    match /stats/{id} { allow read, write: if sudahMasuk(); }
+
     match /userInvites/{email} {
       allow read: if sudahMasuk();
       allow create, update: if adalahAdmin();

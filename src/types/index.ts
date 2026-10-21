@@ -112,6 +112,8 @@ export interface SpjSharedData {
 export interface SpjItem {
   id: string; nomorSpj: string; jawatanId: string; jawatanName: string; userId: string; userEmail: string; userName: string;
   kegiatanId: string; jenisBelanjaId?: string; kodeRekeningId: string; tanggal: string; tahunAnggaran: number; bulan: number;
+  /** Nilai Bend 26 yang disalin ke dokumen SPJ agar dashboard tidak memindai spjDocuments. */
+  totalNominal?: number;
   status: SpjStatus; progress: number; masterSnapshot: SpjMasterSnapshot;
   packageTemplateId?: string | null; packageTemplateName?: string | null;
   checklistSnapshot: { configId: string; version: number; documents: SpjChecklistSnapshotItem[] };
