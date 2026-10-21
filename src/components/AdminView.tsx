@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { collection, getDocs, query, limit } from "firebase/firestore";
 import { db } from "../config/firebase";
-import { UserProfile, AuditLogItem, Jawatan, Kegiatan, KodeRekening } from "../types";
+import { UserProfile, UserInvite, AuditLogItem, Jawatan, Kegiatan, KodeRekening } from "../types";
 import {
   getAllUsers,
   updateUserAccess,
   adminCreateUser,
   adminDeleteUser,
+  adminRestoreUser,
+  adminPurgeUser,
+  getUserInvites,
+  cancelUserInvite,
   getJawatanList,
   createJawatan,
   updateJawatan,
@@ -33,6 +37,7 @@ interface AdminViewProps {
 export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
+  const [invites, setInvites] = useState<UserInvite[]>([]);
   const [jawatanList, setJawatanList] = useState<Jawatan[]>([]);
   const [kegiatanList, setKegiatanList] = useState<Kegiatan[]>([]);
   const [rekList, setRekList] = useState<KodeRekening[]>([]);
@@ -104,13 +109,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
   const fetchMasterData = async () => {
     setLoading(true);
     try {
-      const [uList, jList, kList, rList] = await Promise.all([
+      const [uList, iList, jList, kList, rList] = await Promise.all([
         getAllUsers(),
+        getUserInvites(),
         getJawatanList(),
         getKegiatanList(undefined, true),
         getKodeRekeningList(true),
       ]);
       setUsersList(uList);
+      setInvites(iList);
       setJawatanList(jList);
       setKegiatanList(kList);
       setRekList(rList);
@@ -186,7 +193,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
       setNewUserEmail("");
       setNewUserDisplayName("");
       await fetchMasterData();
-      alert(`Pengguna ${newUserEmail} berhasil ditambahkan.`);
+      alert(`Undangan untuk ${newUserEmail} tersimpan. Akses aktif saat pemilik email login pertama.`);
     } catch (e) {
       console.error("Failed to create user:", e);
       alert("Gagal menambahkan pengguna.");
@@ -355,10 +362,43 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
       await adminDeleteUser(deleteUserUid, user);
       setDeleteUserUid(null);
       await fetchMasterData();
-      alert("Pengguna berhasil dihapus.");
     } catch (e) {
-      console.error(e);
-      alert("Gagal menghapus pengguna.");
+      console.error("Failed to deactivate user:", e);
+      alert("Gagal menonaktifkan pengguna.");
+    }
+  };
+
+  const handlePurgeUser = async () => {
+    if (!deleteUserUid) return;
+    try {
+      await adminPurgeUser(deleteUserUid, user);
+      setDeleteUserUid(null);
+      await fetchMasterData();
+      alert("Profil pengguna dihapus permanen.");
+    } catch (e: any) {
+      console.error("Failed to purge user:", e);
+      alert(e?.message || "Gagal menghapus permanen pengguna.");
+    }
+  };
+
+  const handleRestoreUser = async (u: UserProfile) => {
+    try {
+      await adminRestoreUser(u.uid, user);
+      await fetchMasterData();
+      alert(`Akses ${u.email} dipulihkan.`);
+    } catch (e) {
+      console.error("Failed to restore user:", e);
+      alert("Gagal memulihkan akses pengguna.");
+    }
+  };
+
+  const handleCancelInvite = async (inv: UserInvite) => {
+    try {
+      await cancelUserInvite(inv.email, user);
+      await fetchMasterData();
+    } catch (e) {
+      console.error("Failed to cancel invite:", e);
+      alert("Gagal membatalkan undangan.");
     }
   };
 
@@ -497,13 +537,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                 className="px-4 py-2 bg-[#32848D] hover:bg-[#276972] text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 shadow-sm"
               >
                 <Icon name="user-plus" className="w-4 h-4" />
-                <span>Tambah Pengguna Baru</span>
+                <span>Undang Pengguna Baru</span>
               </button>
             </div>
 
             {loading ? (
               <div className="p-8 text-center text-gray-400">Memuat data pengguna...</div>
-            ) : usersList.length === 0 ? (
+            ) : usersList.length === 0 && invites.length === 0 ? (
               <div className="p-8 text-center text-gray-400">Belum ada pengguna terdaftar.</div>
             ) : (
               <div className="overflow-x-auto">
@@ -518,7 +558,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-                    {usersList.map((u) => (
+                    {usersList.map((u) => {
+                      const nonaktif = Boolean(u.deletedAt) || u.isActive === false;
+                      return (
                       <tr key={u.uid} className="hover:bg-gray-50/80 dark:hover:bg-slate-700/30">
                         <td className="p-4">
                           <p className="font-semibold text-gray-900 dark:text-white">{u.displayName}</p>
@@ -537,30 +579,84 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
                           {u.jawatanName || u.jawatanId || "Belum ditetapkan"}
                         </td>
                         <td className="p-4 text-center">
-                          {u.isActive !== false ? (
-                            <span className="inline-flex items-center text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                              <Icon name="circle-check" className="w-3.5 h-3.5 mr-1" /> Aktif
-                            </span>
-                          ) : (
+                          {nonaktif ? (
                             <span className="inline-flex items-center text-xs font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full">
                               <Icon name="circle-x" className="w-3.5 h-3.5 mr-1" /> Nonaktif
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                              <Icon name="circle-check" className="w-3.5 h-3.5 mr-1" /> Aktif
                             </span>
                           )}
                         </td>
                         <td className="p-4 text-right space-x-2">
-                          <button
-                            onClick={() => handleOpenEditUser(u)}
-                            className="px-3 py-1.5 bg-[#32848D] hover:bg-[#276972] text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1 shadow-sm"
+                          {nonaktif ? (
+                            <>
+                              <button
+                                onClick={() => handleRestoreUser(u)}
+                                className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
+                              >
+                                <Icon name="circle-check" className="w-3.5 h-3.5" />
+                                <span>Pulihkan</span>
+                              </button>
+                              <button
+                                onClick={() => setDeleteUserUid(u.uid)}
+                                className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
+                              >
+                                <Icon name="trash" className="w-3.5 h-3.5" />
+                                <span>Hapus Permanen</span>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleOpenEditUser(u)}
+                                className="px-3 py-1.5 bg-[#32848D] hover:bg-[#276972] text-white rounded-lg text-xs font-semibold inline-flex items-center space-x-1 shadow-sm"
+                              >
+                                <Icon name="pencil" className="w-3.5 h-3.5" />
+                                <span>Ubah Akses</span>
+                              </button>
+                              <button
+                                onClick={() => setDeleteUserUid(u.uid)}
+                                className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
+                              >
+                                <Icon name="circle-x" className="w-3.5 h-3.5" />
+                                <span>Nonaktifkan</span>
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                      );
+                    })}
+                    {invites.map((inv) => (
+                      <tr key={`undangan-${inv.email}`} className="bg-amber-50/50 dark:bg-amber-900/10">
+                        <td className="p-4">
+                          <p className="font-semibold text-gray-900 dark:text-white">{inv.displayName}</p>
+                          <p className="text-xs text-gray-500 dark:text-slate-400 font-mono">{inv.email}</p>
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
+                              inv.role === "ADMIN" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"
+                            }`}
                           >
-                            <Icon name="pencil" className="w-3.5 h-3.5" />
-                            <span>Ubah Akses</span>
-                          </button>
+                            {inv.role}
+                          </span>
+                        </td>
+                        <td className="p-4 font-medium text-gray-800 dark:text-slate-200">{inv.jawatanName}</td>
+                        <td className="p-4 text-center">
+                          <span className="inline-flex items-center text-xs font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                            <Icon name="clock" className="w-3.5 h-3.5 mr-1" /> Menunggu login
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
                           <button
-                            onClick={() => setDeleteUserUid(u.uid)}
-                            className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
+                            onClick={() => handleCancelInvite(inv)}
+                            className="px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg text-xs font-semibold inline-flex items-center space-x-1"
                           >
                             <Icon name="trash" className="w-3.5 h-3.5" />
-                            <span>Hapus</span>
+                            <span>Batalkan</span>
                           </button>
                         </td>
                       </tr>
@@ -946,8 +1042,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-[#32848D] font-bold text-lg border-b pb-3">
               <Icon name="user-plus" className="w-5 h-5" />
-              <span>Tambah Pengguna Baru</span>
+              <span>Undang Pengguna Baru</span>
             </div>
+            <p className="text-xs text-gray-500 dark:text-slate-400">
+              Akun Google tidak dibuat dari sini. Undangan menyimpan peran &amp; jawatan, lalu berlaku otomatis
+              saat pemilik email login pertama kali.
+            </p>
             <form onSubmit={handleCreateUser} className="space-y-3 text-sm">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Email Pengguna (Google Account)</label>
@@ -1234,10 +1334,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-red-600 font-bold text-lg border-b pb-3">
               <Icon name="trash" className="w-5 h-5" />
-              <span>Hapus Pengguna</span>
+              <span>Kelola Akses Akun</span>
             </div>
             <p className="text-sm text-gray-600 dark:text-slate-300">
-              Yakin ingin menghapus pengguna ini? Tindakan ini tidak dapat dibatalkan. Pengguna akan kehilangan akses ke aplikasi.
+              <strong>Nonaktifkan</strong> memutus akses login, tetapi akun tetap terdaftar sehingga bisa dipulihkan
+              dan tidak pernah hilang dari daftar ini. <strong>Hapus permanen</strong> membuang dokumen profil;
+              akun Google-nya sendiri tetap ada dan tidak bisa dihapus dari aplikasi.
             </p>
             <div className="flex justify-end space-x-3 pt-3 border-t">
               <button
@@ -1248,9 +1350,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, activeTab }) => {
               </button>
               <button
                 onClick={handleDeleteUser}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl text-sm shadow-sm"
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl text-sm shadow-sm"
               >
-                Hapus Pengguna
+                Nonaktifkan
+              </button>
+              <button
+                onClick={handlePurgeUser}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl text-sm shadow-sm"
+              >
+                Hapus Permanen
               </button>
             </div>
           </div>

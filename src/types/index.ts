@@ -12,7 +12,37 @@ export interface UserProfile {
   createdAt?: any;
   updatedAt?: any;
   lastLoginAt?: any;
+  /** Diisi saat admin menonaktifkan akun — akun tetap terdaftar & bisa dipulihkan. */
+  deletedAt?: any;
+  deletedBy?: string;
+  deletedByEmail?: string;
 }
+
+/**
+ * Undangan akun dari admin. Kunci dokumen = email (huruf kecil).
+ *
+ * Admin tidak bisa membuat akun Google dari sisi klien, jadi yang disimpan adalah
+ * NIAT akses: peran + jawatan. Profil `users/{uid}` lahir saat pemilik email login
+ * pertama, memakai isi undangan ini, lalu undangannya dihapus.
+ */
+export interface UserInvite {
+  email: string;
+  displayName: string;
+  role: UserRole;
+  jawatanId: string;
+  jawatanName: string;
+  createdBy: string;
+  createdByEmail: string;
+  createdAt?: any;
+}
+
+/**
+ * Undangan akun dari admin. Kunci dokumen = email (huruf kecil).
+ *
+ * Admin tidak bisa membuat akun Google dari sisi klien, jadi yang disimpan adalah
+ * NIAT akses: peran + jawatan. Profil `users/{uid}` lahir saat pemilik email login
+ * pertama, memakai isi undangan ini, lalu undangannya dihapus.
+ */
 
 export interface Jawatan { id: string; kode: string; nama: string; description?: string; isActive: boolean; createdAt?: any; updatedAt?: any; }
 export interface Kegiatan { id: string; kodeKegiatan: string; namaKegiatan: string; jawatanId: string; tahunAnggaran: number; status: "ACTIVE" | "INACTIVE" | "ARCHIVED" | "PENDING_APPROVAL"; requestedBy?: string; createdAt?: any; updatedAt?: any; }

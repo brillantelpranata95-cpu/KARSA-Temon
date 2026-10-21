@@ -12,6 +12,8 @@ import {
   where,
   serverTimestamp,
   writeBatch
+,
+  deleteField
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { normalizeDateToDDMMYYYY, todayDDMMYYYY, getYearFromDate, parseAnyDate } from "../utils/date";
@@ -38,7 +40,7 @@ import {
   OfficialPerson,
   OfficialType,
   PackageTemplate
-} from "../types";
+, UserInvite } from "../types";
 
 // Helper for Firestore data sanitization (removes undefined)
 export const sanitizeData = <T extends Record<string, any>>(obj: T): T => {
@@ -262,6 +264,14 @@ export const getOrCreateUserProfile = async (authUser: { uid: string; email: str
 
   if (snap.exists()) {
     const data = snap.data() as UserProfile;
+
+    // Akun yang dinonaktifkan/dihapus admin TIDAK dihidupkan kembali oleh login.
+    // Tanpa gerbang ini, "hapus" cuma menyembunyikan akun sampai pemiliknya login lagi.
+    if (data.deletedAt || data.isActive === false) {
+      await updateDoc(userRef, { lastLoginAt: serverTimestamp() });
+      return data;
+    }
+
     const isBootstrapAdmin = authUser.email?.toLowerCase() === "temonkec@gmail.com";
     const bootstrapPatch = isBootstrapAdmin && (data.role !== "ADMIN" || data.jawatanId !== "kapanewon-temon")
       ? { role: "ADMIN" as const, jawatanId: "kapanewon-temon", jawatanName: "Administrasi Kapanewon Temon", isActive: true }
@@ -270,18 +280,25 @@ export const getOrCreateUserProfile = async (authUser: { uid: string; email: str
     return { ...data, ...bootstrapPatch };
   }
 
+  // Undangan admin: akses sudah ditetapkan SEBELUM login pertama, jadi profil
+  // langsung dibuat aktif dan undangannya dipakai habis.
+  const email = (authUser.email || "").trim().toLowerCase();
+  const inviteRef = email ? doc(db, "userInvites", email) : null;
+  const inviteSnap = inviteRef ? await getDoc(inviteRef) : null;
+  const invite = inviteSnap?.exists() ? (inviteSnap.data() as UserInvite) : null;
+
   // The Kapanewon account is the sole bootstrap administrator; every other account
   // remains unassigned until that administrator sets its jawatan and access.
   const isBootstrapAdmin = authUser.email?.toLowerCase() === "temonkec@gmail.com";
   const newUser: UserProfile = {
     uid: authUser.uid,
     email: authUser.email || "",
-    displayName: authUser.displayName || authUser.email || "Pengguna KARSA",
+    displayName: invite?.displayName || authUser.displayName || authUser.email || "Pengguna KARSA",
     photoURL: authUser.photoURL,
-    role: isBootstrapAdmin ? "ADMIN" : "USER",
-    jawatanId: isBootstrapAdmin ? "kapanewon-temon" : "unassigned",
-    jawatanName: isBootstrapAdmin ? "Administrasi Kapanewon Temon" : "Belum ditetapkan",
-    isActive: isBootstrapAdmin,
+    role: isBootstrapAdmin ? "ADMIN" : invite?.role || "USER",
+    jawatanId: isBootstrapAdmin ? "kapanewon-temon" : invite?.jawatanId || "unassigned",
+    jawatanName: isBootstrapAdmin ? "Administrasi Kapanewon Temon" : invite?.jawatanName || "Belum ditetapkan",
+    isActive: isBootstrapAdmin || Boolean(invite),
   };
 
   await setDoc(userRef, sanitizeData({
@@ -291,19 +308,35 @@ export const getOrCreateUserProfile = async (authUser: { uid: string; email: str
     lastLoginAt: serverTimestamp()
   }));
 
+  if (inviteRef) {
+    await deleteDoc(inviteRef).catch((e) => console.warn("Gagal menghapus undangan:", e));
+  }
+
   await logAudit({
     actorUid: authUser.uid,
     actorEmail: authUser.email || "",
     action: "LOGIN",
     entityType: "USER",
     entityId: authUser.uid,
-    newValue: { role: newUser.role, jawatanId: newUser.jawatanId }
+    newValue: { role: newUser.role, jawatanId: newUser.jawatanId, dariUndangan: Boolean(invite) }
   });
 
   return newUser;
 };
 
-// Admin Create User directly
+// ------------------- ADMIN: UNDANGAN & SIKLUS HIDUP AKUN -------------------
+// Akun Google TIDAK bisa dibuat/dihapus dari aplikasi statis (butuh Admin SDK),
+// jadi admin mengelola NIAT akses (undangan) dan keadaan profil, bukan kredensial.
+
+export const getUserInvites = async (): Promise<UserInvite[]> => {
+  const snap = await getDocs(collection(db, "userInvites"));
+  return snap.docs.map(d => ({ ...d.data(), email: (d.data() as UserInvite).email || d.id } as UserInvite));
+};
+
+/**
+ * Undang akses untuk sebuah email. Dokumen `user-<timestamp>` hantu TIDAK dibuat
+ * lagi: baris seperti itu muncul di daftar tetapi tidak akan pernah bisa login.
+ */
 export const adminCreateUser = async (data: {
   email: string;
   displayName: string;
@@ -311,23 +344,20 @@ export const adminCreateUser = async (data: {
   jawatanId: string;
   jawatanName: string;
 }, actor: UserProfile) => {
-  const customUid = `user-${Date.now()}`;
-  const userRef = doc(db, "users", customUid);
-  const newUser: UserProfile = {
-    uid: customUid,
-    email: data.email.trim().toLowerCase(),
-    displayName: data.displayName.trim() || data.email,
-    photoURL: null,
+  const email = data.email.trim().toLowerCase();
+  const invite: UserInvite = {
+    email,
+    displayName: data.displayName.trim() || email,
     role: data.role,
     jawatanId: data.jawatanId,
     jawatanName: data.jawatanName,
-    isActive: true,
+    createdBy: actor.uid,
+    createdByEmail: actor.email,
   };
 
-  await setDoc(userRef, sanitizeData({
-    ...newUser,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+  await setDoc(doc(db, "userInvites", email), sanitizeData({
+    ...invite,
+    createdAt: serverTimestamp()
   }));
 
   await logAudit({
@@ -335,11 +365,96 @@ export const adminCreateUser = async (data: {
     actorEmail: actor.email,
     action: "UPDATE_USER_ACCESS",
     entityType: "USER",
-    entityId: customUid,
-    newValue: newUser
+    entityId: email,
+    newValue: invite as any,
+    reason: "Undangan akses dibuat (berlaku saat login pertama)"
   });
 
-  return customUid;
+  return email;
+};
+
+export const cancelUserInvite = async (email: string, actor: UserProfile) => {
+  const key = email.trim().toLowerCase();
+  await deleteDoc(doc(db, "userInvites", key));
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "UPDATE_USER_ACCESS",
+    entityType: "USER",
+    entityId: key,
+    reason: "Undangan akses dibatalkan"
+  });
+};
+
+// Hapus pengguna (SOFT DELETE): dokumen tidak dibuang supaya baris tetap terlihat
+// di Master Data; akun yang hilang tanpa jejak adalah bug lama.
+export const adminDeleteUser = async (uid: string, actor: UserProfile) => {
+  const userRef = doc(db, "users", uid);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) throw new Error("Pengguna tidak ditemukan");
+  const oldData = snap.data();
+  await updateDoc(userRef, {
+    isActive: false,
+    deletedAt: serverTimestamp(),
+    deletedBy: actor.uid,
+    deletedByEmail: actor.email,
+    updatedAt: serverTimestamp()
+  });
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "UPDATE_USER_ACCESS",
+    entityType: "USER",
+    entityId: uid,
+    oldValue: oldData,
+    newValue: { isActive: false },
+    reason: "Pengguna dinonaktifkan (akun tetap terdaftar, bisa dipulihkan)"
+  });
+};
+
+export const adminRestoreUser = async (uid: string, actor: UserProfile) => {
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, {
+    isActive: true,
+    deletedAt: deleteField(),
+    deletedBy: deleteField(),
+    deletedByEmail: deleteField(),
+    updatedAt: serverTimestamp()
+  });
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "UPDATE_USER_ACCESS",
+    entityType: "USER",
+    entityId: uid,
+    newValue: { isActive: true },
+    reason: "Akses pengguna dipulihkan"
+  });
+};
+
+/** Hapus permanen: hanya untuk profil yang sudah nonaktif. */
+export const adminPurgeUser = async (uid: string, actor: UserProfile) => {
+  const userRef = doc(db, "users", uid);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) throw new Error("Pengguna tidak ditemukan");
+  const oldData = snap.data() as UserProfile;
+  if (oldData.isActive !== false) {
+    throw new Error("Nonaktifkan akun terlebih dahulu sebelum menghapus permanen.");
+  }
+
+  await deleteDoc(userRef);
+  // Dokumen poin yatim akan tampil sebagai "pengguna hantu" di papan peringkat.
+  await deleteDoc(doc(db, "userPoints", uid)).catch(() => undefined);
+
+  await logAudit({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    action: "UPDATE_USER_ACCESS",
+    entityType: "USER",
+    entityId: uid,
+    oldValue: oldData,
+    reason: "Profil pengguna dihapus permanen"
+  });
 };
 
 // ------------------- MASTER DATA FETCHERS & MANAGERS -------------------
@@ -610,24 +725,6 @@ export const adminUpdateKodeRekening = async (rekId: string, data: {
     entityId: rekId,
     oldValue: oldData,
     newValue: updateData
-  });
-};
-
-// Admin Delete User
-export const adminDeleteUser = async (uid: string, actor: UserProfile) => {
-  const userRef = doc(db, "users", uid);
-  const snap = await getDoc(userRef);
-  if (!snap.exists()) throw new Error("Pengguna tidak ditemukan");
-  const oldData = snap.data();
-  await deleteDoc(userRef);
-  await logAudit({
-    actorUid: actor.uid,
-    actorEmail: actor.email,
-    action: "UPDATE_USER_ACCESS",
-    entityType: "USER",
-    entityId: uid,
-    oldValue: oldData,
-    reason: "Pengguna dihapus oleh admin"
   });
 };
 

@@ -105,6 +105,31 @@ function MainApp() {
     );
   }
 
+  // Akun nonaktif/dihapus tidak boleh masuk ke area kerja. Tanpa gerbang ini,
+  // "Nonaktifkan" di Master Data hanya label tanpa efek.
+  if (user.isActive === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-6">
+        <div className="w-full max-w-md space-y-4 rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-amber-100 text-2xl font-bold text-amber-700">
+            !
+          </div>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white">Akun Anda belum aktif</h1>
+          <p className="text-sm text-gray-600 dark:text-slate-300">
+            Akses untuk <span className="font-semibold">{user.email}</span> belum diaktifkan atau sudah
+            dinonaktifkan administrator Kapanewon Temon. Hubungi admin untuk membuka akses.
+          </p>
+          <button
+            onClick={logout}
+            className="w-full rounded-xl bg-[#32848D] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#276972]"
+          >
+            Keluar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-50/50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors">
       <Sidebar
@@ -118,7 +143,7 @@ function MainApp() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col pt-16 lg:pt-0">
-        <main className={activeTab === "dashboard" && viewMode === "list" ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
+        <main className="mx-auto w-full max-w-[1500px] px-6 py-8 sm:px-10 lg:px-14 lg:py-12">
         <Suspense fallback={<PageLoader />}>
           {viewMode === "preview" && selectedSpj ? (
             <PrintPreview

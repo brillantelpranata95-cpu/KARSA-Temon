@@ -82,6 +82,17 @@ service cloud.firestore {
                    && (request.auth.uid == uid || profilSaya().role == 'ADMIN');
     }
 
+    // Undangan akses: admin menetapkan peran/jawatan SEBELUM pemilik email login.
+    // Pemilik email boleh menghapus undangannya sendiri saat login pertama (klaim).
+    match /userInvites/{email} {
+      allow read: if sudahMasuk();
+      allow create, update: if adalahAdmin();
+      allow delete: if sudahMasuk()
+                    && (profilSaya().role == 'ADMIN'
+                        || (request.auth.token.email != null
+                            && email == request.auth.token.email.lower()));
+    }
+
     // Koleksi kerja KARSA - perilaku ASLI: semua pengguna terautentikasi.
     match /jawatan/{id} { allow read, write: if sudahMasuk(); }
     match /kegiatan/{id} { allow read, write: if sudahMasuk(); }
