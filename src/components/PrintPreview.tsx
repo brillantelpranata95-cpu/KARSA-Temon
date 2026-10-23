@@ -4,6 +4,8 @@ import { terbilangRupiah, toTitleCase } from "../utils/format";
 import { formatDateDDMMYYYY, getNamaHari, getNamaHariCapitalized, getYearFromDate } from "../utils/date";
 import { drivePhotoUrl, collectDocPhotos, inspectDriveLink } from "../utils/drive";
 import { isSuratkuUrl } from "../utils/suratku";
+import { sheetsForPrint } from "../utils/paper";
+import { logDocumentPrint } from "../services/api";
 import { DriveImage } from "./DriveImage";
 import { Icon } from "./Icon";
 import { db } from "../config/firebase";
@@ -200,6 +202,14 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
   }, [data.peserta, qrAttendance]);
 
   const handlePrint = () => {
+    // Rapor Kertas: catat pemakaian kertas saat benar-benar mencetak. Ekspor PDF
+    // tidak dihitung karena justru menghemat kertas. Pencatatan yang gagal tidak
+    // boleh menghalangi pencetakan.
+    if (activeDoc?.id) {
+      logDocumentPrint(activeDoc.id, sheetsForPrint()).catch((e) =>
+        console.warn("Gagal mencatat pemakaian kertas:", e)
+      );
+    }
     window.print();
   };
 

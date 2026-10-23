@@ -25,6 +25,7 @@ import {
 } from "../utils/tax";
 import { inspectDriveLink, parseDriveFileId } from "../utils/drive";
 import { applyNumberedEnter } from "../utils/numbering";
+import { RaporKertasModal } from "./GreenNotice";
 import { formatDateDDMMYYYY, getNamaHariCapitalized, getNamaHari } from "../utils/date";
 import { SuggestionInput } from "./SuggestionInput";
 import { DriveImage } from "./DriveImage";
@@ -44,6 +45,8 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
   const [selectedDocId, setSelectedDocId] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  /** Rapor Kertas: jumlah lembar tercetak yang ditampilkan sesudah finalisasi. */
+  const [raporKertas, setRaporKertas] = useState<number | null>(null);
 
   // Form State for Active Document
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -326,7 +329,15 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
     }
     if (confirm("Apakah Anda yakin ingin memfinalisasi SPJ ini? Setelah finalisasi data menjadi read-only.")) {
       await finalizeSpj(spj.id, user);
+      // Rapor Kertas: baca ulang dokumen agar angka cetak yang dihitung adalah
+      // yang terbaru (cetak bisa dilakukan dari halaman pratinjau kapan saja).
+      const freshDocs = await getSpjDocuments(spj.id).catch(() => documents);
+      const totalSheets = freshDocs.reduce(
+        (sum, d) => sum + (Number((d as any).printedSheets) || 0),
+        0
+      );
       await loadSpjData();
+      setRaporKertas(totalSheets);
     }
   };
 
@@ -1578,6 +1589,11 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
           )}
         </div>
       </div>
+
+      {/* Rapor Kertas sesudah finalisasi (green company) */}
+      {raporKertas !== null && (
+        <RaporKertasModal sheets={raporKertas} onClose={() => setRaporKertas(null)} />
+      )}
     </div>
   );
 };

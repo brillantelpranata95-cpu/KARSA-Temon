@@ -330,3 +330,35 @@ test("Bend 26: pengingat muncul saat nominal berganti sebelum pajak dihitung ula
   // Simpan tetap meminta konfirmasi supaya angka pajak tidak tersimpan salah.
   assert.match(wizard, /if \(bend26PajakPerluDihitung\) \{\s*const lanjut = confirm/, "simpan meminta konfirmasi");
 });
+
+test("green company: pengingat login, hitung cetak, dan rapor kertas saat finalisasi", async () => {
+  const fs = await import("node:fs/promises");
+  const app = await fs.readFile(new URL("../src/App.tsx", import.meta.url), "utf8");
+  const preview = await fs.readFile(new URL("../src/components/PrintPreview.tsx", import.meta.url), "utf8");
+  const wizard = await fs.readFile(new URL("../src/components/SpjWizard.tsx", import.meta.url), "utf8");
+  const notice = await fs.readFile(new URL("../src/components/GreenNotice.tsx", import.meta.url), "utf8");
+  const api = await fs.readFile(new URL("../src/services/api.ts", import.meta.url), "utf8");
+
+  // 1) Pop-up hemat kertas setelah login, sekali per sesi browser.
+  assert.match(app, /GreenLoginNotice/, "App memasang pop-up pengingat");
+  assert.match(app, /karsa-green-notice/, "penanda sesi agar tidak muncul berulang");
+  assert.match(app, /sessionStorage/, "memakai sessionStorage, bukan localStorage");
+  assert.match(notice, /green\/hemat-kertas\.webp/, "memakai gambar kampanye yang sudah dikompres");
+  assert.match(notice, /absolute right-3 top-3/, "tombol tutup di pojok kanan atas gambar");
+
+  // 2) Cetak dihitung, ekspor PDF tidak (PDF justru menghemat kertas).
+  assert.match(api, /export const logDocumentPrint/, "API mencatat pemakaian kertas");
+  assert.match(api, /printedSheets: increment/, "jumlah lembar ditambah, bukan ditimpa");
+  assert.match(preview, /logDocumentPrint\(activeDoc\.id/, "tombol Cetak mencatat pemakaian kertas");
+  assert.match(preview, /window\.print\(\)/, "pencetakan tetap berjalan");
+
+  // 3) Rapor kertas muncul sesudah finalisasi, memakai data dokumen terbaru.
+  assert.match(wizard, /getSpjDocuments\(spj\.id\)\.catch/, "angka cetak dibaca ulang saat finalisasi");
+  assert.match(wizard, /setRaporKertas\(totalSheets\)/, "rapor ditampilkan setelah finalisasi");
+  assert.match(wizard, /<RaporKertasModal sheets=\{raporKertas\}/, "modal rapor dipasang");
+
+  // 4) Aset gambar benar-benar ada di public/ (kalau tidak, pop-up kosong).
+  const img = await fs.readFile(new URL("../public/green/hemat-kertas.webp", import.meta.url));
+  assert.ok(img.length > 10_000, "gambar pengingat tersedia");
+  assert.ok(img.length < 300_000, "gambar tetap ringan untuk kuota Hosting");
+});

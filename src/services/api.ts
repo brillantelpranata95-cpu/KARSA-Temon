@@ -13,7 +13,8 @@ import {
   serverTimestamp,
   writeBatch
 ,
-  deleteField
+  deleteField,
+  increment
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { normalizeDateToDDMMYYYY, todayDDMMYYYY, getYearFromDate, parseAnyDate } from "../utils/date";
@@ -1552,6 +1553,21 @@ export const reopenSpj = async (spjId: string, reason: string, user: UserProfile
   });
 
   invalidateSpjStatsCache();
+};
+
+/**
+ * Rapor Kertas — catat satu kali cetak pada dokumen SPJ.
+ *
+ * Dipanggil dari tombol Cetak di PrintPreview (bukan saat ekspor PDF: PDF justru
+ * menghemat kertas). Kegagalan mencatat TIDAK boleh menghalangi pengguna
+ * mencetak, jadi pemanggilnya cukup `.catch()` dan lanjut.
+ */
+export const logDocumentPrint = async (spjDocumentId: string, sheets = 1) => {
+  await updateDoc(doc(db, "spjDocuments", spjDocumentId), {
+    printCount: increment(1),
+    printedSheets: increment(Math.max(1, Math.floor(sheets))),
+    lastPrintedAt: serverTimestamp(),
+  });
 };
 
 // Update SPJ Shared Data (e.g. PPTK Nama, NIP, Pangkat)

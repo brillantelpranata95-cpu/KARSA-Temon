@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { Sidebar, AppTab } from "./components/Sidebar";
+import { GreenLoginNotice } from "./components/GreenNotice";
 import { getSpjById, getSpjDocuments, purgeExpiredAttendanceSessions, recordDailyActivity } from "./services/api";
 import { SpjItem, SpjDocumentItem } from "./types";
 
@@ -41,6 +42,9 @@ function MainApp() {
   const [selectedDocs, setSelectedDocs] = useState<SpjDocumentItem[]>([]);
   const [viewMode, setViewMode] = useState<"list" | "edit" | "preview">("list");
 
+  // Green company: pengingat hemat kertas muncul sekali per sesi browser setelah masuk.
+  const [showGreenNotice, setShowGreenNotice] = useState(false);
+
   // Housekeeping: permanently purge expired QR attendance sessions (30-min TTL)
   // and their captured attendance payloads so storage never accumulates.
   useEffect(() => {
@@ -61,6 +65,20 @@ function MainApp() {
     recordDailyActivity(user).catch((e) =>
       console.warn("Daily activity record failed:", e)
     );
+  }, [user]);
+
+  // Green company: pengingat hemat kertas sekali per sesi (sessionStorage),
+  // supaya tidak muncul lagi setiap pindah menu atau me-refresh halaman.
+  useEffect(() => {
+    if (!user || user.isActive === false) return;
+    const KEY = "karsa-green-notice";
+    try {
+      if (sessionStorage.getItem(KEY)) return;
+      sessionStorage.setItem(KEY, "1");
+    } catch {
+      return; // storage diblokir (mode privat) — jangan tampilkan berulang
+    }
+    setShowGreenNotice(true);
   }, [user]);
 
   const handleSelectSpj = async (spjId: string, mode: "edit" | "preview") => {
@@ -172,6 +190,8 @@ function MainApp() {
         </Suspense>
         </main>
       </div>
+
+      {showGreenNotice && <GreenLoginNotice onClose={() => setShowGreenNotice(false)} />}
     </div>
   );
 }
