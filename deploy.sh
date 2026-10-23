@@ -26,6 +26,14 @@ TARGET=${1:-semua}
 # Jumlah SVG ikon yang diharapkan ada di setiap public/koboyo
 IKON_MINIMAL=74
 
+# Firebase CLI tidak selalu terpasang global (mesin ini bahkan memakai shim PATH).
+# Pakai perintah yang tersedia agar skrip tidak bergantung pada shim.
+if command -v firebase >/dev/null 2>&1; then
+  FB="firebase"
+else
+  FB="npx --yes firebase-tools"
+fi
+
 periksa_bersih() {
   # Berkas scratch (mis. daftar nama ikon) JANGAN sampai tayang: apa pun di public/
   # akan disalin ke dist/ dan disajikan ke internet.
@@ -73,8 +81,8 @@ deploy_sso() {
 
   echo
   echo "=== 3/3  Deploy KARSA (termasuk /graha) ==="
-  firebase login:use projectetcetera957@gmail.com >/dev/null 2>&1 || true
-  firebase deploy --only hosting --project karsa-temon --non-interactive 2>&1 | tail -3
+  $FB login:use projectetcetera957@gmail.com >/dev/null 2>&1 || true
+  $FB deploy --only hosting --project karsa-temon --non-interactive 2>&1 | tail -3
 }
 
 deploy_alias() {
@@ -87,8 +95,8 @@ deploy_alias() {
 
   echo
   echo "=== Deploy alias graha-temon ==="
-  firebase login:use projectetcetera957@gmail.com >/dev/null 2>&1 || true
-  firebase deploy --only hosting:graha-temon --project karsa-temon --non-interactive 2>&1 | tail -3
+  $FB login:use projectetcetera957@gmail.com >/dev/null 2>&1 || true
+  $FB deploy --only hosting:graha-temon --project karsa-temon --non-interactive 2>&1 | tail -3
 }
 
 case "$TARGET" in

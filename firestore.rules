@@ -1,166 +1,179 @@
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    // ============================================================
-    // FUNGSI BANTU
-    // ------------------------------------------------------------
-    // Peran dibaca dari dokumen profil (`users/{uid}`), sehingga aturan ini
-    // adalah penjaga SEBENARNYA; tampilan admin di aplikasi hanya cermin.
-    //
-    // Catatan kuota: `get()` di dalam aturan dihitung sebagai pembacaan, dan
-    // pada query LIST ia dievaluasi per dokumen. Karena itu pemeriksaan peran
-    // hanya dipasang pada jalur TULIS dan pada baca yang memang perlu.
-    // ============================================================
-    function sudahMasuk() {
-      return request.auth != null;
-    }
-    function profilSaya() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    function penggunaAktif() {
-      return sudahMasuk() && profilSaya().isActive != false;
-    }
-    function adalahAdmin() {
-      return sudahMasuk()
-             && profilSaya().isActive != false
-             && profilSaya().role == 'ADMIN';
-    }
-
-    // ============================================================
-    // KARSA TEMON
-    // ------------------------------------------------------------
-    // PENTING - jangan disederhanakan kembali menjadi catch-all:
-    // versi lama memakai `match /{document=**}` yang menutupi SEMUA koleksi.
-    // Aturan Firestore bersifat gabungan (OR), jadi satu catch-all membuat
-    // pembatasan di koleksi lain (mis. CRUD khusus admin di GRAHA) tidak
-    // berarti apa pun.
-    //
-    // Karena itu koleksi KARSA didaftarkan satu per satu di bawah. Daftar ini
-    // harus LENGKAP: koleksi tanpa aturan ditolak DIAM-DIAM, dan gejalanya di
-    // aplikasi adalah "data gagal dimuat", bukan pesan izin yang jelas.
-    // Bila KARSA menambah koleksi baru, tambahkan aturannya di sini.
-    // ============================================================
-
-    // Public SPJ read (used by the QR attendance landing page)
-    match /spj/{spjId} {
-      allow read: if true;
-      allow write: if sudahMasuk();
-
-      // Attendance capture is public (participants scan a QR and sign in).
-      // Rows are permanently purged when their 30-minute session expires.
-      match /attendance/{attendanceId} {
-        allow read: if sudahMasuk();
-        allow create: if true;
-        allow update, delete: if sudahMasuk();
-      }
-    }
-
-    // Attendance sessions: creators (logged-in) manage them; purge sweep deletes expired ones.
-    match /attendanceSessions/{sessionId} {
-      allow read: if true;
-      allow write: if sudahMasuk();
-    }
-
-    // Gamifikasi: poin aktivitas dibaca SEMUA pengguna terautentikasi karena
-    // papan peringkat menampilkan skor seluruh pegawai. Menulis tetap hanya
-    // boleh pada dokumen milik sendiri.
-    match /userPoints/{uid} {
-      allow read: if sudahMasuk();
-      allow write: if sudahMasuk() && request.auth.uid == uid;
-    }
-
-    // Profil pengguna: dibaca semua pengguna terautentikasi (menu Master Data &
-    // Akses menampilkan daftar pengguna), ditulis oleh PEMILIKNYA atau ADMIN.
-    //
-    // Catatan kuota: baca sengaja TIDAK memakai pemeriksaan peran, karena
-    // `get()` pada query LIST dievaluasi per dokumen dan akan melipatgandakan
-    // pembacaan sejumlah pengguna.
-    match /users/{uid} {
-      allow read: if sudahMasuk();
-      allow write: if sudahMasuk()
-                   && (request.auth.uid == uid || profilSaya().role == 'ADMIN');
-    }
-
-    // Undangan akses: admin menetapkan peran/jawatan SEBELUM pemilik email login.
-    // Pemilik email boleh menghapus undangannya sendiri saat login pertama (klaim).
-    // Statistik turunan dashboard (agregat). Bukan data resmi — boleh ditulis
-    // pengguna terautentikasi supaya angka tidak basi setelah SPJ berubah.
-    match /stats/{id} { allow read, write: if sudahMasuk(); }
-
-    match /userInvites/{email} {
-      allow read: if sudahMasuk();
-      allow create, update: if adalahAdmin();
-      allow delete: if sudahMasuk()
-                    && (profilSaya().role == 'ADMIN'
-                        || (request.auth.token.email != null
-                            && email == request.auth.token.email.lower()));
-    }
-
-    // Koleksi kerja KARSA - perilaku ASLI: semua pengguna terautentikasi.
-    match /jawatan/{id} { allow read, write: if sudahMasuk(); }
-    match /kegiatan/{id} { allow read, write: if sudahMasuk(); }
-    match /kodeRekening/{id} { allow read, write: if sudahMasuk(); }
-    match /documentTypes/{id} { allow read, write: if sudahMasuk(); }
-    match /checklistConfigs/{id} { allow read, write: if sudahMasuk(); }
-    match /packageTemplates/{id} { allow read, write: if sudahMasuk(); }
-    match /officials/{id} { allow read, write: if sudahMasuk(); }
-    match /spjDocuments/{id} { allow read, write: if sudahMasuk(); }
-
-    // Audit log adalah catatan bukti: semua boleh mencatat, hanya admin yang
-    // boleh mengubah atau menghapusnya.
-    match /auditLogs/{id} {
-      allow read, create: if sudahMasuk();
-      allow update, delete: if adalahAdmin();
-    }
-
-    // ============================================================
-    // GRAHA TEMON - peminjaman ruangan & fasilitas
-    // ============================================================
-
-    // Master ruangan: dibaca semua pengguna (daftar & kalender bersama),
-    // diubah HANYA admin.
-    match /rooms/{roomId} {
-      allow read: if sudahMasuk();
-      allow create, update, delete: if adalahAdmin();
-    }
-
-    // Master fasilitas: CRUD khusus admin.
-    match /facilities/{facilityId} {
-      allow read: if sudahMasuk();
-      allow create, update, delete: if adalahAdmin();
-    }
-
-    // Pengaturan jam operasional: dibaca semua, diubah admin.
-    match /pengaturan/{docId} {
-      allow read: if sudahMasuk();
-      allow write: if adalahAdmin();
-    }
-
-    // Peminjaman: dibaca semua pengguna (kalender & agenda bersama).
-    // Dibuat hanya atas nama sendiri oleh akun terverifikasi; diubah atau
-    // dibatalkan oleh PEMILIK atau ADMIN.
-    //
-    // Urutan `||` penting: peran ADMIN diperiksa LEBIH DULU supaya admin tidak
-    // perlu menyentuh `resource.data`. Bila dokumen lama tidak lengkap
-    // (`peminjamUid` kosong), mengevaluasinya lebih dulu menghasilkan error -
-    // dan error di aturan berarti TOLAK, sehingga admin pun ikut terkunci.
-    match /bookings/{bookingId} {
-      allow read: if sudahMasuk();
-      allow create: if penggunaAktif()
-                    && request.resource.data.peminjamUid == request.auth.uid;
-      allow update: if penggunaAktif()
-                    && (profilSaya().role == 'ADMIN'
-                        || resource.data.peminjamUid == request.auth.uid);
-      allow delete: if adalahAdmin();
-    }
-
-    // Ringkasan pemakaian per tanggal (dokumen turunan untuk pengecekan bentrok
-    // secara atomik di dalam transaksi). Dibaca semua pengguna; ditulis oleh
-    // pengguna terverifikasi karena setiap peminjaman memperbarui ringkasannya.
-    match /hari/{tanggal} {
-      allow read: if sudahMasuk();
-      allow write: if penggunaAktif();
-    }
-  }
-}
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // FUNGSI BANTU
+    // ------------------------------------------------------------
+    // Peran dibaca dari dokumen profil (`users/{uid}`), sehingga aturan ini
+    // adalah penjaga SEBENARNYA; tampilan admin di aplikasi hanya cermin.
+    //
+    // Catatan kuota: `get()` di dalam aturan dihitung sebagai pembacaan, dan
+    // pada query LIST ia dievaluasi per dokumen. Karena itu pemeriksaan peran
+    // hanya dipasang pada jalur TULIS dan pada baca yang memang perlu.
+    // ============================================================
+    function sudahMasuk() {
+      return request.auth != null;
+    }
+    function profilSaya() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function penggunaAktif() {
+      return sudahMasuk() && profilSaya().isActive != false;
+    }
+    function adalahAdmin() {
+      return sudahMasuk()
+             && profilSaya().isActive != false
+             && profilSaya().role == 'ADMIN';
+    }
+
+    // ============================================================
+    // KARSA TEMON
+    // ------------------------------------------------------------
+    // PENTING - jangan disederhanakan kembali menjadi catch-all:
+    // versi lama memakai `match /{document=**}` yang menutupi SEMUA koleksi.
+    // Aturan Firestore bersifat gabungan (OR), jadi satu catch-all membuat
+    // pembatasan di koleksi lain (mis. CRUD khusus admin di GRAHA) tidak
+    // berarti apa pun.
+    //
+    // Karena itu koleksi KARSA didaftarkan satu per satu di bawah. Daftar ini
+    // harus LENGKAP: koleksi tanpa aturan ditolak DIAM-DIAM, dan gejalanya di
+    // aplikasi adalah "data gagal dimuat", bukan pesan izin yang jelas.
+    // Bila KARSA menambah koleksi baru, tambahkan aturannya di sini.
+    // ============================================================
+
+    // Public SPJ read (used by the QR attendance landing page)
+    match /spj/{spjId} {
+      // Publik boleh MEMBACA (dashboard publik memakai agregat), tetapi menulis
+      // tetap wajib login. Pembatasan rinci hanya dipasang pada dua jalur
+      // berbahaya agar kolaborasi per jawatan yang sudah berjalan tidak patah:
+      //   - DELETE : hanya admin (tombol Hapus memang hanya muncul untuk admin).
+      //   - Reopen : FINALIZED -> IN_PROGRESS hanya pemilik SPJ atau admin (sesuai
+      //              tombol "Revisi" di UI; mencegah rekan sejawatan membuka paksa
+      //              SPJ final lewat konsol browser).
+      allow read: if true;
+      allow create: if sudahMasuk();
+      allow update: if sudahMasuk()
+                    && !(resource.data.status == 'FINALIZED'
+                         && request.resource.data.status == 'IN_PROGRESS'
+                         && resource.data.userId != request.auth.uid
+                         && !adalahAdmin());
+      allow delete: if adalahAdmin();
+
+      // Attendance capture is public (participants scan a QR and sign in).
+      // Rows are permanently purged when their 30-minute session expires.
+      match /attendance/{attendanceId} {
+        allow read: if sudahMasuk();
+        allow create: if true;
+        allow update, delete: if sudahMasuk();
+      }
+    }
+
+    // Attendance sessions: creators (logged-in) manage them; purge sweep deletes expired ones.
+    match /attendanceSessions/{sessionId} {
+      allow read: if true;
+      allow write: if sudahMasuk();
+    }
+
+    // Gamifikasi: poin aktivitas dibaca SEMUA pengguna terautentikasi karena
+    // papan peringkat menampilkan skor seluruh pegawai. Menulis tetap hanya
+    // boleh pada dokumen milik sendiri.
+    match /userPoints/{uid} {
+      allow read: if sudahMasuk();
+      allow write: if sudahMasuk() && request.auth.uid == uid;
+    }
+
+    // Profil pengguna: dibaca semua pengguna terautentikasi (menu Master Data &
+    // Akses menampilkan daftar pengguna), ditulis oleh PEMILIKNYA atau ADMIN.
+    //
+    // Catatan kuota: baca sengaja TIDAK memakai pemeriksaan peran, karena
+    // `get()` pada query LIST dievaluasi per dokumen dan akan melipatgandakan
+    // pembacaan sejumlah pengguna.
+    match /users/{uid} {
+      allow read: if sudahMasuk();
+      allow write: if sudahMasuk()
+                   && (request.auth.uid == uid || profilSaya().role == 'ADMIN');
+    }
+
+    // Undangan akses: admin menetapkan peran/jawatan SEBELUM pemilik email login.
+    // Pemilik email boleh menghapus undangannya sendiri saat login pertama (klaim).
+    // Statistik turunan dashboard (agregat). Bukan data resmi — boleh ditulis
+    // pengguna terautentikasi supaya angka tidak basi setelah SPJ berubah.
+    match /stats/{id} { allow read, write: if sudahMasuk(); }
+
+    match /userInvites/{email} {
+      allow read: if sudahMasuk();
+      allow create, update: if adalahAdmin();
+      allow delete: if sudahMasuk()
+                    && (profilSaya().role == 'ADMIN'
+                        || (request.auth.token.email != null
+                            && email == request.auth.token.email.lower()));
+    }
+
+    // Koleksi kerja KARSA - perilaku ASLI: semua pengguna terautentikasi.
+    match /jawatan/{id} { allow read, write: if sudahMasuk(); }
+    match /kegiatan/{id} { allow read, write: if sudahMasuk(); }
+    match /kodeRekening/{id} { allow read, write: if sudahMasuk(); }
+    match /documentTypes/{id} { allow read, write: if sudahMasuk(); }
+    match /checklistConfigs/{id} { allow read, write: if sudahMasuk(); }
+    match /packageTemplates/{id} { allow read, write: if sudahMasuk(); }
+    match /officials/{id} { allow read, write: if sudahMasuk(); }
+    match /spjDocuments/{id} { allow read, write: if sudahMasuk(); }
+
+    // Audit log adalah catatan bukti: semua boleh mencatat, hanya admin yang
+    // boleh mengubah atau menghapusnya.
+    match /auditLogs/{id} {
+      allow read, create: if sudahMasuk();
+      allow update, delete: if adalahAdmin();
+    }
+
+    // ============================================================
+    // GRAHA TEMON - peminjaman ruangan & fasilitas
+    // ============================================================
+
+    // Master ruangan: dibaca semua pengguna (daftar & kalender bersama),
+    // diubah HANYA admin.
+    match /rooms/{roomId} {
+      allow read: if sudahMasuk();
+      allow create, update, delete: if adalahAdmin();
+    }
+
+    // Master fasilitas: CRUD khusus admin.
+    match /facilities/{facilityId} {
+      allow read: if sudahMasuk();
+      allow create, update, delete: if adalahAdmin();
+    }
+
+    // Pengaturan jam operasional: dibaca semua, diubah admin.
+    match /pengaturan/{docId} {
+      allow read: if sudahMasuk();
+      allow write: if adalahAdmin();
+    }
+
+    // Peminjaman: dibaca semua pengguna (kalender & agenda bersama).
+    // Dibuat hanya atas nama sendiri oleh akun terverifikasi; diubah atau
+    // dibatalkan oleh PEMILIK atau ADMIN.
+    //
+    // Urutan `||` penting: peran ADMIN diperiksa LEBIH DULU supaya admin tidak
+    // perlu menyentuh `resource.data`. Bila dokumen lama tidak lengkap
+    // (`peminjamUid` kosong), mengevaluasinya lebih dulu menghasilkan error -
+    // dan error di aturan berarti TOLAK, sehingga admin pun ikut terkunci.
+    match /bookings/{bookingId} {
+      allow read: if sudahMasuk();
+      allow create: if penggunaAktif()
+                    && request.resource.data.peminjamUid == request.auth.uid;
+      allow update: if penggunaAktif()
+                    && (profilSaya().role == 'ADMIN'
+                        || resource.data.peminjamUid == request.auth.uid);
+      allow delete: if adalahAdmin();
+    }
+
+    // Ringkasan pemakaian per tanggal (dokumen turunan untuk pengecekan bentrok
+    // secara atomik di dalam transaksi). Dibaca semua pengguna; ditulis oleh
+    // pengguna terverifikasi karena setiap peminjaman memperbarui ringkasannya.
+    match /hari/{tanggal} {
+      allow read: if sudahMasuk();
+      allow write: if penggunaAktif();
+    }
+  }
+}
