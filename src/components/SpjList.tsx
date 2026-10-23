@@ -80,6 +80,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [creating, setCreating] = useState(false);
   const [reopenSpjId, setReopenSpjId] = useState<string | null>(null);
   const [reopenReason, setReopenReason] = useState("");
+  const [reopening, setReopening] = useState(false);
   const [deleteSpjId, setDeleteSpjId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [archiveSpjId, setArchiveSpjId] = useState<string | null>(null);
@@ -307,14 +308,19 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   };
 
   const handleReopen = async () => {
-    if (!reopenSpjId || !reopenReason) return;
+    if (!reopenSpjId || reopenReason.trim().length < 5) return;
+    const spjId = reopenSpjId;
+    setReopening(true);
     try {
-      await reopenSpj(reopenSpjId, reopenReason, user);
+      await reopenSpj(spjId, reopenReason.trim(), user);
       setReopenSpjId(null);
       setReopenReason("");
-      loadData();
+      // Langsung buka dokumennya supaya pengguna bisa memperbaiki tanpa mencari lagi.
+      onSelectSpj(spjId, "edit");
     } catch (err: any) {
-      alert("Gagal reopening SPJ: " + err.message);
+      alert("Gagal membuka revisi SPJ: " + err.message);
+    } finally {
+      setReopening(false);
     }
   };
 
@@ -805,13 +811,18 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                           </button>
                         )}
 
-                        {spj.status === "FINALIZED" && user.role === "ADMIN" && (
+                        {spj.status === "FINALIZED" && (user.role === "ADMIN" || spj.userId === user.uid) && (
                           <button
-                            onClick={() => setReopenSpjId(spj.id)}
-                            className="px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
+                            onClick={() => {
+                              setReopenReason("");
+                              setReopenSpjId(spj.id);
+                            }}
+                            title="Revisi SPJ yang sudah final: status kembali ke Proses agar dokumen bisa diperbaiki, alasan dicatat di Audit Log"
+                            aria-label="Revisi SPJ"
+                            className="px-3 py-1.5 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-lg inline-flex items-center space-x-1 shadow-sm whitespace-nowrap"
                           >
-                            <Icon name="refresh-ccw" className="w-3.5 h-3.5 shrink-0" />
-                            <span>Reopen</span>
+                            <Icon name="pencil" className="w-3.5 h-3.5 shrink-0" tebal />
+                            <span>Revisi</span>
                           </button>
                         )}
 
@@ -1087,24 +1098,26 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         </div>
       )}
 
-      {/* MODAL REOPEN SPJ */}
+      {/* MODAL REVISI SPJ (SPJ final) */}
       {reopenSpjId && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <h3 className="text-base font-bold text-amber-600 flex items-center gap-2">
-              <Icon name="refresh-ccw" className="w-5 h-5" /> Konfirmasi Reopen SPJ
+              <Icon name="pencil" className="w-5 h-5" tebal /> Konfirmasi Revisi SPJ
             </h3>
             <p className="text-xs text-gray-500 dark:text-slate-400">
-              Mengizinkan perbaikan dokumen SPJ yang sudah difinalisasi. Alasan reopening wajib dicatat ke Audit Log.
+              SPJ ini sudah difinalisasi. Revisi mengembalikan status ke <b>Proses</b> agar dokumen dapat
+              diperbaiki, lalu wajib difinalisasi ulang. Alasan revisi dicatat ke Audit Log.
             </p>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Alasan Reopen</label>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Alasan Revisi</label>
               <textarea
                 value={reopenReason}
                 onChange={(e) => setReopenReason(e.target.value)}
                 placeholder="Contoh: Perbaikan nominal kuitansi Bend 26..."
                 className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white h-24"
               ></textarea>
+              <p className="mt-1 text-[11px] text-gray-400">Minimal 5 karakter — dipakai sebagai jejak audit.</p>
             </div>
             <div className="flex justify-end space-x-3 pt-2">
               <button
@@ -1115,9 +1128,10 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
               </button>
               <button
                 onClick={handleReopen}
-                className="px-4 py-2 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700"
+                disabled={reopening || reopenReason.trim().length < 5}
+                className="px-4 py-2 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Reopen SPJ
+                {reopening ? "Membuka revisi..." : "Mulai Revisi"}
               </button>
             </div>
           </div>

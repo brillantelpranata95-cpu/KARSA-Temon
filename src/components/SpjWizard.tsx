@@ -18,6 +18,7 @@ import {
   calculatePhr,
   calculatePph,
   calculatePpn,
+  taxNeedsRecalc,
   PHR_RATE,
   PPH_RATE,
   PPN_RATE,
@@ -191,6 +192,18 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
   const activeDoc = documents.find(d => d.id === selectedDocId);
 
+  /**
+   * Pajak Bend 26 dianggap perlu dihitung ulang bila nominal berubah dari
+   * `taxBasis` (nominal saat pajak terakhir dihitung). Dokumen lama belum punya
+   * `taxBasis`: kalau pajaknya sudah terisi, anggap sudah dihitung supaya arsip
+   * tidak memunculkan peringatan palsu.
+   */
+  const bend26BasisPajak =
+    formData.taxBasis ??
+    ([formData.phr, formData.pph, formData.ppn].some((v) => Number(v) > 0) ? formData.nominal : undefined);
+  const bend26PajakPerluDihitung =
+    activeDoc?.documentTypeCode === "BEND_26" && taxNeedsRecalc(formData.nominal, bend26BasisPajak);
+
   const handleSelectDoc = (docItem: SpjDocumentItem) => {
     setSelectedDocId(docItem.id);
     setFormData(withDocDefaults(docItem, docItem.data || {}, spj?.sharedData));
@@ -216,14 +229,19 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
     }
     const value =
       kind === "phr" ? calculatePhr(nominal) : kind === "pph" ? calculatePph(nominal) : calculatePpn(nominal);
-    setFormData(prev => ({ ...prev, [kind]: value }));
+    // `taxBasis` menandai nominal yang sudah dipakai menghitung pajak, sehingga
+    // pengingat "pajak belum dihitung" hilang dan tidak muncul lagi saat dibuka.
+    setFormData(prev => ({ ...prev, [kind]: value, taxBasis: nominal }));
     const label = kind === "phr" ? "PHR" : kind === "pph" ? "PPh" : "PPN";
     setSaveMessage(`${label} dihitung dari ${terbilangRupiah(nominal)}`);
     setTimeout(() => setSaveMessage(null), 2500);
   };
 
   const handleClearTax = () => {
-    setFormData(prev => ({ ...prev, phr: "", pph: "", ppn: "" }));
+    // Mengosongkan pajak = menyatakan SPJ ini tanpa potongan pajak untuk nominal
+    // saat ini; tanpa `taxBasis` pengingat akan terus muncul padahal sudah jelas.
+    const nominal = Number(formData.nominal || 0);
+    setFormData(prev => ({ ...prev, phr: "", pph: "", ppn: "", taxBasis: nominal }));
   };
 
   /**
@@ -256,6 +274,18 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
   const handleSaveDoc = async (status: "DRAFT" | "IN_PROGRESS" | "COMPLETED") => {
     if (!selectedDocId) return;
+
+    // Pagar terakhir: nominal Bend 26 sudah berganti tapi pajaknya belum
+    // dihitung ulang → angka pajak yang tersimpan akan salah cetak.
+    if (bend26PajakPerluDihitung) {
+      const lanjut = confirm(
+        "Nominal Bend 26 sudah berubah, tetapi pajak belum dihitung ulang.\n\n" +
+          "Klik Batal, lalu tekan tombol Hitung PHR/PPh/PPN (atau Kosongkan bila memang tanpa pajak).\n\n" +
+          "Tetap simpan dengan angka pajak yang sekarang?"
+      );
+      if (!lanjut) return;
+    }
+
     setSaving(true);
     setSaveMessage("Menyimpan...");
 
@@ -606,6 +636,23 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       {terbilangRupiah(Number(formData.nominal || 0))}
                     </p>
                   </div>
+
+                  {/* Pengingat: nominal berganti tapi pajak belum dihitung ulang */}
+                  {bend26PajakPerluDihitung && (
+                    <div
+                      role="alert"
+                      className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2"
+                    >
+                      <Icon name="triangle-alert" className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" tebal />
+                      <p className="leading-relaxed">
+                        <span className="font-bold">Pajak belum dihitung ulang.</span>{" "}
+                        Angka nominal baru saja berganti, jadi nilai PHR/PPh/PPN yang tersimpan sudah tidak sesuai.
+                        Tekan <span className="font-semibold">Hitung PHR / PPh / PPN</span> di bawah untuk pajak yang
+                        dipakai, atau <span className="font-semibold">Kosongkan</span> bila SPJ ini memang tanpa
+                        potongan pajak. Selama belum, penyimpanan akan meminta konfirmasi.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="border-t border-gray-200 dark:border-slate-700 pt-4">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-2">

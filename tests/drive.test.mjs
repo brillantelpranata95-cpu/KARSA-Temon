@@ -295,3 +295,38 @@ test("Buat Paket SPJ: kartu 'Paket SPJ yang Sudah Ada' dihapus dari menu admin",
   assert.match(comp, /getChecklistConfigList/, "checklist bawaan tetap dibaca");
 });
 
+
+test("SPJ final: tombol Revisi tersedia untuk pemilik SPJ dan Admin", async () => {
+  const fs = await import("node:fs/promises");
+  const list = await fs.readFile(new URL("../src/components/SpjList.tsx", import.meta.url), "utf8");
+  const api = await fs.readFile(new URL("../src/services/api.ts", import.meta.url), "utf8");
+
+  // SPJ yang sudah final harus bisa direvisi pemiliknya sendiri, bukan hanya admin.
+  assert.match(
+    list,
+    /spj\.status === "FINALIZED" && \(user\.role === "ADMIN" \|\| spj\.userId === user\.uid\)/,
+    "tombol Revisi tampil untuk pemilik SPJ dan admin"
+  );
+  assert.match(list, /<span>Revisi<\/span>/, "label tombol Revisi");
+  // Alasan revisi wajib, minimal 5 karakter, sebelum status diubah.
+  assert.match(list, /reopenReason\.trim\(\)\.length < 5/, "alasan revisi wajib diisi");
+  // Setelah revisi dibuka pengguna langsung masuk ke editor, bukan disuruh mencari barisnya.
+  assert.match(list, /onSelectSpj\(spjId, "edit"\)/, "langsung buka editor setelah revisi");
+  // API menolak revisi untuk SPJ yang statusnya bukan FINALIZED.
+  assert.match(api, /if \(current\.status !== "FINALIZED"\) return;/, "hanya SPJ final yang bisa direvisi");
+});
+
+test("Bend 26: pengingat muncul saat nominal berganti sebelum pajak dihitung ulang", async () => {
+  const fs = await import("node:fs/promises");
+  const wizard = await fs.readFile(new URL("../src/components/SpjWizard.tsx", import.meta.url), "utf8");
+  const tax = await fs.readFile(new URL("../src/utils/tax.ts", import.meta.url), "utf8");
+
+  // Pembanding nominal vs dasar hitung ada di utils agar bisa diuji terpisah.
+  assert.match(tax, /export const taxNeedsRecalc/, "helper taxNeedsRecalc tersedia");
+  // Setiap tombol hitung (dan Kosongkan) menandai nominal yang dipakai.
+  assert.match(wizard, /taxBasis: nominal/, "dasar pajak dicatat saat menghitung");
+  assert.match(wizard, /bend26PajakPerluDihitung/, "editor memakai status perlu hitung ulang");
+  assert.match(wizard, /Pajak belum dihitung ulang/, "teks pengingat tampil di editor");
+  // Simpan tetap meminta konfirmasi supaya angka pajak tidak tersimpan salah.
+  assert.match(wizard, /if \(bend26PajakPerluDihitung\) \{\s*const lanjut = confirm/, "simpan meminta konfirmasi");
+});

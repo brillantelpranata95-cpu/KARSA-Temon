@@ -1526,10 +1526,14 @@ export const finalizeSpj = async (spjId: string, user: UserProfile) => {
   invalidateSpjStatsCache();
 };
 
-// Reopen SPJ (Admin Only)
+// Reopen SPJ untuk revisi (pemilik SPJ & Admin). Hanya berlaku untuk SPJ FINALIZED.
 export const reopenSpj = async (spjId: string, reason: string, user: UserProfile) => {
   const spjRef = doc(db, "spj", spjId);
-  
+  const snap = await getDoc(spjRef);
+  if (!snap.exists()) return;
+  const current = snap.data() as SpjItem;
+  if (current.status !== "FINALIZED") return;
+
   await updateDoc(spjRef, {
     status: "IN_PROGRESS",
     reopenReason: reason,
@@ -1543,7 +1547,7 @@ export const reopenSpj = async (spjId: string, reason: string, user: UserProfile
     entityType: "SPJ",
     entityId: spjId,
     reason,
-    oldValue: { status: "FINALIZED" },
+    oldValue: { status: current.status },
     newValue: { status: "IN_PROGRESS" }
   });
 

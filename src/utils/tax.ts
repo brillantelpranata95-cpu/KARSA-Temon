@@ -55,3 +55,17 @@ export const calculatePph = (nominal: unknown): number => {
 
 export const calculatePpn = (nominal: unknown): number =>
   Math.round(toPositiveNumber(nominal) * PPN_RATE);
+
+/**
+ * Apakah pajak Bend 26 perlu dihitung ulang?
+ *
+ * `taxBasis` adalah nominal yang dipakai saat pajak terakhir dihitung (atau saat
+ * pengguna menyatakan "tanpa pajak"). Bila nominal sekarang berbeda dari basis
+ * itu, angka pajak yang tersimpan sudah tidak sesuai dan pengguna harus diberi
+ * pengingat. Nominal kosong/nol tidak pernah dianggap perlu dihitung.
+ */
+export const taxNeedsRecalc = (nominal: unknown, taxBasis: unknown): boolean => {
+  const current = toPositiveNumber(nominal);
+  if (!current) return false;
+  return current !== toPositiveNumber(taxBasis);
+};

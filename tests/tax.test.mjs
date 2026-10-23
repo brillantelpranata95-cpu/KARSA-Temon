@@ -8,6 +8,7 @@ const loadTax = () =>
     "calculatePhr",
     "calculatePph",
     "calculatePpn",
+    "taxNeedsRecalc",
     "PHR_RATE",
     "PPH_RATE",
     "PPN_RATE",
@@ -77,4 +78,22 @@ test("pajak Bend 26: tiap jenis pajak dapat dihitung sendiri-sendiri", async () 
     assert.equal(fn(null), 0);
     assert.equal(fn(NaN), 0);
   }
+});
+
+test("pajak Bend 26: pengingat muncul hanya bila nominal berganti dari dasar hitung", async () => {
+  const { taxNeedsRecalc } = await loadTax();
+
+  // Nominal masih sama dengan dasar hitung terakhir → tidak perlu pengingat.
+  assert.equal(taxNeedsRecalc(1_000_000, 1_000_000), false);
+  // Nominal berganti → pajak yang tersimpan sudah tidak sesuai.
+  assert.equal(taxNeedsRecalc(1_500_000, 1_000_000), true);
+  // Belum pernah dihitung (basis kosong) tapi nominal sudah ada → pengingat.
+  assert.equal(taxNeedsRecalc(500_000, undefined), true);
+  assert.equal(taxNeedsRecalc(500_000, ""), true);
+  // Nominal kosong/nol tidak pernah memaksa pengingat.
+  assert.equal(taxNeedsRecalc("", 1_000_000), false);
+  assert.equal(taxNeedsRecalc(0, 0), false);
+  assert.equal(taxNeedsRecalc(undefined, undefined), false);
+  // Nilai teks dari input number tetap dibandingkan sebagai angka.
+  assert.equal(taxNeedsRecalc("750000", "750000"), false);
 });
