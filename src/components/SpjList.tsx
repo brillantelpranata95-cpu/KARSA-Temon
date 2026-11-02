@@ -95,10 +95,14 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [reopening, setReopening] = useState(false);
   const [deleteSpjId, setDeleteSpjId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Hapus seluruh tanggal dalam satu paket multi tanggal.
+  const [deleteBatchId, setDeleteBatchId] = useState<string | null>(null);
+  const [deletingBatch, setDeletingBatch] = useState(false);
   const [archiveSpjId, setArchiveSpjId] = useState<string | null>(null);
 
-  // Pagination (Rekomendasi 4): tampilkan bertahap agar ringan saat data besar
-  const PAGE_SIZE = 15;
+  // Pagination (Rekomendasi 4): tampilkan bertahap agar ringan saat data besar.
+  // 5 SPJ per halaman — sama dengan panel "SPJ Terbaru" di dashboard.
+  const PAGE_SIZE = 5;
   const [page, setPage] = useState(1);
 
   // Ekspor rekap PDF — sedang proses & nominal cache per SPJ
@@ -419,6 +423,41 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       alert("Gagal menghapus SPJ: " + err.message);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  /**
+   * Hapus SEMUA SPJ dalam satu batch multi tanggal sekaligus. Dijalankan
+   * berurutan agar setiap kegagalan bisa dilaporkan per nomor SPJ tanpa
+   * meninggalkan paket yatim.
+   */
+  const handleDeleteBatch = async () => {
+    if (!deleteBatchId) return;
+    const items = spjs.filter((s) => s.batchId === deleteBatchId);
+    if (items.length === 0) {
+      setDeleteBatchId(null);
+      return;
+    }
+
+    setDeletingBatch(true);
+    let berhasil = 0;
+    const gagal: string[] = [];
+    for (const s of items) {
+      try {
+        await deleteSpj(s.id, user);
+        berhasil += 1;
+      } catch (err: any) {
+        gagal.push(`${s.nomorSpj}: ${err?.message || "gagal dihapus"}`);
+      }
+    }
+    setDeletingBatch(false);
+    setDeleteBatchId(null);
+    await loadData();
+
+    if (gagal.length > 0) {
+      alert(
+        `${berhasil} SPJ berhasil dihapus.\n${gagal.length} gagal:\n${gagal.join("\n")}`
+      );
     }
   };
 
@@ -822,13 +861,29 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                           <span className="min-w-0 truncate text-[11px] text-gray-500 dark:text-slate-400">
                             {spj.sharedData?.judulAktivitas || spj.masterSnapshot?.kegiatan?.nama}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => toggleBatch(spj.batchId as string)}
-                            className="ml-auto text-[11px] font-semibold text-[#32848D] hover:underline"
-                          >
-                            {isCollapsed ? "Tampilkan tanggal" : "Ringkas"}
-                          </button>
+                          <div className="ml-auto flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => toggleBatch(spj.batchId as string)}
+                              className="text-[11px] font-semibold text-[#32848D] hover:underline"
+                            >
+                              {isCollapsed ? "Tampilkan tanggal" : "Ringkas"}
+                            </button>
+                            {(user.role === "ADMIN" ||
+                              spjs
+                                .filter((s) => s.batchId === spj.batchId)
+                                .every((s) => s.userId === user.uid)) && (
+                              <button
+                                type="button"
+                                onClick={() => setDeleteBatchId(spj.batchId as string)}
+                                title={`Hapus semua ${batchSiblings.length} SPJ dalam paket multi tanggal ini`}
+                                className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
+                              >
+                                <Icon name="trash" className="w-3.5 h-3.5 shrink-0" />
+                                <span>Hapus semua</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -1002,7 +1057,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       {!loading && totalPages > 1 && (
         <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-gray-500 dark:text-slate-400">
-            Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, spjs.length)} dari {spjs.length} SPJ
+            Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, spjsTersaring.length)} dari {spjsTersaring.length} SPJ
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -1397,6 +1452,47 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 className="px-4 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700"
               >
                 {deleting ? "Menghapus..." : "Hapus Permanen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DELETE SELURUH BATCH MULTI TANGGAL */}
+      {deleteBatchId && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-red-600 flex items-center gap-2">
+              <Icon name="trash" className="w-5 h-5" /> Hapus Semua Tanggal
+            </h3>
+            <p className="text-xs text-gray-600 dark:text-slate-300">
+              Paket multi tanggal ini terdiri dari{" "}
+              <strong>{spjs.filter((s) => s.batchId === deleteBatchId).length} SPJ</strong>.
+              Semua SPJ pada tanggal-tanggal tersebut beserta dokumennya akan dihapus permanen.
+              Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="max-h-32 overflow-y-auto rounded-xl border border-gray-100 bg-gray-50 p-2 text-[11px] text-gray-600 dark:border-slate-700 dark:bg-slate-700/40 dark:text-slate-300">
+              {spjs
+                .filter((s) => s.batchId === deleteBatchId)
+                .map((s) => (
+                  <p key={s.id} className="truncate">
+                    {formatDateDDMMYYYY(s.tanggal)} · {s.nomorSpj}
+                  </p>
+                ))}
+            </div>
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                onClick={() => setDeleteBatchId(null)}
+                className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteBatch}
+                disabled={deletingBatch}
+                className="px-4 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 disabled:opacity-60"
+              >
+                {deletingBatch ? "Menghapus..." : "Hapus Semua"}
               </button>
             </div>
           </div>

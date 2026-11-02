@@ -532,3 +532,61 @@ test("dashboard: SPJ dimuat 5 per halaman dengan limit server", async () => {
   );
   assert.equal(firebase.firestore.indexes, "firestore.indexes.json");
 });
+
+test("finalisasi: boleh berapa pun persen dengan notifikasi alasan", async () => {
+  const fs = await import("node:fs/promises");
+  const wizard = await fs.readFile(new URL("../src/components/SpjWizard.tsx", import.meta.url), "utf8");
+  const api = await fs.readFile(new URL("../src/services/api.ts", import.meta.url), "utf8");
+
+  // Tombol tidak lagi dinonaktifkan saat progres < 100.
+  assert.doesNotMatch(
+    wizard,
+    /onClick=\{handleFinalize\}\s+disabled=\{spj\.progress < 100\}/,
+    "tombol Finalisasi tidak boleh dinonaktifkan karena progres"
+  );
+  assert.doesNotMatch(
+    wizard,
+    /Seluruh dokumen wajib harus berstatus SELESAI sebelum finalisasi/,
+    "blokir finalisasi < 100% harus dihapus"
+  );
+
+  // Saat < 100%, pengguna diberi tahu dokumen wajib yang belum selesai.
+  assert.match(wizard, /if \(spj\.progress < 100\)/, "ada cabang notifikasi < 100%");
+  assert.match(wizard, /Dokumen wajib yang belum selesai/, "rincian dokumen yang belum selesai");
+  assert.match(wizard, /Anda TETAP dapat memfinalisasi sekarang/, "penegasan tetap boleh finalisasi");
+  assert.match(wizard, /Lanjutkan finalisasi\?/, "konfirmasi lanjut");
+
+  // API tetap mau memfinalisasi tanpa memeriksa progres.
+  assert.match(api, /export const finalizeSpj = async/);
+  assert.doesNotMatch(
+    api,
+    /finalizeSpj[\s\S]{0,400}progress < 100/,
+    "API finalize tidak boleh menolak progres < 100"
+  );
+});
+
+test("multi tanggal: hapus semua tanggal sekaligus dari header batch", async () => {
+  const fs = await import("node:fs/promises");
+  const list = await fs.readFile(new URL("../src/components/SpjList.tsx", import.meta.url), "utf8");
+
+  assert.match(list, /const \[deleteBatchId, setDeleteBatchId\]/);
+  assert.match(list, /const \[deletingBatch, setDeletingBatch\]/);
+  assert.match(list, /const handleDeleteBatch = async/, "handler hapus batch tersedia");
+  assert.match(list, /spjs\.filter\(\(s\) => s\.batchId === deleteBatchId\)/, "anggota batch dipilih");
+  assert.match(list, /for \(const s of items\)[\s\S]{0,200}await deleteSpj\(s\.id, user\)/, "hapus berurutan");
+  assert.match(list, /setDeleteBatchId\(spj\.batchId as string\)/, "tombol memakai batchId");
+  assert.match(list, /Hapus semua/, "label tombol hapus semua");
+  assert.match(list, /Hapus Semua Tanggal/, "judul modal konfirmasi");
+});
+
+test("daftar SPJ: 5 per halaman, sama dengan dashboard", async () => {
+  const fs = await import("node:fs/promises");
+  const list = await fs.readFile(new URL("../src/components/SpjList.tsx", import.meta.url), "utf8");
+  const dash = await fs.readFile(new URL("../src/components/Dashboard.tsx", import.meta.url), "utf8");
+
+  assert.match(list, /const PAGE_SIZE = 5;/, "daftar SPJ 5 per halaman");
+  assert.doesNotMatch(list, /const PAGE_SIZE = 15;/, "ukuran lama 15 harus diganti");
+  assert.match(dash, /const PER_HALAMAN = 5;/, "dashboard tetap 5 per halaman");
+  // Jumlah di footer mengikuti hasil filter, bukan seluruh data.
+  assert.match(list, /dari \{spjsTersaring\.length\} SPJ/);
+});

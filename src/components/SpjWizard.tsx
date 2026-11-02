@@ -330,22 +330,45 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
   const handleFinalize = async () => {
     if (!spj) return;
+
+    // Finalisasi TIDAK lagi diwajibkan 100%. Bila masih kurang, pengguna diberi
+    // tahu dokumen wajib mana yang belum selesai — tetapi tetap boleh lanjut.
     if (spj.progress < 100) {
-      alert("Seluruh dokumen wajib harus berstatus SELESAI sebelum finalisasi.");
+      const belumSelesai = (spj.checklistSnapshot?.documents || [])
+        .filter((s) => s.required)
+        .filter((s) => {
+          const d = documents.find((x) => x.documentTypeId === s.documentTypeId);
+          return !(d && d.status === "COMPLETED" && d.validation?.isValid);
+        })
+        .map((s) => `• ${s.documentTypeName}`);
+
+      const rincian =
+        belumSelesai.length > 0
+          ? `\n\nDokumen wajib yang belum selesai:\n${belumSelesai.join("\n")}`
+          : "\n\nBelum ada dokumen wajib yang terdaftar pada checklist.";
+
+      const lanjut = confirm(
+        `SPJ ini baru ${spj.progress}% lengkap.${rincian}\n\n` +
+          "Anda TETAP dapat memfinalisasi sekarang. Setelah finalisasi data menjadi read-only; " +
+          "bila perlu diperbaiki, gunakan tombol Revisi.\n\nLanjutkan finalisasi?"
+      );
+      if (!lanjut) return;
+    } else if (
+      !confirm("Apakah Anda yakin ingin memfinalisasi SPJ ini? Setelah finalisasi data menjadi read-only.")
+    ) {
       return;
     }
-    if (confirm("Apakah Anda yakin ingin memfinalisasi SPJ ini? Setelah finalisasi data menjadi read-only.")) {
-      await finalizeSpj(spj.id, user);
-      // Rapor Kertas: baca ulang dokumen agar angka cetak yang dihitung adalah
-      // yang terbaru (cetak bisa dilakukan dari halaman pratinjau kapan saja).
-      const freshDocs = await getSpjDocuments(spj.id).catch(() => documents);
-      const totalSheets = freshDocs.reduce(
-        (sum, d) => sum + (Number((d as any).printedSheets) || 0),
-        0
-      );
-      await loadSpjData();
-      setRaporKertas(totalSheets);
-    }
+
+    await finalizeSpj(spj.id, user);
+    // Rapor Kertas: baca ulang dokumen agar angka cetak yang dihitung adalah
+    // yang terbaru (cetak bisa dilakukan dari halaman pratinjau kapan saja).
+    const freshDocs = await getSpjDocuments(spj.id).catch(() => documents);
+    const totalSheets = freshDocs.reduce(
+      (sum, d) => sum + (Number((d as any).printedSheets) || 0),
+      0
+    );
+    await loadSpjData();
+    setRaporKertas(totalSheets);
   };
 
   if (!spj) {
@@ -387,11 +410,15 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
           {spj.status !== "FINALIZED" && (
             <button
               onClick={handleFinalize}
-              disabled={spj.progress < 100}
+              title={
+                spj.progress < 100
+                  ? `Finalisasi tetap bisa dilakukan meski baru ${spj.progress}% — alasan akan ditampilkan`
+                  : "Finalisasi paket SPJ"
+              }
               className={`px-5 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
                 spj.progress === 100
                   ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
-                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  : "bg-amber-500 hover:bg-amber-600 text-white shadow-md"
               }`}
             >
               <Icon name="shield-check" className="w-4 h-4" />
