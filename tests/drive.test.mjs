@@ -362,3 +362,89 @@ test("green company: pengingat login, hitung cetak, dan rapor kertas saat finali
   assert.ok(img.length > 10_000, "gambar pengingat tersedia");
   assert.ok(img.length < 300_000, "gambar tetap ringan untuk kuota Hosting");
 });
+
+test("Daftar Penerimaan hanya muncul bila paket/checklist memilihnya", async () => {
+  const fs = await import("node:fs/promises");
+  const api = await fs.readFile(new URL("../src/services/api.ts", import.meta.url), "utf8");
+
+  // Regresi: dokumen ini dulu DIPAKSAKAN ke setiap SPJ baru, sehingga muncul
+  // pada paket mamin lapangan yang tidak membutuhkannya.
+  assert.doesNotMatch(
+    api,
+    /Daftar Penerimaan selalu disertakan/,
+    "tidak boleh ada penambahan Daftar Penerimaan secara membabi buta"
+  );
+  assert.doesNotMatch(
+    api,
+    /checklistDocs\.some\(\(d\) => d\.documentTypeId === "doctype-daftarpenerimaan"\)/,
+    "tidak boleh ada pengecekan yang menambahkan dokumen ini otomatis"
+  );
+
+  // Checklist standar (dipakai hanya bila rekening tidak punya paket/config)
+  // juga tidak boleh memuat Daftar Penerimaan.
+  const defaultBlock = api.match(
+    /checklistDocs = \[\s*\{ documentTypeId: "doctype-bend26"[\s\S]*?\n\s*\];/
+  );
+  assert.ok(defaultBlock, "blok checklist standar harus tetap ada");
+  assert.doesNotMatch(
+    defaultBlock[0],
+    /daftarpenerimaan/i,
+    "checklist standar tidak boleh memuat Daftar Penerimaan"
+  );
+});
+
+test("multi tanggal: satu aksi membuat paket SPJ tersendiri per tanggal", async () => {
+  const fs = await import("node:fs/promises");
+  const list = await fs.readFile(new URL("../src/components/SpjList.tsx", import.meta.url), "utf8");
+  const date = await fs.readFile(new URL("../src/utils/date.ts", import.meta.url), "utf8");
+  const preview = await fs.readFile(new URL("../src/components/PrintPreview.tsx", import.meta.url), "utf8");
+
+  // Input tanggal berupa daftar, bukan satu nilai tunggal.
+  assert.match(list, /const \[tanggalSpjList, setTanggalSpjList\]/);
+  assert.doesNotMatch(list, /const \[tanggalSpj, setTanggalSpj\]/);
+  assert.match(list, /sortDates\(tanggalSpjList\)/, "tanggal diurutkan sebelum diproses");
+  assert.match(list, /for \(const tanggal of tanggalList\)/, "setiap tanggal diproses");
+  assert.match(list, /await createSpjPackage\(\{[\s\S]*?tanggal,/, "paket dibuat dengan tanggalnya sendiri");
+  // Nomor SPJ berurutan, jadi pembuatan tidak boleh paralel.
+  assert.match(list, /generateSpjNumber|berurutan/, "pembuatan berurutan untuk nomor SPJ unik");
+  // Penjelasan agar pengguna tahu konsekuensinya.
+  assert.match(list, /Setiap tanggal menjadi paket SPJ tersendiri/);
+
+  // Utilitas pengurutan tanggal tersedia dan dipakai bersama.
+  assert.match(date, /export const sortDates/);
+
+  // Dokumen cetak mengambil tanggal dari SPJ masing-masing, sehingga Notulen,
+  // Bend 26, dan Daftar Hadir pada tiap paket memakai tanggal yang benar.
+  assert.match(preview, /formatDateDDMMYYYY\(spj\.tanggal\)/);
+});
+
+test("multi tanggal: pengelompokan visual memakai batchId", async () => {
+  const fs = await import("node:fs/promises");
+  const list = await fs.readFile(new URL("../src/components/SpjList.tsx", import.meta.url), "utf8");
+  const api = await fs.readFile(new URL("../src/services/api.ts", import.meta.url), "utf8");
+  const types = await fs.readFile(new URL("../src/types/index.ts", import.meta.url), "utf8");
+
+  // Model data: batch hanya penanda visual, SPJ tetap berdiri sendiri.
+  assert.match(types, /batchId\?: string/, "SpjItem punya batchId opsional");
+  assert.match(types, /batchIndex\?: number/, "SpjItem punya batchIndex opsional");
+  assert.match(types, /batchTotal\?: number/, "SpjItem punya batchTotal opsional");
+  assert.match(api, /batchId: params\.batchId/, "batchId disimpan ke dokumen SPJ");
+
+  // Satu batchId dibuat sekali per aksi multi tanggal, dan hanya bila > 1 tanggal.
+  assert.match(
+    list,
+    /tanggalList\.length > 1[\s\S]{0,200}batch-\$\{Date\.now\(\)\}/,
+    "batchId hanya dibuat untuk lebih dari satu tanggal"
+  );
+  assert.match(list, /batchIndex: batchId \? urutanTanggal/, "urutan tanggal dicatat");
+  assert.match(list, /batchTotal: batchId \? tanggalList\.length/, "jumlah tanggal dicatat");
+
+  // Pengelompokan + pelipatan di daftar SPJ.
+  assert.match(list, /const batchGroups = React\.useMemo/, "SPJ dikelompokkan per batch");
+  assert.match(list, /collapsedBatches/, "batch bisa dilipat/ditampilkan");
+  assert.match(list, /Paket multi tanggal · \{batchSiblings\.length\} SPJ/, "header batch");
+  // Baris anggota batch diberi aksen agar mudah dibedakan dari SPJ tunggal.
+  assert.match(list, /border-l-\[#32848D\]\/40/, "aksen kiri untuk anggota batch");
+  // SPJ lama tanpa batchId tidak boleh ikut berubah perilakunya.
+  assert.match(list, /spj\.batchId \? "border-l-2/, "aksa hanya untuk SPJ ber-batch");
+});

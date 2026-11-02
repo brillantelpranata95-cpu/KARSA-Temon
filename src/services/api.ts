@@ -1175,6 +1175,10 @@ export const createSpjPackage = async (params: {
   targetJawatanId?: string;
   targetJawatanName?: string;
   packageTemplate?: PackageTemplate | null;
+  /** Pengelompokan visual untuk paket multi tanggal (opsional). */
+  batchId?: string;
+  batchIndex?: number;
+  batchTotal?: number;
 }): Promise<string> => {
   const { user, kegiatan, kodeRekening, judulAktivitas, jumlahPeserta, targetJawatanId, targetJawatanName } = params;
   // Dates are ALWAYS stored as dd-mm-yyyy
@@ -1218,26 +1222,22 @@ export const createSpjPackage = async (params: {
       configId = activeConfig.id;
       checklistDocs = configData.documents;
     } else {
+      // Checklist standar hanya memuat dokumen yang memang lazim untuk paket
+      // tanpa konfigurasi. Daftar Penerimaan TIDAK lagi dipaksakan di sini:
+      // blanko itu hanya boleh muncul bila paket/checklist rekening memilihnya
+      // (mis. honorarium narasumber), bukan pada belanja mamin lapangan.
       checklistDocs = [
         { documentTypeId: "doctype-bend26", required: true, order: 1 },
         { documentTypeId: "doctype-undangan", required: true, order: 2 },
         { documentTypeId: "doctype-daftarhadir", required: true, order: 3 },
-        { documentTypeId: "doctype-notulen", required: true, order: 4 },
-        { documentTypeId: "doctype-daftarpenerimaan", required: false, order: 5 }
+        { documentTypeId: "doctype-notulen", required: true, order: 4 }
       ];
     }
   }
 
-  // Daftar Penerimaan selalu disertakan pada setiap SPJ baru (opsional, tidak
-  // memblokir finalisasi) supaya blanko ini tersedia juga saat SPJ memakai
-  // paket dokumen buatan admin.
-  if (!checklistDocs.some((d) => d.documentTypeId === "doctype-daftarpenerimaan")) {
-    checklistDocs.push({
-      documentTypeId: "doctype-daftarpenerimaan",
-      required: false,
-      order: checklistDocs.length + 1,
-    });
-  }
+  // Sengaja tidak ada penambahan dokumen otomatis di sini. Paket dokumen
+  // mengikuti pilihan admin per Kode Rekening; menambahkan Daftar Penerimaan
+  // secara membabi buta membuat formulir yang tidak relevan ikut terbuka.
 
   // Get doc types details
   const docTypesMap = new Map<string, DocumentTypeItem>();
@@ -1286,6 +1286,14 @@ export const createSpjPackage = async (params: {
     masterSnapshot,
     packageTemplateId: packageTemplate?.id || null,
     packageTemplateName: packageTemplate?.nama || null,
+    // Hanya diisi bila SPJ ini bagian dari pembuatan multi tanggal.
+    ...(params.batchId
+      ? {
+          batchId: params.batchId,
+          batchIndex: params.batchIndex,
+          batchTotal: params.batchTotal,
+        }
+      : {}),
     checklistSnapshot: {
       configId,
       version: 1,

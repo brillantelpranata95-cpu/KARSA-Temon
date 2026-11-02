@@ -17,7 +17,7 @@ import {
   getSpjDocuments,
   getSpjById,
 } from "../services/api";
-import { formatDateDDMMYYYY, toDateInputValue } from "../utils/date";
+import { formatDateDDMMYYYY, sortDates, toDateInputValue } from "../utils/date";
 import { exportSpjRecapPdf } from "../utils/exportRecap";
 import { exportSpjPdf } from "../utils/exportSpjPdf";
 import { SearchableSelect, ComboOption } from "./SearchableSelect";
@@ -46,8 +46,17 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   const [taggingSubKegiatan, setTaggingSubKegiatan] = useState("");
   const [tempatLokasi, setTempatLokasi] = useState("PENDOPO KAPANEWON TEMON");
   const [jumlahPeserta, setJumlahPeserta] = useState<number>(20);
-  const [tanggalSpj, setTanggalSpj] = useState(() => toDateInputValue(new Date()));
+  // Multi tanggal: satu aksi membuat satu paket SPJ per tanggal. Setiap paket
+  // punya nomor, status, dan seluruh dokumennya sendiri sehingga tanggal pada
+  // Bend 26, Notulen, Daftar Hadir, dan surat tidak saling menimpa.
+  const [tanggalSpjList, setTanggalSpjList] = useState<string[]>(() => [
+    toDateInputValue(new Date()),
+  ]);
+  const [tanggalBaru, setTanggalBaru] = useState("");
+  const [createProgress, setCreateProgress] = useState<{ done: number; total: number } | null>(null);
   const [adminOverrideJawatanId, setAdminOverrideJawatanId] = useState("");
+  // Batch multi tanggal yang sedang dilipat (id batch saja, bukan datanya).
+  const [collapsedBatches, setCollapsedBatches] = useState<string[]>([]);
 
   // The package checklist follows the chosen Kode Rekening automatically
   const matchedPackage = packageTemplates.find((p) => p.kodeRekeningId === selectedRekId) || null;
@@ -155,6 +164,28 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
 
   const totalPages = Math.max(1, Math.ceil(spjsTersaring.length / PAGE_SIZE));
   const pagedSpjs = spjsTersaring.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  /**
+   * Kumpulan SPJ per batch multi tanggal. Dihitung dari daftar yang sudah
+   * tersaring agar jumlah di header tetap konsisten dengan yang ditampilkan.
+   * SPJ lama tanpa `batchId` tidak terpengaruh sama sekali.
+   */
+  const batchGroups = React.useMemo(() => {
+    const map = new Map<string, SpjItem[]>();
+    for (const s of spjsTersaring) {
+      if (!s.batchId) continue;
+      const isi = map.get(s.batchId) || [];
+      isi.push(s);
+      map.set(s.batchId, isi);
+    }
+    return map;
+  }, [spjsTersaring]);
+
+  const toggleBatch = (batchId: string) => {
+    setCollapsedBatches((prev) =>
+      prev.includes(batchId) ? prev.filter((x) => x !== batchId) : [...prev, batchId]
+    );
+  };
 
   // Kembali ke halaman 1 setiap penyaringan/urutan berubah, supaya pengguna
   // tidak terdampar di halaman kosong.
@@ -269,7 +300,17 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       return;
     }
 
+    const tanggalList = sortDates(tanggalSpjList);
+    if (tanggalList.length === 0) {
+      alert("Mohon pilih minimal satu tanggal pelaksanaan.");
+      return;
+    }
+
     setCreating(true);
+    setCreateProgress({ done: 0, total: tanggalList.length });
+    let created = 0;
+    const gagal: Array<{ tanggal: string; pesan: string }> = [];
+
     try {
       let targetJawatanId = user.jawatanId;
       let targetJawatanName = user.jawatanName;
@@ -282,28 +323,66 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
         }
       }
 
-      await createSpjPackage({
-        user,
-        kegiatan: k,
-        kodeRekening: r,
-        tanggal: tanggalSpj,
-        judulAktivitas: taggingSubKegiatan.trim().toUpperCase(),
-        jumlahPeserta,
-        tempat: tempatLokasi.trim().toUpperCase(),
-        targetJawatanId,
-        targetJawatanName,
-        // Package checklist is resolved from the chosen Kode Rekening inside the API
-        packageTemplate: null,
-      });
+      // Satu batchId untuk seluruh tanggal. Nilainya unik dan deterministik dari
+      // waktu pembuatan sehingga cukup untuk pengelompokan visual tanpa tabel
+      // tambahan. Batch tidak dibuat bila hanya satu tanggal.
+      const batchId =
+        tanggalList.length > 1
+          ? `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+          : undefined;
+
+      // WAJIB berurutan: generateSpjNumber memakai cache nomor urut. Bila
+      // dijalankan paralel, dua tanggal dapat memperoleh nomor yang sama.
+      let urutanTanggal = 0;
+      for (const tanggal of tanggalList) {
+        urutanTanggal += 1;
+        try {
+          await createSpjPackage({
+            user,
+            kegiatan: k,
+            kodeRekening: r,
+            tanggal,
+            judulAktivitas: taggingSubKegiatan.trim().toUpperCase(),
+            jumlahPeserta,
+            tempat: tempatLokasi.trim().toUpperCase(),
+            targetJawatanId,
+            targetJawatanName,
+            // Package checklist is resolved from the chosen Kode Rekening inside the API
+            packageTemplate: null,
+            batchId,
+            batchIndex: batchId ? urutanTanggal : undefined,
+            batchTotal: batchId ? tanggalList.length : undefined,
+          });
+          created += 1;
+          setCreateProgress({ done: created, total: tanggalList.length });
+        } catch (err: any) {
+          gagal.push({ tanggal, pesan: err?.message || "Gagal membuat SPJ" });
+        }
+      }
+
       setIsModalOpen(false);
       setTaggingSubKegiatan("");
       setTempatLokasi("PENDOPO KAPANEWON TEMON");
       setJumlahPeserta(20);
-      loadData();
-    } catch (err: any) {
-      alert("Gagal membuat Paket SPJ: " + err.message);
+      setTanggalSpjList([toDateInputValue(new Date())]);
+      setTanggalBaru("");
+      await loadData();
+
+      if (gagal.length > 0) {
+        const rincian = gagal
+          .map((g) => `${formatDateDDMMYYYY(g.tanggal)}: ${g.pesan}`)
+          .join("\n");
+        alert(
+          `${created} paket SPJ berhasil dibuat.\n${gagal.length} tanggal gagal:\n${rincian}`
+        );
+      } else if (created > 1) {
+        alert(
+          `${created} paket SPJ berhasil dibuat — satu paket untuk setiap tanggal, masing-masing dengan dokumen bertanggal sesuai harinya.`
+        );
+      }
     } finally {
       setCreating(false);
+      setCreateProgress(null);
     }
   };
 
@@ -708,10 +787,72 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-slate-700 text-xs">
-                {pagedSpjs.map((spj) => (
-                  <tr key={spj.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition align-top">
+                {pagedSpjs.map((spj, idx) => {
+                  const prev = idx > 0 ? pagedSpjs[idx - 1] : null;
+                  // Header hanya muncul sekali di awal deretan batch (baris
+                  // diurutkan sedemikian rupa oleh pilihan urutan pengguna).
+                  const isBatchStart = !!spj.batchId && spj.batchId !== prev?.batchId;
+                  const batchSiblings = spj.batchId ? batchGroups.get(spj.batchId) || [] : [];
+                  const isCollapsed =
+                    !!spj.batchId && collapsedBatches.includes(spj.batchId);
+
+                  const batchHeader = isBatchStart ? (
+                    <tr className="bg-[#32848D]/5 dark:bg-[#32848D]/10">
+                      <td colSpan={7} className="px-4 py-2 border-l-2 border-l-[#32848D]">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleBatch(spj.batchId as string)}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#276972] dark:text-[#9ED4DA]"
+                            title={isCollapsed ? "Tampilkan semua tanggal" : "Ringkas paket ini"}
+                          >
+                            <Icon
+                              name={isCollapsed ? "chevron-right" : "chevron-down"}
+                              className="w-3.5 h-3.5 shrink-0"
+                              tebal
+                            />
+                            <Icon name="calendar-days" className="w-3.5 h-3.5 shrink-0" tebal />
+                            <span>Paket multi tanggal · {batchSiblings.length} SPJ</span>
+                          </button>
+                          <span className="min-w-0 truncate text-[11px] text-gray-500 dark:text-slate-400">
+                            {spj.sharedData?.judulAktivitas || spj.masterSnapshot?.kegiatan?.nama}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleBatch(spj.batchId as string)}
+                            className="ml-auto text-[11px] font-semibold text-[#32848D] hover:underline"
+                          >
+                            {isCollapsed ? "Tampilkan tanggal" : "Ringkas"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : null;
+
+                  if (isCollapsed) {
+                    return (
+                      <React.Fragment key={spj.id}>{batchHeader}</React.Fragment>
+                    );
+                  }
+
+                  return (
+                    <React.Fragment key={spj.id}>
+                      {batchHeader}
+                      <tr
+                        className={`hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition align-top ${
+                          spj.batchId ? "border-l-2 border-l-[#32848D]/40" : ""
+                        }`}
+                      >
                     <td className="p-4 font-mono font-medium text-gray-700 dark:text-slate-300 whitespace-nowrap">
                       {formatDateDDMMYYYY(spj.tanggal)}
+                      {spj.batchId && spj.batchTotal ? (
+                        <span
+                          className="ml-1.5 text-[10px] font-semibold text-[#32848D] dark:text-[#9ED4DA]"
+                          title={`Tanggal ${spj.batchIndex} dari ${spj.batchTotal} pada paket multi tanggal`}
+                        >
+                          ({spj.batchIndex}/{spj.batchTotal})
+                        </span>
+                      ) : null}
                     </td>
                     <td className="p-4">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-100 dark:border-emerald-800/50 whitespace-nowrap max-w-[180px]">
@@ -837,8 +978,10 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                         )}
                       </div>
                     </td>
-                  </tr>
-                ))}
+                      </tr>
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1040,13 +1183,68 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Tanggal Pelaksanaan</label>
-                <input
-                  type="date"
-                  value={tanggalSpj}
-                  onChange={(e) => setTanggalSpj(e.target.value)}
-                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
-                />
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                  Tanggal Pelaksanaan
+                </label>
+
+                {/* Chip tanggal terpilih */}
+                <div className="flex flex-wrap gap-2">
+                  {tanggalSpjList.map((d, i) => (
+                    <span
+                      key={`${d}-${i}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#32848D]/30 bg-[#F6FAF5] px-2.5 py-1 text-xs font-semibold text-[#276972] dark:border-[#32848D]/50 dark:bg-[#32848D]/15 dark:text-[#9ED4DA]"
+                    >
+                      <span>{formatDateDDMMYYYY(d)}</span>
+                      <button
+                        type="button"
+                        title="Hapus tanggal"
+                        aria-label={`Hapus tanggal ${formatDateDDMMYYYY(d)}`}
+                        disabled={tanggalSpjList.length <= 1}
+                        onClick={() =>
+                          setTanggalSpjList((prev) => prev.filter((_: string, idx: number) => idx !== i))
+                        }
+                        className="text-current opacity-70 transition hover:text-red-600 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        <Icon name="x" className="h-3 w-3" tebal />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                {/* Tambah tanggal lain */}
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={tanggalBaru}
+                    onChange={(e) => setTanggalBaru(e.target.value)}
+                    className="min-w-0 flex-1 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!tanggalBaru) {
+                        alert("Pilih tanggal terlebih dahulu.");
+                        return;
+                      }
+                      if (tanggalSpjList.includes(tanggalBaru)) {
+                        alert("Tanggal ini sudah ada di daftar.");
+                        return;
+                      }
+                      setTanggalSpjList((prev) => sortDates([...prev, tanggalBaru]));
+                      setTanggalBaru("");
+                    }}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-[#32848D] px-3 py-2.5 text-xs font-semibold text-white hover:bg-[#276972]"
+                  >
+                    <Icon name="plus" className="h-3.5 w-3.5" tebal />
+                    <span>Tambah</span>
+                  </button>
+                </div>
+
+                <p className="mt-1 text-[11px] text-gray-400">
+                  {tanggalSpjList.length > 1
+                    ? `${tanggalSpjList.length} tanggal dipilih. Setiap tanggal menjadi paket SPJ tersendiri — nomor SPJ dan seluruh dokumennya (Bend 26, Notulen, Daftar Hadir, surat) mengikuti tanggal masing-masing.`
+                    : "Tambahkan tanggal lain bila kegiatan yang sama dilaksanakan pada beberapa hari. Kosongkan bukan pilihan — minimal satu tanggal."}
+                </p>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 dark:border-slate-700">
@@ -1060,9 +1258,15 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 <button
                   type="submit"
                   disabled={creating}
-                  className="px-5 py-2 bg-[#32848D] text-white rounded-xl font-semibold hover:bg-[#276972]"
+                  className="px-5 py-2 bg-[#32848D] text-white rounded-xl font-semibold hover:bg-[#276972] disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {creating ? "Membuat..." : "Buat Paket SPJ"}
+                  {creating
+                    ? createProgress
+                      ? `Membuat ${Math.min(createProgress.done + 1, createProgress.total)}/${createProgress.total}...`
+                      : "Membuat..."
+                    : tanggalSpjList.length > 1
+                      ? `Buat ${tanggalSpjList.length} Paket SPJ`
+                      : "Buat Paket SPJ"}
                 </button>
               </div>
             </form>

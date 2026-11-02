@@ -116,6 +116,16 @@ export interface SpjItem {
   totalNominal?: number;
   status: SpjStatus; progress: number; masterSnapshot: SpjMasterSnapshot;
   packageTemplateId?: string | null; packageTemplateName?: string | null;
+  /**
+   * Penanda paket multi tanggal: beberapa SPJ yang dibuat dalam satu aksi berbagi
+   * `batchId` yang sama. Dipakai hanya untuk pengelompokan visual di daftar SPJ —
+   * setiap SPJ tetap berdiri sendiri (nomor, status, dan dokumennya terpisah).
+   */
+  batchId?: string;
+  /** Urutan tanggal dalam batch (1-based). */
+  batchIndex?: number;
+  /** Jumlah tanggal dalam batch. */
+  batchTotal?: number;
   checklistSnapshot: { configId: string; version: number; documents: SpjChecklistSnapshotItem[] };
   sharedData?: SpjSharedData; createdAt?: any; updatedAt?: any; finalizedAt?: any; finalizedBy?: string; reopenReason?: string;
 }
