@@ -177,7 +177,7 @@ function MainApp() {
               onPreview={() => handleSelectSpj(selectedSpjId, "preview")}
             />
           ) : activeTab === "dashboard" ? (
-            <Dashboard user={user} onCreateSpj={handleCreateSpj} />
+            <Dashboard user={user} onCreateSpj={handleCreateSpj} onSelectSpj={handleSelectSpj} />
           ) : activeTab === "spj" ? (
             <SpjList user={user} onSelectSpj={handleSelectSpj} />
           ) : activeTab === "packages" ? (

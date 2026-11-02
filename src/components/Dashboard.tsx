@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { UserProfile } from "../types";
-import { getSpjStatistics } from "../services/api";
+import { UserProfile, SpjItem } from "../types";
+import { getSpjStatistics, getRecentSpjPage } from "../services/api";
+import { formatDateDDMMYYYY } from "../utils/date";
 import { HeroSection } from "./HeroSection";
 import { SkorRingkas } from "./SkorRingkas";
 import { Icon } from "./Icon";
@@ -22,6 +23,7 @@ import {
 interface DashboardProps {
   user: UserProfile;
   onCreateSpj?: () => void;
+  onSelectSpj?: (spjId: string, viewMode: "preview" | "edit") => void;
 }
 
 interface SpjStats {
@@ -128,11 +130,79 @@ const KATEGORI_LABELS: Record<string, string> = {
   LAINNYA: "Lainnya",
 };
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
+/** Lencana status ringkas untuk daftar SPJ di dashboard. */
+const StatusPill: React.FC<{ status: SpjItem["status"] }> = ({ status }) => {
+  const gaya: Record<string, string> = {
+    FINALIZED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+    COMPLETE: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+    IN_PROGRESS: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+    ARCHIVED: "bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-300",
+  };
+  const teks: Record<string, string> = {
+    FINALIZED: "Final",
+    COMPLETE: "Lengkap",
+    IN_PROGRESS: "Proses",
+    ARCHIVED: "Arsip",
+  };
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+        gaya[status] || "bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-300"
+      }`}
+    >
+      {teks[status] || "Draft"}
+    </span>
+  );
+};
+
+export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj, onSelectSpj }) => {
   const [stats, setStats] = useState<SpjStats | null>(null);
   const [loading, setLoading] = useState(true);
   // Indeks irisan diagram lingkaran yang sedang disorot kursor (null = tidak ada).
   const [pieAktif, setPieAktif] = useState<number | null>(null);
+
+  // ------------------- SPJ TERBARU (5 per halaman) -------------------
+  // Diambil bertahap dari server dengan `limit(5)`, bukan seluruh koleksi,
+  // supaya pembacaan Firestore tetap hemat di paket free tier.
+  const PER_HALAMAN = 5;
+  const [recentPages, setRecentPages] = useState<SpjItem[][]>([]);
+  const [recentCursors, setRecentCursors] = useState<any[]>([]);
+  const [recentPage, setRecentPage] = useState(0);
+  const [recentHasMore, setRecentHasMore] = useState(false);
+  const [recentLoading, setRecentLoading] = useState(true);
+  const [recentError, setRecentError] = useState<string | null>(null);
+
+  const muatHalamanSpj = async (targetPage: number, paksa = false) => {
+    if (!paksa && recentPages[targetPage]) {
+      setRecentPage(targetPage);
+      return;
+    }
+    setRecentLoading(true);
+    setRecentError(null);
+    try {
+      const res = await getRecentSpjPage(user, {
+        pageSize: PER_HALAMAN,
+        after: targetPage > 0 ? recentCursors[targetPage - 1] : undefined,
+      });
+      setRecentPages((prev) => {
+        const next = paksa ? [] : [...prev];
+        next[targetPage] = res.items;
+        return next;
+      });
+      setRecentCursors((prev) => {
+        const next = paksa ? [] : [...prev];
+        next[targetPage] = res.cursor;
+        return next;
+      });
+      setRecentHasMore(res.hasMore);
+      setRecentPage(targetPage);
+    } catch (err: any) {
+      console.error("Gagal memuat SPJ terbaru:", err);
+      setRecentError(err?.message || "Gagal memuat daftar SPJ.");
+    } finally {
+      setRecentLoading(false);
+    }
+  };
 
   const loadStats = async () => {
     setLoading(true);
@@ -147,6 +217,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
 
   useEffect(() => {
     loadStats();
+  }, [user]);
+
+  useEffect(() => {
+    // Muat halaman pertama sekali saat dashboard dibuka.
+    muatHalamanSpj(0, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // Badge ikon memakai latar GRADIEN PENUH dengan ikon PUTIH.
@@ -585,6 +661,115 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateSpj }) => {
               </div>
             </>
           )}
+        </div>
+      </div>
+
+      {/* SPJ Terbaru — 5 per halaman, hemat kuota baca */}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-[#276972] via-[#32848D] to-[#5FB8C2] px-6 py-5">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/25 text-white backdrop-blur-sm">
+              <Icon name="file-text" className="w-5 h-5" />
+            </span>
+            <div>
+              <h2 className="text-lg font-bold text-white">SPJ Terbaru</h2>
+              <p className="text-xs text-white/80">
+                {PER_HALAMAN} SPJ per halaman — hemat kuota baca Firestore
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => muatHalamanSpj(0, true)}
+            disabled={recentLoading}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/30 disabled:opacity-60"
+            title="Ambil ulang 5 SPJ terbaru dari awal"
+          >
+            <Icon
+              name="refresh-ccw"
+              className={`w-3.5 h-3.5 shrink-0 ${recentLoading ? "animate-spin" : ""}`}
+              tebal
+            />
+            <span>Muat ulang</span>
+          </button>
+        </div>
+
+        <div className="p-6">
+          {recentError ? (
+            <div className="py-8 text-center">
+              <p className="text-sm text-red-600 dark:text-red-400">{recentError}</p>
+              <button
+                type="button"
+                onClick={() => muatHalamanSpj(recentPage)}
+                className="mt-3 text-xs font-semibold text-[#32848D] hover:underline"
+              >
+                Coba lagi
+              </button>
+            </div>
+          ) : recentLoading ? (
+            <div className="py-10 text-center text-sm text-gray-400 dark:text-slate-500">
+              <Icon name="refresh-ccw" className="mx-auto mb-2 h-7 w-7 animate-spin" />
+              Memuat {PER_HALAMAN} SPJ...
+            </div>
+          ) : (recentPages[recentPage]?.length || 0) === 0 ? (
+            <div className="py-10 text-center text-sm text-gray-400 dark:text-slate-500">
+              Belum ada SPJ pada halaman ini.
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100 dark:divide-slate-700">
+              {(recentPages[recentPage] || []).map((spj) => (
+                <div key={spj.id} className="flex flex-wrap items-center gap-3 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-gray-900 dark:text-white">
+                      {spj.sharedData?.judulAktivitas || spj.masterSnapshot?.kegiatan?.nama}
+                    </p>
+                    <p className="mt-0.5 truncate text-[11px] text-gray-500 dark:text-slate-400">
+                      <span className="font-mono">{spj.nomorSpj}</span> ·{" "}
+                      {formatDateDDMMYYYY(spj.tanggal)} · {spj.sharedData?.jumlahPeserta || 0} peserta
+                    </p>
+                  </div>
+                  <StatusPill status={spj.status} />
+                  {onSelectSpj && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectSpj(spj.id, "preview")}
+                      title="Pratinjau seluruh dokumen SPJ"
+                      aria-label="Pratinjau"
+                      className="inline-flex items-center justify-center rounded-lg bg-gray-100 p-2 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                    >
+                      <Icon name="eye" className="w-4 h-4 shrink-0" tebal />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-slate-700">
+            <p className="text-xs text-gray-500 dark:text-slate-400">
+              Halaman {recentPage + 1}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => muatHalamanSpj(recentPage - 1)}
+                disabled={recentPage <= 0 || recentLoading}
+                className="inline-flex items-center gap-1 rounded-xl bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-slate-700 dark:text-slate-300"
+              >
+                <Icon name="chevron-left" className="w-3.5 h-3.5 shrink-0" />
+                <span>Sebelumnya</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => muatHalamanSpj(recentPage + 1)}
+                disabled={!recentHasMore || recentLoading}
+                className="inline-flex items-center gap-1 rounded-xl bg-[#32848D] px-3 py-2 text-xs font-semibold text-white hover:bg-[#276972] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <span>Berikutnya</span>
+                <Icon name="chevron-right" className="w-3.5 h-3.5 shrink-0" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       </div>

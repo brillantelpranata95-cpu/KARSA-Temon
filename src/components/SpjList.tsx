@@ -53,6 +53,9 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
     toDateInputValue(new Date()),
   ]);
   const [tanggalBaru, setTanggalBaru] = useState("");
+  // Jam pelaksanaan dipakai bersama: tersimpan di sharedData.jam sehingga
+  // otomatis muncul di PUKUL Daftar Hadir dan tetap bisa disunting per dokumen.
+  const [jamPelaksanaan, setJamPelaksanaan] = useState("09.00 WIB s.d. 11.00 WIB");
   const [createProgress, setCreateProgress] = useState<{ done: number; total: number } | null>(null);
   const [adminOverrideJawatanId, setAdminOverrideJawatanId] = useState("");
   // Batch multi tanggal yang sedang dilipat (id batch saja, bukan datanya).
@@ -345,6 +348,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
             judulAktivitas: taggingSubKegiatan.trim().toUpperCase(),
             jumlahPeserta,
             tempat: tempatLokasi.trim().toUpperCase(),
+            jam: jamPelaksanaan.trim(),
             targetJawatanId,
             targetJawatanName,
             // Package checklist is resolved from the chosen Kode Rekening inside the API
@@ -366,6 +370,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       setJumlahPeserta(20);
       setTanggalSpjList([toDateInputValue(new Date())]);
       setTanggalBaru("");
+      setJamPelaksanaan("09.00 WIB s.d. 11.00 WIB");
       await loadData();
 
       if (gagal.length > 0) {
@@ -967,15 +972,20 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                           </button>
                         )}
 
-                        {user.role === "ADMIN" && (
+                        {user.role === "ADMIN" || spj.userId === user.uid ? (
                           <button
                             onClick={() => setDeleteSpjId(spj.id)}
+                            title={
+                              user.role === "ADMIN"
+                                ? "Hapus SPJ ini beserta seluruh dokumennya"
+                                : "Hapus SPJ milik Anda beserta seluruh dokumennya"
+                            }
                             className="px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg inline-flex items-center space-x-1 whitespace-nowrap"
                           >
                             <Icon name="trash" className="w-3.5 h-3.5 shrink-0" />
                             <span>Hapus</span>
                           </button>
-                        )}
+                        ) : null}
                       </div>
                     </td>
                       </tr>
@@ -1247,6 +1257,23 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 </p>
               </div>
 
+              {/* Jam Pelaksanaan — dipakai Daftar Hadir & Notulensi */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                  Jam Pelaksanaan
+                </label>
+                <input
+                  type="text"
+                  value={jamPelaksanaan}
+                  onChange={(e) => setJamPelaksanaan(e.target.value)}
+                  placeholder="CONTOH: 09.00 WIB s.d. 11.00 WIB"
+                  className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                />
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Ditarik otomatis ke kolom PUKUL pada Daftar Hadir dan dapat disunting per dokumen.
+                </p>
+              </div>
+
               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 dark:border-slate-700">
                 <button
                   type="button"
@@ -1351,6 +1378,11 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
             </h3>
             <p className="text-xs text-gray-600 dark:text-slate-300">
               Apakah Anda yakin ingin menghapus paket SPJ ini beserta seluruh dokumennya? Tindakan ini tidak dapat dibatalkan.
+              {user.role !== "ADMIN" && (
+                <span className="mt-2 block font-semibold text-amber-700 dark:text-amber-400">
+                  Anda hanya dapat menghapus SPJ yang Anda buat sendiri.
+                </span>
+              )}
             </p>
             <div className="flex justify-end space-x-3 pt-2">
               <button

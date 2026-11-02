@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "spj",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "jawatanId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

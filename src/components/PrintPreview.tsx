@@ -538,7 +538,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
             <div className="text-left text-xs py-2 space-y-1 font-mono uppercase">
               <p><span className="font-semibold inline-block w-24">HARI</span>: {getNamaHari(spj.tanggal)}</p>
               <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {formatDateDDMMYYYY(spj.tanggal)}</p>
-              <p><span className="font-semibold inline-block w-24">PUKUL</span>: {data.jam || "09.00 WIB S.D. 11.00 WIB"}</p>
+              <p><span className="font-semibold inline-block w-24">PUKUL</span>: {data.jam || spj.sharedData?.jam || "09.00 WIB S.D. 11.00 WIB"}</p>
               <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {spj.sharedData?.tempat || data.tempat || "PENDOPO KAPANEWON TEMON"}</p>
               <p><span className="font-semibold inline-block w-24">ACARA</span>: {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
             </div>

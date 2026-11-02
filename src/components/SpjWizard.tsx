@@ -148,6 +148,13 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
       }
       return next;
     }
+    if (docItem.documentTypeCode === "DAFTAR_HADIR") {
+      // Jam pelaksanaan dari form pembuatan paket dipakai sebagai nilai awal,
+      // tetapi tetap bisa disunting per dokumen.
+      const next = { ...data };
+      if (!next.jam && shared?.jam) next.jam = shared.jam;
+      return next;
+    }
     if (docItem.documentTypeCode !== "SPJ_AKTIVITAS_LAPANGAN") return data;
     const next = { ...data };
     if (next.maksudTujuan === undefined || next.maksudTujuan === null) {
@@ -1133,6 +1140,23 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                     </div>
                   </div>
 
+                  {/* Jam Pelaksanaan — dapat disunting per dokumen */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                      Jam Pelaksanaan
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.jam ?? spj.sharedData?.jam ?? ""}
+                      onChange={(e) => handleFormChange("jam", e.target.value)}
+                      placeholder="CONTOH: 09.00 WIB s.d. 11.00 WIB"
+                      className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Diisi otomatis dari paket SPJ saat pembuatan; ubah bila jam dokumen ini berbeda.
+                    </p>
+                  </div>
+
                   {/* Header Preview in Editor */}
                   <div className="border border-gray-300 dark:border-slate-600 rounded-xl p-4 bg-white dark:bg-slate-800 space-y-3">
                     <div className="flex items-center space-x-3 border-b-2 border-black pb-2">
@@ -1147,7 +1171,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                     <div className="text-left text-xs space-y-1 text-gray-800 dark:text-slate-200 font-mono">
                       <p><span className="font-semibold inline-block w-24">HARI</span>: {getNamaHari(spj.tanggal)}</p>
                       <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {formatDateDDMMYYYY(spj.tanggal)}</p>
-                      <p><span className="font-semibold inline-block w-24">PUKUL</span>: {formData.jam || "09.00 WIB s.d. 11.00 WIB"}</p>
+                      <p><span className="font-semibold inline-block w-24">PUKUL</span>: {formData.jam || spj.sharedData?.jam || "09.00 WIB s.d. 11.00 WIB"}</p>
                       <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {formData.tempat || "PENDOPO KAPANEWON TEMON"}</p>
                       <p><span className="font-semibold inline-block w-24">ACARA</span>: {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
                     </div>

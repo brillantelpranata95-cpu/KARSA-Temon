@@ -446,5 +446,89 @@ test("multi tanggal: pengelompokan visual memakai batchId", async () => {
   // Baris anggota batch diberi aksen agar mudah dibedakan dari SPJ tunggal.
   assert.match(list, /border-l-\[#32848D\]\/40/, "aksen kiri untuk anggota batch");
   // SPJ lama tanpa batchId tidak boleh ikut berubah perilakunya.
-  assert.match(list, /spj\.batchId \? "border-l-2/, "aksa hanya untuk SPJ ber-batch");
+  assert.match(list, /spj\.batchId \? "border-l-2/, "aksen hanya untuk SPJ ber-batch");
+});
+
+test("hapus SPJ: pemilik boleh menghapus miliknya sendiri, admin semua", async () => {
+  const fs = await import("node:fs/promises");
+  const list = await fs.readFile(new URL("../src/components/SpjList.tsx", import.meta.url), "utf8");
+  const api = await fs.readFile(new URL("../src/services/api.ts", import.meta.url), "utf8");
+
+  // Tombol Hapus tampil untuk admin DAN pemilik SPJ.
+  assert.match(
+    list,
+    /user\.role === "ADMIN" \|\| spj\.userId === user\.uid \?[\s\S]{0,200}setDeleteSpjId\(spj\.id\)/,
+    "tombol Hapus tampil untuk pemilik dan admin"
+  );
+  assert.doesNotMatch(
+    list,
+    /user\.role === "ADMIN" && \(\s*<button\s+onClick=\{\(\) => setDeleteSpjId\(spj\.id\)\}/,
+    "tombol Hapus tidak boleh admin-only lagi"
+  );
+
+  // API menolak penghapusan SPJ milik orang lain.
+  assert.match(
+    api,
+    /const milikSendiri = spjData\.userId === user\.uid/,
+    "API memeriksa kepemilikan SPJ"
+  );
+  assert.match(
+    api,
+    /user\.role !== "ADMIN" && !milikSendiri[\s\S]{0,120}hanya dapat menghapus SPJ yang Anda buat sendiri/,
+    "API menolak hapus SPJ milik orang lain"
+  );
+  assert.match(api, /SPJ dihapus oleh pemiliknya sendiri/, "alasan audit untuk pemilik");
+});
+
+test("jam pelaksanaan: input dikembalikan dan diteruskan ke dokumen", async () => {
+  const fs = await import("node:fs/promises");
+  const list = await fs.readFile(new URL("../src/components/SpjList.tsx", import.meta.url), "utf8");
+  const api = await fs.readFile(new URL("../src/services/api.ts", import.meta.url), "utf8");
+  const wizard = await fs.readFile(new URL("../src/components/SpjWizard.tsx", import.meta.url), "utf8");
+  const preview = await fs.readFile(new URL("../src/components/PrintPreview.tsx", import.meta.url), "utf8");
+
+  // Form pembuatan paket punya isian Jam Pelaksanaan.
+  assert.match(list, /const \[jamPelaksanaan, setJamPelaksanaan\]/);
+  assert.match(list, /Jam Pelaksanaan/, "label input tersedia");
+  assert.match(list, /jam: jamPelaksanaan\.trim\(\)/, "nilai jam dikirim saat membuat SPJ");
+
+  // API menyimpannya di sharedData.jam.
+  assert.match(api, /jam\?: string;/, "parameter jam di createSpjPackage");
+  assert.match(api, /params\.jam\?\.trim\(\) \? \{ jam: params\.jam\.trim\(\) \}/, "jam disimpan ke sharedData");
+
+  // Wizard Daftar Hadir bisa menyunting jam, dan cetakan memakai nilai itu.
+  assert.match(wizard, /handleFormChange\("jam"/, "input jam bisa disunting per dokumen");
+  assert.match(preview, /data\.jam \|\| spj\.sharedData\?\.jam/, "cetakan memakai jam paket sebagai cadangan");
+});
+
+test("dashboard: SPJ dimuat 5 per halaman dengan limit server", async () => {
+  const fs = await import("node:fs/promises");
+  const api = await fs.readFile(new URL("../src/services/api.ts", import.meta.url), "utf8");
+  const dash = await fs.readFile(new URL("../src/components/Dashboard.tsx", import.meta.url), "utf8");
+  const indexes = JSON.parse(
+    await fs.readFile(new URL("../firestore.indexes.json", import.meta.url), "utf8")
+  );
+  const firebase = JSON.parse(
+    await fs.readFile(new URL("../firebase.json", import.meta.url), "utf8")
+  );
+
+  // Query dibatasi di server, bukan mengambil seluruh koleksi.
+  assert.match(api, /export const getRecentSpjPage/);
+  assert.match(api, /limit\(pageSize \+ 1\)/, "query dibatasi limit");
+  assert.match(api, /startAfter\(opts\.after\)/, "paginasi memakai cursor, bukan offset");
+  assert.match(api, /pageSize \|\| 5/, "ukuran halaman default 5");
+
+  // Dashboard memakai 5 per halaman dan punya navigasi.
+  assert.match(dash, /const PER_HALAMAN = 5/);
+  assert.match(dash, /getRecentSpjPage\(user/);
+  assert.match(dash, /Halaman \{recentPage \+ 1\}/);
+  assert.match(dash, /recentHasMore/);
+
+  // Index komposit untuk filter jawatan + urutan terbaru.
+  assert.equal(indexes.indexes[0].collectionGroup, "spj");
+  assert.deepEqual(
+    indexes.indexes[0].fields.map((f) => f.fieldPath),
+    ["jawatanId", "createdAt"]
+  );
+  assert.equal(firebase.firestore.indexes, "firestore.indexes.json");
 });

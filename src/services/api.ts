@@ -14,7 +14,10 @@ import {
   writeBatch
 ,
   deleteField,
-  increment
+  increment,
+  orderBy,
+  limit,
+  startAfter
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { normalizeDateToDDMMYYYY, todayDDMMYYYY, getYearFromDate, parseAnyDate } from "../utils/date";
@@ -1172,6 +1175,8 @@ export const createSpjPackage = async (params: {
   judulAktivitas: string;
   jumlahPeserta: number;
   tempat?: string;
+  /** Jam pelaksanaan, mis. "09.00 WIB s.d. 11.00 WIB". */
+  jam?: string;
   targetJawatanId?: string;
   targetJawatanName?: string;
   packageTemplate?: PackageTemplate | null;
@@ -1306,6 +1311,7 @@ export const createSpjPackage = async (params: {
       namaRekening: kodeRekening.nama,
       judulAktivitas: judulAktivitas.trim().toUpperCase(),
       tempat: (params.tempat || "PENDOPO KAPANEWON TEMON").trim().toUpperCase(),
+      ...(params.jam?.trim() ? { jam: params.jam.trim() } : {}),
       jumlahPeserta: Math.max(1, Math.floor(jumlahPeserta)),
       paNama: officials?.pa?.nama || officials?.panewu?.nama || "",
       paNip: officials?.pa?.nip || officials?.panewu?.nip || "",
@@ -1390,9 +1396,58 @@ export const getSpjList = async (user: UserProfile): Promise<SpjItem[]> => {
     .filter(s => s.status !== "ARCHIVED");
 };
 
+/**
+ * Halaman daftar SPJ terbaru — SENGAJA dibatasi `limit()` di server agar
+ * Dashboard tidak mengunduh seluruh koleksi. Kuota Firestore free tier dihitung
+ * per dokumen yang dibaca, jadi memuat 5 SPJ per halaman jauh lebih hemat
+ * daripada memanggil `getSpjList` (yang membaca semua dokumen).
+ *
+ * `cursor` adalah dokumen terakhir pada halaman; kirim balik sebagai `after`
+ * untuk halaman berikutnya (cursor-based, bukan `offset()` yang tetap ditagih).
+ */
+export const getRecentSpjPage = async (
+  user: UserProfile,
+  opts: { pageSize?: number; after?: any } = {}
+): Promise<{ items: SpjItem[]; cursor: any; hasMore: boolean }> => {
+  const pageSize = Math.max(1, Math.floor(opts.pageSize || 5));
+  const col = collection(db, "spj");
+  const filterJawatan = user.role !== "ADMIN" ? [where("jawatanId", "==", user.jawatanId)] : [];
+
+  const runQuery = async (pakaiUrutan: boolean) => {
+    const bagian: any[] = [...filterJawatan];
+    if (pakaiUrutan) bagian.push(orderBy("createdAt", "desc"));
+    if (opts.after) bagian.push(startAfter(opts.after));
+    bagian.push(limit(pageSize + 1));
+    const snap = await getDocs(query(col, ...bagian));
+    return snap.docs;
+  };
+
+  let docs: any[];
+  try {
+    docs = await runQuery(true);
+  } catch (e: any) {
+    // Index komposit (jawatanId + createdAt) mungkin belum selesai dibangun
+    // sesaat setelah deploy. Fallback tetap dibatasi agar tidak membaca semua.
+    console.warn("getRecentSpjPage: urutan belum tersedia, memakai fallback:", e?.code || e);
+    docs = await runQuery(false);
+    docs = docs.slice().sort((a, b) => {
+      const ta = a.data().createdAt?.toMillis?.() || 0;
+      const tb = b.data().createdAt?.toMillis?.() || 0;
+      return tb - ta;
+    });
+  }
+
+  const visible = docs.filter((d) => (d.data() as SpjItem).status !== "ARCHIVED");
+  const pageDocs = visible.slice(0, pageSize);
+  return {
+    items: pageDocs.map((d) => ({ id: d.id, ...d.data() } as SpjItem)),
+    cursor: pageDocs[pageDocs.length - 1] || null,
+    hasMore: visible.length > pageSize,
+  };
+};
+
 // Fetch Single SPJ
-export const getSpjById = async (spjId: string): Promise<SpjItem | null> => {
-  const snap = await getDoc(doc(db, "spj", spjId));
+export const getSpjById = async (spjId: string): Promise<SpjItem | null> => {  const snap = await getDoc(doc(db, "spj", spjId));
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() } as SpjItem;
 };
@@ -1588,11 +1643,20 @@ export const updateSpjSharedData = async (spjId: string, sharedDataPatch: Partia
   await updateDoc(spjRef, sanitizeData({ sharedData: updatedShared, updatedAt: serverTimestamp() }));
 };
 
-// Delete SPJ (Admin only)
+// Delete SPJ — pemilik SPJ boleh menghapus miliknya sendiri; admin boleh semua.
 export const deleteSpj = async (spjId: string, user: UserProfile) => {
   const spjRef = doc(db, "spj", spjId);
+  const spjSnap = await getDoc(spjRef);
+  if (!spjSnap.exists()) return;
+
+  const spjData = spjSnap.data() as SpjItem;
+  const milikSendiri = spjData.userId === user.uid;
+  if (user.role !== "ADMIN" && !milikSendiri) {
+    throw new Error("Anda hanya dapat menghapus SPJ yang Anda buat sendiri.");
+  }
+
   const docsSnap = await getDocs(query(collection(db, "spjDocuments"), where("spjId", "==", spjId)));
-  
+
   // Delete all associated documents
   const batch = writeBatch(db);
   docsSnap.docs.forEach(d => batch.delete(d.ref));
@@ -1605,7 +1669,10 @@ export const deleteSpj = async (spjId: string, user: UserProfile) => {
     action: "DELETE_SPJ",
     entityType: "SPJ",
     entityId: spjId,
-    reason: "SPJ dihapus oleh administrator"
+    reason:
+      user.role === "ADMIN"
+        ? "SPJ dihapus oleh administrator"
+        : "SPJ dihapus oleh pemiliknya sendiri"
   });
 
   invalidateSpjStatsCache();
