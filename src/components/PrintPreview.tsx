@@ -460,7 +460,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold">Tempat rapat</td>
                   <td className="py-2 text-center">:</td>
-                  <td className="py-2 font-semibold uppercase">{spj.sharedData?.tempat || data.tempat || "PENDOPO KAPANEWON TEMON"}</td>
+                  <td className="py-2 font-semibold uppercase">{data.tempat || spj.sharedData?.tempat || "PENDOPO KAPANEWON TEMON"}</td>
                 </tr>
                 <tr className="border-b border-gray-300">
                   <td className="py-2 font-semibold align-top">Acara</td>
@@ -539,7 +539,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               <p><span className="font-semibold inline-block w-24">HARI</span>: {getNamaHari(spj.tanggal)}</p>
               <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {formatDateDDMMYYYY(spj.tanggal)}</p>
               <p><span className="font-semibold inline-block w-24">PUKUL</span>: {data.jam || spj.sharedData?.jam || "09.00 WIB S.D. 11.00 WIB"}</p>
-              <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {spj.sharedData?.tempat || data.tempat || "PENDOPO KAPANEWON TEMON"}</p>
+              <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {data.tempat || spj.sharedData?.tempat || "PENDOPO KAPANEWON TEMON"}</p>
               <p><span className="font-semibold inline-block w-24">ACARA</span>: {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
             </div>
 

@@ -149,10 +149,11 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
       return next;
     }
     if (docItem.documentTypeCode === "DAFTAR_HADIR") {
-      // Jam pelaksanaan dari form pembuatan paket dipakai sebagai nilai awal,
+      // Jam pelaksanaan dan tempat dari form pembuatan paket dipakai sebagai nilai awal,
       // tetapi tetap bisa disunting per dokumen.
       const next = { ...data };
       if (!next.jam && shared?.jam) next.jam = shared.jam;
+      if (!next.tempat && shared?.tempat) next.tempat = shared.tempat;
       return next;
     }
     if (docItem.documentTypeCode !== "SPJ_AKTIVITAS_LAPANGAN") return data;
@@ -1167,21 +1168,39 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                     </div>
                   </div>
 
-                  {/* Jam Pelaksanaan — dapat disunting per dokumen */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
-                      Jam Pelaksanaan
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.jam ?? spj.sharedData?.jam ?? ""}
-                      onChange={(e) => handleFormChange("jam", e.target.value)}
-                      placeholder="CONTOH: 09.00 WIB s.d. 11.00 WIB"
-                      className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
-                    />
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Diisi otomatis dari paket SPJ saat pembuatan; ubah bila jam dokumen ini berbeda.
-                    </p>
+                  {/* Jam & Tempat Pelaksanaan — ditarik otomatis dari paket, dapat disesuaikan */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                        Jam Pelaksanaan
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.jam ?? spj.sharedData?.jam ?? ""}
+                        onChange={(e) => handleFormChange("jam", e.target.value)}
+                        placeholder="CONTOH: 09.00 WIB s.d. 11.00 WIB"
+                        className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        Diisi otomatis dari paket SPJ saat pembuatan; ubah bila jam dokumen ini berbeda.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                        Tempat Pelaksanaan
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.tempat ?? spj.sharedData?.tempat ?? ""}
+                        onChange={(e) => handleFormChange("tempat", e.target.value)}
+                        placeholder="CONTOH: PENDOPO KAPANEWON TEMON"
+                        className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 text-gray-900 dark:text-white"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        Diisi otomatis dari paket SPJ saat pembuatan; ubah bila tempat dokumen ini berbeda.
+                      </p>
+                    </div>
                   </div>
 
                   {/* Header Preview in Editor */}
@@ -1199,7 +1218,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       <p><span className="font-semibold inline-block w-24">HARI</span>: {getNamaHari(spj.tanggal)}</p>
                       <p><span className="font-semibold inline-block w-24">TANGGAL</span>: {formatDateDDMMYYYY(spj.tanggal)}</p>
                       <p><span className="font-semibold inline-block w-24">PUKUL</span>: {formData.jam || spj.sharedData?.jam || "09.00 WIB s.d. 11.00 WIB"}</p>
-                      <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {formData.tempat || "PENDOPO KAPANEWON TEMON"}</p>
+                      <p><span className="font-semibold inline-block w-24">TEMPAT</span>: {formData.tempat || spj.sharedData?.tempat || "PENDOPO KAPANEWON TEMON"}</p>
                       <p><span className="font-semibold inline-block w-24">ACARA</span>: {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
                     </div>
 

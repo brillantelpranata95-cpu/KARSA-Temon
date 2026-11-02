@@ -590,3 +590,51 @@ test("daftar SPJ: 5 per halaman, sama dengan dashboard", async () => {
   // Jumlah di footer mengikuti hasil filter, bukan seluruh data.
   assert.match(list, /dari \{spjsTersaring\.length\} SPJ/);
 });
+
+test("sinkronisasi tempat: ditarik otomatis dari paket, bisa disesuaikan per dokumen", async () => {
+  const fs = await import("node:fs/promises");
+  const wizard = await fs.readFile(new URL("../src/components/SpjWizard.tsx", import.meta.url), "utf8");
+  const preview = await fs.readFile(new URL("../src/components/PrintPreview.tsx", import.meta.url), "utf8");
+  const api = await fs.readFile(new URL("../src/services/api.ts", import.meta.url), "utf8");
+
+  // withDocDefaults mengisi tempat dari shared.tempat untuk DAFTAR_HADIR
+  assert.match(
+    wizard,
+    /if \(!next\.tempat && shared\?\.tempat\) next\.tempat = shared\.tempat;/,
+    "withDocDefaults menarik shared.tempat ke next.tempat"
+  );
+
+  // Ada input Tempat Pelaksanaan di editor Daftar Hadir
+  assert.match(wizard, /Tempat Pelaksanaan/, "label input Tempat Pelaksanaan tersedia");
+  assert.match(
+    wizard,
+    /value=\{formData\.tempat \?\? spj\.sharedData\?\.tempat \?\? ""\}/,
+    "input tempat ditarik dari formData atau sharedData"
+  );
+  assert.match(
+    wizard,
+    /handleFormChange\("tempat", e\.target\.value\)/,
+    "pengguna bisa menyesuaikan tempat per dokumen"
+  );
+
+  // Preview di wizard memakai fallback berjenjang
+  assert.match(
+    wizard,
+    /\{formData\.tempat \|\| spj\.sharedData\?\.tempat \|\| "PENDOPO KAPANEWON TEMON"\}/,
+    "preview Daftar Hadir menampilkan tempat paket, bukan langsung hardcode pendopo"
+  );
+
+  // Dokumen cetak memprioritaskan data.tempat lalu sharedData.tempat
+  assert.match(
+    preview,
+    /<p><span className="font-semibold inline-block w-24">TEMPAT<\/span>: \{data\.tempat \|\| spj\.sharedData\?\.tempat \|\| "PENDOPO KAPANEWON TEMON"\}<\/p>/,
+    "cetak Daftar Hadir memakai data.tempat atau sharedData.tempat"
+  );
+
+  // api.ts createSpjPackage juga menyertakan tempat pada data inisial DAFTAR_HADIR
+  assert.match(
+    api,
+    /tempat: \(params\.tempat \|\| "PENDOPO KAPANEWON TEMON"\)\.trim\(\)\.toUpperCase\(\)/,
+    "data inisial DAFTAR_HADIR menyimpan tempat"
+  );
+});

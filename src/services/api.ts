@@ -1344,7 +1344,11 @@ export const createSpjPackage = async (params: {
       templateVersion: 1,
       status: "DRAFT",
       data: item.documentTypeCode === "DAFTAR_HADIR"
-        ? { peserta: Array.from({ length: Math.max(1, Math.floor(jumlahPeserta)) }, (_, index) => ({ no: index + 1, nama: "", jabatan: "", tandaTangan: "" })) }
+        ? {
+            tempat: (params.tempat || "PENDOPO KAPANEWON TEMON").trim().toUpperCase(),
+            ...(params.jam?.trim() ? { jam: params.jam.trim() } : {}),
+            peserta: Array.from({ length: Math.max(1, Math.floor(jumlahPeserta)) }, (_, index) => ({ no: index + 1, nama: "", jabatan: "", tandaTangan: "" }))
+          }
         : {},
       validation: {
         isValid: false,
