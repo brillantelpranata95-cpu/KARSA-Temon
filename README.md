@@ -1,3 +1,26 @@
+# KARSA TEMON
+
+Aplikasi pengelolaan SPJ Kecamatan Temon.
+
+## Aturan Dokumen Cetak
+
+Dokumen cetak (HTML print maupun PDF ekspor) **tidak boleh** menampilkan
+timestamp waktu cetak, seperti "Tanggal cetak", "Waktu cetak", atau "Dicetak
+pada". Tanggal kegiatan, jam pelaksanaan, dan nama pencetak tetap boleh.
+Aturan lengkap ada di [AGENTS.md](./AGENTS.md) dan dijaga otomatis oleh
+`tests/print-no-timestamp.test.mjs`.
+
+## Pengembangan
+
+```bash
+npm install
+npm run dev      # server pengembangan
+npm test         # jalankan test, termasuk aturan dokumen cetak
+npm run build    # typecheck + build produksi
+```
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.

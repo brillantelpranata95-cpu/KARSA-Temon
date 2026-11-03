@@ -23,7 +23,6 @@ const formatRupiah = (value: number): string =>
 export const exportSpjRecapPdf = ({ spjs, user, periodLabel, nominalBySpjId }: RecapOptions): void => {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const generatedAt = new Date().toLocaleString("id-ID");
 
   // ---------- KOP RESMI ----------
   doc.setFont("helvetica", "bold");
@@ -41,12 +40,13 @@ export const exportSpjRecapPdf = ({ spjs, user, periodLabel, nominalBySpjId }: R
   doc.line(14, 28, pageWidth - 14, 28);
 
   // ---------- METADATA ----------
+  // Aturan proyek: JANGAN menambahkan timestamp waktu cetak (tanggal/jam cetak).
+  // Lihat AGENTS.md — dokumen SPJ adalah arsip resmi, waktu cetak tidak relevan.
   doc.setFontSize(9);
   const metaY = 34;
   doc.text(`Jawatan      : ${user.role === "ADMIN" ? "Seluruh Jawatan" : user.jawatanName || "-"}`, 14, metaY);
   doc.text(`Periode      : ${periodLabel || "Semua Periode"}`, 14, metaY + 5);
   doc.text(`Dicetak oleh : ${user.displayName || user.email}`, pageWidth / 2, metaY);
-  doc.text(`Tanggal cetak: ${generatedAt} WIB`, pageWidth / 2, metaY + 5);
   doc.text(`Total Paket  : ${spjs.length} SPJ`, pageWidth - 14, metaY, { align: "right" });
 
   const totalNominal = spjs.reduce((sum, s) => sum + (nominalBySpjId?.[s.id] || 0), 0);
