@@ -31,6 +31,7 @@ import { SuggestionInput } from "./SuggestionInput";
 import { DriveImage } from "./DriveImage";
 import { Icon } from "./Icon";
 import { SuratLinkField } from "./SuratLinkField";
+import { RupiahInput } from "./RupiahInput";
 
 interface SpjWizardProps {
   user: UserProfile;
@@ -128,6 +129,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
    * bisa disunting:
    *   - Maksud dan Tujuan Perjalanan Dinas ← Judul Aktivitas (Tagging Sub-Kegiatan)
    *   - Tempat Tujuan                      ← Tempat/Lokasi paket SPJ
+   *   - Tanggal Pelaksanaan                ← Tanggal SPJ saat paket dibuat
    *
    * Nilai hanya diisi bila kolomnya BELUM PERNAH diisi (undefined/null). Kolom
    * yang sengaja dikosongkan pengguna (string kosong) dibiarkan kosong, sehingga
@@ -136,7 +138,8 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
   const withDocDefaults = (
     docItem: SpjDocumentItem,
     data: Record<string, any>,
-    shared?: SpjItem["sharedData"]
+    shared?: SpjItem["sharedData"],
+    tanggalSpj?: string
   ): Record<string, any> => {
     // Daftar Penerimaan selalu dibuka dengan satu baris kosong siap isi.
     if (docItem.documentTypeCode === "DAFTAR_PENERIMAAN") {
@@ -164,6 +167,11 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
     if (next.tempatTujuan === undefined || next.tempatTujuan === null) {
       next.tempatTujuan = shared?.tempat || "";
     }
+    // Tanggal pelaksanaan mengikuti tanggal SPJ saat paket dibuat, tetapi tetap
+    // dapat disunting di editor dokumen. Nilai yang sudah ada tidak ditimpa.
+    if (next.tanggalPelaksanaan === undefined || next.tanggalPelaksanaan === null) {
+      next.tanggalPelaksanaan = tanggalSpj || "";
+    }
     return next;
   };
 
@@ -189,7 +197,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
       if (docs.length > 0 && !selectedDocId) {
         setSelectedDocId(docs[0].id);
-        setFormData(withDocDefaults(docs[0], docs[0].data || {}, s?.sharedData));
+        setFormData(withDocDefaults(docs[0], docs[0].data || {}, s?.sharedData, s?.tanggal));
         setExternalUrl(docs[0].externalUrl || "");
       }
     } catch (err) {
@@ -217,7 +225,7 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
   const handleSelectDoc = (docItem: SpjDocumentItem) => {
     setSelectedDocId(docItem.id);
-    setFormData(withDocDefaults(docItem, docItem.data || {}, spj?.sharedData));
+    setFormData(withDocDefaults(docItem, docItem.data || {}, spj?.sharedData, spj?.tanggal));
     setExternalUrl(docItem.externalUrl || "");
   };
 
@@ -667,15 +675,11 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
 
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Nominal (Rp)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.nominal ?? ""}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        handleFormChange("nominal", raw === "" ? "" : Math.max(0, Number(raw) || 0));
-                      }}
+                    <RupiahInput
+                      value={formData.nominal}
+                      onChange={(value) => handleFormChange("nominal", value)}
                       placeholder="0"
+                      ariaLabel="Nominal Bend 26"
                       className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 font-bold text-gray-900 dark:text-white"
                     />
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 capitalize font-medium">
@@ -723,15 +727,11 @@ export const SpjWizard: React.FC<SpjWizardProps> = ({ user, spjId, onBack, onPre
                       ].map(({ key, label, rate }) => (
                         <div key={key} className="block text-xs font-semibold text-gray-700 dark:text-slate-300">
                           {label} <span className="font-normal text-gray-400">({rate * 100}%)</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={formData[key] ?? ""}
-                            onChange={(e) => {
-                              const raw = e.target.value;
-                              handleFormChange(key, raw === "" ? "" : Math.max(0, Number(raw) || 0));
-                            }}
+                          <RupiahInput
+                            value={formData[key]}
+                            onChange={(value) => handleFormChange(key, value)}
                             placeholder="0"
+                            ariaLabel={`${label} Bend 26`}
                             className="mt-1 w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl p-2.5 font-normal text-gray-900 dark:text-white"
                           />
                           <button
