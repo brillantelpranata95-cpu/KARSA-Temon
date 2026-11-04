@@ -92,6 +92,8 @@ const SuratkuSheet: React.FC<{ judul: string; url: string }> = ({ judul, url }) 
 
 export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack, initialDocCode, liveAttendance = true, screenFit = true }) => {
   const [selectedDocCode, setSelectedDocCode] = React.useState<string>(initialDocCode || "BEND_26");
+  // Menandai sedang menyiapkan PDF cetak agar tombol tidak diklik berulang.
+  const [preparingPrint, setPreparingPrint] = React.useState(false);
   // Live QR attendance rows so the printed daftar hadir matches what was submitted
   const [qrAttendance, setQrAttendance] = React.useState<Array<{ id: string; nama: string; jabatan: string; ttdImage?: string }>>([]);
   // Lembar Bend 26 (folio tegak 215mm) bisa lebih lebar daripada kartu
@@ -137,9 +139,9 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
   const lampiranPhotos = React.useMemo(() => collectDocPhotos(activeDoc?.data), [activeDoc?.data]);
 
   // Bend 26 dicetak pada satu lembar folio tegak (21,5 × 33 cm).
-  // Margin @page dibuat 0 agar browser tidak menyisipkan header/footer cetak
-  // (tanggal, judul halaman, alamat URL); tepi kertas diwakili padding di
-  // dalam lembar sehingga hasil cetak tetap memiliki margin normal.
+  // Aturan @page di bawah hanya berlaku untuk pencetakan langsung (Ctrl+P);
+  // tombol "Cetak / Simpan PDF" mencetak berkas PDF supaya header/footer
+  // bawaan browser (tanggal, jam, judul, URL) tidak ikut tercetak.
   // Daftar Penerimaan memuat 9 kolom — dicetak mendatar agar tidak terpotong.
   React.useEffect(() => {
     if (selectedDocCode !== "DAFTAR_PENERIMAAN") return;
@@ -201,16 +203,61 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
     return [...qrRows, ...manualRows];
   }, [data.peserta, qrAttendance]);
 
-  const handlePrint = () => {
-    // Rapor Kertas: catat pemakaian kertas saat benar-benar mencetak. Ekspor PDF
-    // tidak dihitung karena justru menghemat kertas. Pencatatan yang gagal tidak
-    // boleh menghalangi pencetakan.
-    if (activeDoc?.id) {
-      logDocumentPrint(activeDoc.id, sheetsForPrint()).catch((e) =>
-        console.warn("Gagal mencatat pemakaian kertas:", e)
+  /**
+   * Cetak lewat PDF, bukan `window.print()` pada halaman aplikasi.
+   *
+   * Header/footer cetak bawaan browser (tanggal + jam, judul halaman, alamat
+   * URL, nomor halaman) muncul di tepi kertas dan tidak bisa dimatikan dari
+   * CSS. Dengan mencetak berkas PDF, penampil PDF tidak menambahkan metadata
+   * tersebut sehingga dokumen SPJ bebas timestamp waktu cetak.
+   */
+  const handlePrint = async () => {
+    if (preparingPrint) return;
+    setPreparingPrint(true);
+
+    // Tab dibuka langsung dari klik pengguna agar tidak diblokir popup; isinya
+    // diganti PDF setelah dokumen selesai dirender.
+    const printTab = window.open("", "_blank");
+    if (printTab) {
+      printTab.document.write(
+        '<!doctype html><html lang="id"><head><meta charset="utf-8">' +
+          "<title>Menyiapkan dokumen…</title></head>" +
+          '<body style="font-family:system-ui,sans-serif;padding:24px;color:#0f172a">' +
+          "<p>Menyiapkan dokumen untuk dicetak…</p>" +
+          '<p style="font-size:13px;color:#475569">PDF akan terbuka di tab ini. ' +
+          "Klik ikon Cetak pada penampil PDF — hasil cetak bebas timestamp.</p></body></html>"
       );
+      printTab.document.close();
     }
-    window.print();
+
+    try {
+      // Rapor Kertas: catat pemakaian kertas saat benar-benar mencetak. Ekspor
+      // PDF tidak dihitung karena justru menghemat kertas. Pencatatan yang
+      // gagal tidak boleh menghalangi pencetakan.
+      if (activeDoc?.id) {
+        logDocumentPrint(activeDoc.id, sheetsForPrint()).catch((e) =>
+          console.warn("Gagal mencatat pemakaian kertas:", e)
+        );
+      }
+
+      const { printSpjDocument } = await import("../utils/exportSpjPdf");
+      const url = await printSpjDocument(spj, documents, selectedDocCode);
+
+      if (printTab && !printTab.closed) {
+        printTab.location.href = url;
+      } else {
+        window.open(url, "_blank");
+      }
+    } catch (err) {
+      printTab?.close();
+      alert(
+        err instanceof Error
+          ? err.message
+          : "Gagal menyiapkan dokumen untuk dicetak. Silakan coba lagi."
+      );
+    } finally {
+      setPreparingPrint(false);
+    }
   };
 
   // Helper for Notulen Decisions formatting
@@ -263,10 +310,11 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
           ))}
           <button
             onClick={handlePrint}
-            className="ml-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold flex items-center space-x-2 shadow-sm transition-all"
+            disabled={preparingPrint}
+            className="ml-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-wait text-white rounded-xl text-sm font-semibold flex items-center space-x-2 shadow-sm transition-all"
           >
             <Icon name="printer-2" className="w-4 h-4" />
-            <span>Cetak / Simpan PDF</span>
+            <span>{preparingPrint ? "Menyiapkan…" : "Cetak / Simpan PDF"}</span>
           </button>
         </div>
       </div>
@@ -543,13 +591,22 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               <p><span className="font-semibold inline-block w-24">ACARA</span>: {spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</p>
             </div>
 
-            <table className="w-full border border-black text-xs text-center border-collapse">
+            <table className="w-full table-fixed border border-black text-xs text-center border-collapse">
+              {/* Lebar kolom dipatok agar NAMA selalu lebih lebar daripada
+                  JABATAN / ALAMAT, berapa pun panjang isinya. */}
+              <colgroup>
+                <col className="w-[7%]" />
+                <col className="w-[33%]" />
+                <col className="w-[24%]" />
+                <col className="w-[18%]" />
+                <col className="w-[18%]" />
+              </colgroup>
               <thead>
                 <tr className="bg-gray-100 print:bg-transparent border-b border-black">
-                  <th className="border border-black p-2 w-12 text-center">NO</th>
-                  <th className="border border-black p-2 text-left">NAMA</th>
-                  <th className="border border-black p-2 text-left">JABATAN / ALAMAT</th>
-                  <th className="border border-black p-2 text-left" colSpan={2}>TANDA TANGAN</th>
+                  <th className="border border-black p-2 text-center">NO</th>
+                  <th className="border border-black p-2 text-center">NAMA</th>
+                  <th className="border border-black p-2 text-center">JABATAN / ALAMAT</th>
+                  <th className="border border-black p-2 text-center" colSpan={2}>TANDA TANGAN</th>
                 </tr>
               </thead>
               <tbody>

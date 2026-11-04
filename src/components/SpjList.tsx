@@ -17,7 +17,7 @@ import {
   getSpjDocuments,
   getSpjById,
 } from "../services/api";
-import { formatDateDDMMYYYY, sortDates, toDateInputValue } from "../utils/date";
+import { formatDateDDMMYYYY, sortDates } from "../utils/date";
 import { exportSpjRecapPdf } from "../utils/exportRecap";
 import { exportSpjPdf } from "../utils/exportSpjPdf";
 import { SearchableSelect, ComboOption } from "./SearchableSelect";
@@ -49,9 +49,9 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
   // Multi tanggal: satu aksi membuat satu paket SPJ per tanggal. Setiap paket
   // punya nomor, status, dan seluruh dokumennya sendiri sehingga tanggal pada
   // Bend 26, Notulen, Daftar Hadir, dan surat tidak saling menimpa.
-  const [tanggalSpjList, setTanggalSpjList] = useState<string[]>(() => [
-    toDateInputValue(new Date()),
-  ]);
+  // Mulai kosong: pengguna memilih sendiri tanggal pelaksanaan, tidak
+  // terisi otomatis dengan tanggal hari ini.
+  const [tanggalSpjList, setTanggalSpjList] = useState<string[]>([]);
   const [tanggalBaru, setTanggalBaru] = useState("");
   // Jam pelaksanaan dipakai bersama: tersimpan di sharedData.jam sehingga
   // otomatis muncul di PUKUL Daftar Hadir dan tetap bisa disunting per dokumen.
@@ -372,7 +372,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
       setTaggingSubKegiatan("");
       setTempatLokasi("PENDOPO KAPANEWON TEMON");
       setJumlahPeserta(20);
-      setTanggalSpjList([toDateInputValue(new Date())]);
+      setTanggalSpjList([]);
       setTanggalBaru("");
       setJamPelaksanaan("09.00 WIB s.d. 11.00 WIB");
       await loadData();
@@ -1264,11 +1264,10 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                         type="button"
                         title="Hapus tanggal"
                         aria-label={`Hapus tanggal ${formatDateDDMMYYYY(d)}`}
-                        disabled={tanggalSpjList.length <= 1}
                         onClick={() =>
                           setTanggalSpjList((prev) => prev.filter((_: string, idx: number) => idx !== i))
                         }
-                        className="text-current opacity-70 transition hover:text-red-600 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="text-current opacity-70 transition hover:text-red-600 hover:opacity-100"
                       >
                         <Icon name="x" className="h-3 w-3" tebal />
                       </button>
@@ -1308,7 +1307,7 @@ export const SpjList: React.FC<SpjListProps> = ({ user, onSelectSpj }) => {
                 <p className="mt-1 text-[11px] text-gray-400">
                   {tanggalSpjList.length > 1
                     ? `${tanggalSpjList.length} tanggal dipilih. Setiap tanggal menjadi paket SPJ tersendiri — nomor SPJ dan seluruh dokumennya (Bend 26, Notulen, Daftar Hadir, surat) mengikuti tanggal masing-masing.`
-                    : "Tambahkan tanggal lain bila kegiatan yang sama dilaksanakan pada beberapa hari. Kosongkan bukan pilihan — minimal satu tanggal."}
+                    : "Pilih tanggal pelaksanaan terlebih dahulu. Tambahkan tanggal lain bila kegiatan yang sama dilaksanakan pada beberapa hari — minimal satu tanggal untuk membuat paket SPJ."}
                 </p>
               </div>
 

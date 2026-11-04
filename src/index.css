@@ -51,9 +51,11 @@
   }
 
   /* Margin kertas diwakili padding di dalam lembar dokumen.
-     @page margin 0 menonaktifkan header/footer cetak bawaan browser
-     (tanggal, judul halaman, alamat URL); padding ini mengembalikan margin
-     normal sehingga isi tidak menempel pada tepi kertas. */
+     @page margin 0 berusaha menonaktifkan header/footer cetak bawaan browser
+     (tanggal, judul halaman, alamat URL) saat pengguna menekan Ctrl+P; padding
+     ini mengembalikan margin normal sehingga isi tidak menempel pada tepi
+     kertas. Tombol "Cetak / Simpan PDF" tidak memakai jalur ini — ia mencetak
+     berkas PDF agar dijamin bebas timestamp (lihat PrintPreview.handlePrint). */
   .print-doc > * {
     padding: 12mm !important;
     box-sizing: border-box !important;
@@ -86,8 +88,9 @@
 }
 
 /* Ukuran kertas bawaan untuk dokumen selain Bend 26.
-   margin: 0 menonaktifkan header/footer cetak browser; margin cetak yang
-   sesungguhnya diberikan oleh padding di dalam lembar dokumen. */
+   margin: 0 berusaha menonaktifkan header/footer cetak browser saat dicetak
+   langsung (Ctrl+P); margin cetak yang sesungguhnya diberikan oleh padding di
+   dalam lembar dokumen. Tombol cetak aplikasi memakai berkas PDF. */
 @page {
   size: A4;
   margin: 0;

@@ -72,11 +72,8 @@ const DEFAULT_HOST_WIDTH = 1000;
 const isA4 = (page: PageFormat) =>
   page.orientation === "portrait" && page.format[0] === A4_FORMAT[0] && page.format[1] === A4_FORMAT[1];
 
-export const exportSpjPdf = async (
-  spj: SpjItem,
-  documents: SpjDocumentItem[],
-  onProgress?: (label: string) => void
-): Promise<ExportSpjPdfResult> => {
+/** Pisahkan dokumen yang bisa dirender dari yang hanya berupa tautan Drive. */
+const splitDocuments = (documents: SpjDocumentItem[]) => {
   const renderable = documents
     .filter((d) => !DRIVE_ONLY.has(d.documentTypeCode))
     .sort((a, b) => {
@@ -89,14 +86,16 @@ export const exportSpjPdf = async (
     .filter((d) => DRIVE_ONLY.has(d.documentTypeCode))
     .map((d) => d.documentTypeCode.replace(/_/g, " "));
 
-  if (renderable.length === 0) {
-    throw new Error(
-      skipped.length > 0
-        ? "Dokumen paket ini hanya berupa tautan Google Drive, sehingga tidak dapat dibuatkan PDF. Buka Preview untuk membuka tautannya."
-        : "Paket SPJ ini belum memiliki dokumen yang dapat dicetak."
-    );
-  }
+  return { renderable, skipped };
+};
 
+/** Susun dokumen-dokumen terpilih menjadi satu jsPDF (satu dokumen = satu bagian). */
+const buildPdf = async (
+  spj: SpjItem,
+  documents: SpjDocumentItem[],
+  renderable: SpjDocumentItem[],
+  onProgress?: (label: string) => void
+) => {
   // Dimuat saat dibutuhkan saja agar bundle awal tetap ringan.
   const [{ default: html2canvas }, { default: jsPDF }, { PrintPreview }] = await Promise.all([
     import("html2canvas-pro"),
@@ -189,7 +188,51 @@ export const exportSpjPdf = async (
     }
   }
 
+  return pdf;
+};
+
+export const exportSpjPdf = async (
+  spj: SpjItem,
+  documents: SpjDocumentItem[],
+  onProgress?: (label: string) => void
+): Promise<ExportSpjPdfResult> => {
+  const { renderable, skipped } = splitDocuments(documents);
+
+  if (renderable.length === 0) {
+    throw new Error(
+      skipped.length > 0
+        ? "Dokumen paket ini hanya berupa tautan Google Drive, sehingga tidak dapat dibuatkan PDF. Buka Preview untuk membuka tautannya."
+        : "Paket SPJ ini belum memiliki dokumen yang dapat dicetak."
+    );
+  }
+
+  const pdf = await buildPdf(spj, documents, renderable, onProgress);
   const safeName = (spj.nomorSpj || "SPJ").replace(/[\\/:*?"<>|]/g, "-");
   pdf.save(`${safeName}.pdf`);
   return { rendered: renderable.length, skipped };
+};
+
+/**
+ * Siapkan satu dokumen sebagai PDF dan kembalikan URL blob-nya.
+ *
+ * Pencetakan sengaja melewati PDF, bukan `window.print()` pada halaman
+ * aplikasi: browser selalu menambahkan header/footer cetak bawaan (tanggal,
+ * jam, judul halaman, alamat URL, nomor halaman) yang tidak dapat dihilangkan
+ * lewat CSS. Penampil PDF mencetak berkas PDF tanpa metadata tersebut, jadi
+ * seluruh dokumen SPJ tetap bersih dari timestamp waktu cetak.
+ */
+export const printSpjDocument = async (
+  spj: SpjItem,
+  documents: SpjDocumentItem[],
+  docCode: string,
+  onProgress?: (label: string) => void
+): Promise<string> => {
+  const docItem = documents.find((d) => d.documentTypeCode === docCode);
+  if (!docItem) throw new Error("Dokumen tidak ditemukan.");
+
+  // Surat yang hanya berupa tautan Drive tetap bisa dicetak: templatenya
+  // menampilkan lembar tautan resmi, sama seperti pada pratinjau.
+  const pdf = await buildPdf(spj, documents, [docItem], onProgress);
+  pdf.autoPrint();
+  return pdf.output("bloburl").toString();
 };
