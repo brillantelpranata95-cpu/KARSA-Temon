@@ -90,6 +90,57 @@ const SuratkuSheet: React.FC<{ judul: string; url: string }> = ({ judul, url }) 
   </div>
 );
 
+/**
+ * Cetak berkas PDF lewat iframe tersembunyi.
+ *
+ * Penampil PDF mencetak isi berkas apa adanya — tanpa header/footer browser
+ * (tanggal, jam, judul, URL, nomor halaman) — dan dialog cetak langsung
+ * terbuka tanpa perlu membuka tab PDF secara manual. Mengembalikan `false`
+ * bila browser menolak, agar pemanggil bisa membuka PDF di tab baru.
+ */
+const printPdfInHiddenFrame = (url: string): Promise<boolean> =>
+  new Promise((resolve) => {
+    const frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.style.cssText =
+      "position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none;";
+
+    let settled = false;
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      if (ok) {
+        // Biarkan iframe hidup selama dialog cetak terbuka, lalu bersihkan.
+        window.setTimeout(() => {
+          frame.remove();
+          URL.revokeObjectURL(url);
+        }, 60_000);
+      } else {
+        frame.remove();
+      }
+      resolve(ok);
+    };
+
+    frame.addEventListener("load", () => {
+      // Beri penampil PDF waktu menyiapkan halaman sebelum dialog dibuka.
+      window.setTimeout(() => {
+        try {
+          frame.contentWindow?.focus();
+          frame.contentWindow?.print();
+          finish(true);
+        } catch {
+          finish(false);
+        }
+      }, 400);
+    });
+
+    // Jangan menggantung bila iframe tidak pernah selesai dimuat.
+    window.setTimeout(() => finish(false), 15_000);
+
+    frame.src = url;
+    document.body.appendChild(frame);
+  });
+
 export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBack, initialDocCode, liveAttendance = true, screenFit = true }) => {
   const [selectedDocCode, setSelectedDocCode] = React.useState<string>(initialDocCode || "BEND_26");
   // Menandai sedang menyiapkan PDF cetak agar tombol tidak diklik berulang.
@@ -215,21 +266,6 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
     if (preparingPrint) return;
     setPreparingPrint(true);
 
-    // Tab dibuka langsung dari klik pengguna agar tidak diblokir popup; isinya
-    // diganti PDF setelah dokumen selesai dirender.
-    const printTab = window.open("", "_blank");
-    if (printTab) {
-      printTab.document.write(
-        '<!doctype html><html lang="id"><head><meta charset="utf-8">' +
-          "<title>Menyiapkan dokumen…</title></head>" +
-          '<body style="font-family:system-ui,sans-serif;padding:24px;color:#0f172a">' +
-          "<p>Menyiapkan dokumen untuk dicetak…</p>" +
-          '<p style="font-size:13px;color:#475569">PDF akan terbuka di tab ini. ' +
-          "Klik ikon Cetak pada penampil PDF — hasil cetak bebas timestamp.</p></body></html>"
-      );
-      printTab.document.close();
-    }
-
     try {
       // Rapor Kertas: catat pemakaian kertas saat benar-benar mencetak. Ekspor
       // PDF tidak dihitung karena justru menghemat kertas. Pencatatan yang
@@ -243,13 +279,11 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
       const { printSpjDocument } = await import("../utils/exportSpjPdf");
       const url = await printSpjDocument(spj, documents, selectedDocCode);
 
-      if (printTab && !printTab.closed) {
-        printTab.location.href = url;
-      } else {
-        window.open(url, "_blank");
-      }
+      // Dialog cetak dibuka langsung dari iframe PDF tersembunyi. Bila browser
+      // menolak (mis. Firefox), PDF dibuka di tab baru sebagai cadangan.
+      const printed = await printPdfInHiddenFrame(url);
+      if (!printed) window.open(url, "_blank");
     } catch (err) {
-      printTab?.close();
       alert(
         err instanceof Error
           ? err.message

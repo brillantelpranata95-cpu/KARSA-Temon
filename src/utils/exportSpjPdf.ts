@@ -171,8 +171,16 @@ const buildPdf = async (
       });
 
       const imgData = canvas.toDataURL("image/jpeg", 0.92);
-      const imgH = (canvas.height * pageW) / canvas.width;
-      const pageCount = Math.max(1, Math.ceil(imgH / pageH));
+
+      // Tepi kertas. Lembar Bend 26 sudah membawa padding 12 mm sendiri
+      // (ukuran folio 215 × 330 mm), jadi tidak diberi margin tambahan.
+      // Dokumen lain dicetak dengan margin 12 mm di setiap sisi agar isi tidak
+      // menempel atau terpotong di tepi kertas.
+      const marginMm = docItem.documentTypeCode === "BEND_26" ? 0 : 12;
+      const contentW = pageW - marginMm * 2;
+      const contentH = pageH - marginMm * 2;
+      const imgH = (canvas.height * contentW) / canvas.width;
+      const pageCount = Math.max(1, Math.ceil(imgH / contentH));
 
       for (let p = 0; p < pageCount; p++) {
         if (p > 0) {
@@ -180,7 +188,9 @@ const buildPdf = async (
           // tidak terpotong.
           pdf.addPage(page.format, page.orientation);
         }
-        pdf.addImage(imgData, "JPEG", 0, -p * pageH, pageW, imgH);
+        // Gambar digambar dengan margin; halaman lanjutan tetap menyisakan
+        // margin atas/bawah karena dipotong per tinggi area isi.
+        pdf.addImage(imgData, "JPEG", marginMm, marginMm - p * contentH, contentW, imgH);
       }
     } finally {
       root.unmount();
@@ -220,6 +230,9 @@ export const exportSpjPdf = async (
  * jam, judul halaman, alamat URL, nomor halaman) yang tidak dapat dihilangkan
  * lewat CSS. Penampil PDF mencetak berkas PDF tanpa metadata tersebut, jadi
  * seluruh dokumen SPJ tetap bersih dari timestamp waktu cetak.
+ *
+ * PDF dibuka di iframe tersembunyi lalu dicetak lewat `contentWindow.print()`,
+ * sehingga dialog cetak langsung muncul tanpa perlu membuka tab PDF manual.
  */
 export const printSpjDocument = async (
   spj: SpjItem,
@@ -233,6 +246,5 @@ export const printSpjDocument = async (
   // Surat yang hanya berupa tautan Drive tetap bisa dicetak: templatenya
   // menampilkan lembar tautan resmi, sama seperti pada pratinjau.
   const pdf = await buildPdf(spj, documents, [docItem], onProgress);
-  pdf.autoPrint();
   return pdf.output("bloburl").toString();
 };
