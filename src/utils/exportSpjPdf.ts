@@ -54,6 +54,8 @@ interface PageFormat {
 
 const PAGE_FORMAT: Record<string, PageFormat> = {
   BEND_26: { format: [215, 330], orientation: "portrait" },
+  // Daftar Penerimaan memuat 9 kolom; dicetak mendatar agar tidak terpotong.
+  DAFTAR_PENERIMAAN: { format: [210, 297], orientation: "landscape" },
 };
 
 /** Ukuran A4 dalam mm — dipakai sebagai ukuran bawaan halaman PDF. */
@@ -65,9 +67,23 @@ const A4_PAGE: PageFormat = { format: A4_FORMAT, orientation: "portrait" };
 const HOST_WIDTH: Record<string, number> = {
   // Bend 26 = 215mm ≈ 813px pada 96dpi; beri sedikit ruang agar tidak membungkus.
   BEND_26: 815,
+  // A4 mendatar (297mm) — beri ruang agar 9 kolom tidak membungkus.
+  DAFTAR_PENERIMAAN: 1120,
 };
 
 const DEFAULT_HOST_WIDTH = 1000;
+
+/**
+ * Margin tepi kertas per dokumen (mm). Semua dokumen memakai margin supaya isi
+ * tidak menempel di tepi dan tidak terpotong saat dicetak — termasuk Bend 26:
+ * lembarnya sudah berpadding 12 mm, tetapi bingkai luarnya tetap perlu jarak
+ * dari tepi kertas agar tidak terpotong batas cetak printer.
+ */
+const PAGE_MARGIN_MM: Record<string, number> = {
+  BEND_26: 8,
+};
+
+const DEFAULT_MARGIN_MM = 12;
 
 const isA4 = (page: PageFormat) =>
   page.orientation === "portrait" && page.format[0] === A4_FORMAT[0] && page.format[1] === A4_FORMAT[1];
@@ -172,15 +188,27 @@ const buildPdf = async (
 
       const imgData = canvas.toDataURL("image/jpeg", 0.92);
 
-      // Tepi kertas. Lembar Bend 26 sudah membawa padding 12 mm sendiri
-      // (ukuran folio 215 × 330 mm), jadi tidak diberi margin tambahan.
-      // Dokumen lain dicetak dengan margin 12 mm di setiap sisi agar isi tidak
-      // menempel atau terpotong di tepi kertas.
-      const marginMm = docItem.documentTypeCode === "BEND_26" ? 0 : 12;
+      // Tepi kertas: setiap dokumen diberi margin supaya isi (termasuk bingkai
+      // lembar) tidak menempel atau terpotong di batas cetak printer.
+      const marginMm = PAGE_MARGIN_MM[docItem.documentTypeCode] ?? DEFAULT_MARGIN_MM;
       const contentW = pageW - marginMm * 2;
       const contentH = pageH - marginMm * 2;
-      const imgH = (canvas.height * contentW) / canvas.width;
-      const pageCount = Math.max(1, Math.ceil(imgH / contentH));
+
+      let imgW = contentW;
+      let imgH = (canvas.height * contentW) / canvas.width;
+      let pageCount = Math.max(1, Math.ceil(imgH / contentH));
+
+      // Bila kelebihan tinggi hanya sedikit (mis. selisih pembulatan), perkecil
+      // gambar agar muat satu halaman penuh. Tanpa ini sisa beberapa milimeter
+      // tercetak sebagai halaman kedua yang nyaris kosong.
+      if (pageCount === 2 && imgH <= contentH * 1.15) {
+        const scale = contentH / imgH;
+        imgW = contentW * scale;
+        imgH = contentH;
+        pageCount = 1;
+      }
+
+      const offsetX = marginMm + (contentW - imgW) / 2;
 
       for (let p = 0; p < pageCount; p++) {
         if (p > 0) {
@@ -190,7 +218,7 @@ const buildPdf = async (
         }
         // Gambar digambar dengan margin; halaman lanjutan tetap menyisakan
         // margin atas/bawah karena dipotong per tinggi area isi.
-        pdf.addImage(imgData, "JPEG", marginMm, marginMm - p * contentH, contentW, imgH);
+        pdf.addImage(imgData, "JPEG", offsetX, marginMm - p * contentH, imgW, imgH);
       }
     } finally {
       root.unmount();
