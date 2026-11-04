@@ -514,23 +514,23 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
               </div>
             </div>
 
-            <div className="text-center font-bold text-xl uppercase tracking-widest border-b border-black pb-2">
+            <div className="text-center font-bold text-xl uppercase tracking-widest pb-2">
               NOTULEN
             </div>
 
             <table className="w-full text-sm border-collapse">
               <tbody>
-                <tr className="border-b border-gray-300">
+                <tr>
                   <td className="py-2 font-semibold w-1/4">Rapat</td>
                   <td className="py-2 w-10 text-center">:</td>
                   <td className="py-2 font-bold uppercase">{spj.sharedData?.judulAktivitas || spj.masterSnapshot.kegiatan.nama}</td>
                 </tr>
-                <tr className="border-b border-gray-300">
+                <tr>
                   <td className="py-2 font-semibold">Hari/ tanggal</td>
                   <td className="py-2 text-center">:</td>
                   <td className="py-2">{`${getNamaHariCapitalized(spj.tanggal)}, ${formatDateDDMMYYYY(spj.tanggal)}`}</td>
                 </tr>
-                <tr className="border-b border-gray-300">
+                <tr>
                   <td className="py-2 font-semibold">Pukul</td>
                   <td className="py-2 text-center">:</td>
                   <td className="py-2">
@@ -539,12 +539,12 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                       : data.pukul || "09.00 WIB s.d. 11.30 WIB"}
                   </td>
                 </tr>
-                <tr className="border-b border-gray-300">
+                <tr>
                   <td className="py-2 font-semibold">Tempat rapat</td>
                   <td className="py-2 text-center">:</td>
                   <td className="py-2 font-semibold uppercase">{data.tempat || spj.sharedData?.tempat || "PENDOPO KAPANEWON TEMON"}</td>
                 </tr>
-                <tr className="border-b border-gray-300">
+                <tr>
                   <td className="py-2 font-semibold align-top">Acara</td>
                   <td className="py-2 text-center align-top">:</td>
                   <td className="py-2">
@@ -556,22 +556,22 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
                     </ol>
                   </td>
                 </tr>
-                <tr className="border-b border-gray-300">
+                <tr>
                   <td className="py-2 font-semibold">Pemimpin Rapat</td>
                   <td className="py-2 text-center">:</td>
                   <td className="py-2">{data.pemimpinRapat || spj.sharedData?.pemimpinRapat || "…………………………"}</td>
                 </tr>
-                <tr className="border-b border-gray-300">
+                <tr>
                   <td className="py-2 font-semibold">Ketua</td>
                   <td className="py-2 text-center">:</td>
                   <td className="py-2">{data.pemimpinRapat || spj.sharedData?.pemimpinRapat || "…………………………"}</td>
                 </tr>
-                <tr className="border-b border-gray-300">
+                <tr>
                   <td className="py-2 font-semibold">Notulis</td>
                   <td className="py-2 text-center">:</td>
                   <td className="py-2">{data.notulis || spj.sharedData?.notulis || "…………………………"}</td>
                 </tr>
-                <tr className="border-b border-gray-300">
+                <tr>
                   <td className="py-2 font-semibold">Peserta Rapat</td>
                   <td className="py-2 text-center">:</td>
                   <td className="py-2">{`${spj.sharedData?.jumlahPeserta || 20} orang`}</td>
@@ -581,7 +581,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({ spj, documents, onBa
 
             <div className="space-y-4 pt-4">
               <h3 className="font-bold underline text-base">Keputusan Rapat:</h3>
-              <div className="whitespace-pre-line text-justify leading-relaxed bg-gray-50 print:bg-transparent p-4 rounded-xl border border-gray-200 print:border-none">
+              <div className="whitespace-pre-line text-justify leading-relaxed">
                 {getFormattedKeputusanRapat()}
               </div>
             </div>

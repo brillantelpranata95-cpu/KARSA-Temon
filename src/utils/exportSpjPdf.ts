@@ -65,8 +65,10 @@ const A4_PAGE: PageFormat = { format: A4_FORMAT, orientation: "portrait" };
 
 /** Lebar host render (px) per dokumen agar tata letak sama dengan hasil cetak. */
 const HOST_WIDTH: Record<string, number> = {
-  // Bend 26 = 215mm ≈ 813px pada 96dpi; beri sedikit ruang agar tidak membungkus.
-  BEND_26: 815,
+  // Bend 26 = 215mm ≈ 813px pada 96dpi; host harus SAMA ATAU LEBIH LEBAR dari
+  // lembar, karena html2canvas memotong kanvas tepat pada kotak elemen. Bila
+  // host lebih sempit, sisi kanan lembar hilang dari hasil cetak.
+  BEND_26: 816,
   // A4 mendatar (297mm) — beri ruang agar 9 kolom tidak membungkus.
   DAFTAR_PENERIMAAN: 1120,
 };
@@ -74,16 +76,14 @@ const HOST_WIDTH: Record<string, number> = {
 const DEFAULT_HOST_WIDTH = 1000;
 
 /**
- * Margin tepi kertas per dokumen (mm). Semua dokumen memakai margin supaya isi
- * tidak menempel di tepi dan tidak terpotong saat dicetak — termasuk Bend 26:
- * lembarnya sudah berpadding 12 mm, tetapi bingkai luarnya tetap perlu jarak
- * dari tepi kertas agar tidak terpotong batas cetak printer.
+ * Margin tepi kertas (mm) di setiap sisi, untuk semua dokumen.
+ *
+ * Bend 26 tetap memakai 12 mm meski lembarnya sudah berpadding 12 mm: halaman
+ * PDF-nya selebar 215 mm, jadi saat dicetak 100% pada kertas folio/A4 area
+ * cetak printer (± 3–5 mm) tidak boleh menyentuh isi. Dengan margin 12 mm,
+ * isi berakhir 12 mm dari tepi kertas sehingga aman dari batas cetak printer.
  */
-const PAGE_MARGIN_MM: Record<string, number> = {
-  BEND_26: 8,
-};
-
-const DEFAULT_MARGIN_MM = 12;
+const PAGE_MARGIN_MM = 12;
 
 const isA4 = (page: PageFormat) =>
   page.orientation === "portrait" && page.format[0] === A4_FORMAT[0] && page.format[1] === A4_FORMAT[1];
@@ -175,22 +175,49 @@ const buildPdf = async (
       const target = host.querySelector<HTMLElement>(".print-doc");
       if (!target) throw new Error("Template dokumen tidak ditemukan.");
 
+      // Netralkan bingkai pratinjau layar (padding 32 px, border, bayangan,
+      // batas max-w-4xl). Tanpa ini lembar yang lebih lebar dari area isi —
+      // misalnya Bend 26 (215 mm ≈ 813 px) — terpotong padding container dan
+      // sisi kanannya hilang dari dokumen cetak.
+      target.style.padding = "0";
+      target.style.border = "0";
+      target.style.borderRadius = "0";
+      target.style.boxShadow = "none";
+      target.style.margin = "0";
+      target.style.maxWidth = "none";
+      target.style.width = `${hostWidth}px`;
+
       // Ambil elemen dokumennya saja (tanpa bingkai/padding layar) supaya
       // rasio gambar sama dengan rasio kertas.
       const docElement = (target.firstElementChild as HTMLElement) || target;
+
+      // Kalau isinya masih lebih lebar dari wadah (tabel dengan banyak kolom),
+      // lebarkan wadah: kanvas html2canvas dipotong tepat pada kotak elemen,
+      // jadi kelebihan lebar akan hilang bila wadah tidak diperlebar.
+      if (docElement.scrollWidth > docElement.clientWidth) {
+        const neededWidth = docElement.scrollWidth;
+        host.style.width = `${neededWidth}px`;
+        target.style.width = `${neededWidth}px`;
+        // Tunggu satu siklus layout agar pengukuran berikutnya akurat.
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        );
+      }
 
       const canvas = await html2canvas(docElement, {
         scale: 2,
         backgroundColor: "#ffffff",
         useCORS: true,
         logging: false,
+        width: Math.ceil(docElement.scrollWidth),
+        height: Math.ceil(docElement.scrollHeight),
       });
 
       const imgData = canvas.toDataURL("image/jpeg", 0.92);
 
       // Tepi kertas: setiap dokumen diberi margin supaya isi (termasuk bingkai
       // lembar) tidak menempel atau terpotong di batas cetak printer.
-      const marginMm = PAGE_MARGIN_MM[docItem.documentTypeCode] ?? DEFAULT_MARGIN_MM;
+      const marginMm = PAGE_MARGIN_MM;
       const contentW = pageW - marginMm * 2;
       const contentH = pageH - marginMm * 2;
 
